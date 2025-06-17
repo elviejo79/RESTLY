@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-22-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-22-0 http://www.eiffel.com/developers/xml/configuration-1-22-0.xsd" name="my_app" uuid="12345678-1234-5678-9ABC-123456789012">
+	<description>Example client application using the RESTFUL library</description>
+
+	<target name="my_app">
+		<description>My application that uses RESTFUL library</description>
+		<root class="MY_APPLICATION" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="my_app"/>
+
+		<!-- Standard libraries -->
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+
+		<!-- Reference to RESTFUL library using relative path -->
+		<library name="restful" location="../restful.ecf"/>
+
+		<!-- Or using absolute path: -->
+		<!-- <library name="restful" location="/full/path/to/restful.ecf"/> -->
+
+		<!-- Application source code -->
+		<cluster name="src" location="src\" recursive="true"/>
+	</target>
+</system>

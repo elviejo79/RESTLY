@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-22-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-22-0 http://www.eiffel.com/developers/xml/configuration-1-22-0.xsd" name="restful" uuid="0AA6AB17-0539-480B-ADAE-38CEA07000D3">
+	<description>RESTFUL library for RESTful API interactions</description>
+
+	<!-- Library Target: Self-contained for use by external projects -->
+	<target name="restful">
+		<description>RESTFUL library - for use by external projects</description>
+		<file_rule>
+			<exclude>/CVS$</exclude>
+			<exclude>/EIFGENs$</exclude>
+			<exclude>/\.git$</exclude>
+			<exclude>/\.svn$</exclude>
+		</file_rule>
+		<option warning="warning" is_obsolete_iteration="true" manifest_array_type="mismatch_warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+
+		<!-- Common libraries used by all targets -->
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf">
+			<option warning="none"/>
+		</library>
+		<library name="http_client" location="$ISE_LIBRARY\contrib\library\network\http_client\http_client.ecf"/>
+		<library name="json" location="$ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf"/>
+		<library name="time" location="$ISE_LIBRARY\library\time\time.ecf"/>
+		<library name="uri" location="$ISE_LIBRARY\library\text\uri\uri.ecf">
+			<option warning="none"/>
+		</library>
+
+		<!-- RESTFUL library source -->
+		<cluster name="src" location="src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="RESOURCE" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="DNS" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+		</cluster>
+	</target>
+
+	<!-- Base Target: Common configuration shared by all targets -->
+	<target name="base" abstract="true">
+		<description>Base configuration for all RESTFUL targets</description>
+		<file_rule>
+			<exclude>/CVS$</exclude>
+			<exclude>/EIFGENs$</exclude>
+			<exclude>/\.git$</exclude>
+			<exclude>/\.svn$</exclude>
+		</file_rule>
+		<option warning="warning" is_obsolete_iteration="true" manifest_array_type="mismatch_warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+
+		<!-- Common libraries used by all targets -->
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf">
+			<option warning="none"/>
+		</library>
+		<library name="http_client" location="$ISE_LIBRARY\contrib\library\network\http_client\http_client.ecf"/>
+		<library name="json" location="$ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf"/>
+		<library name="time" location="$ISE_LIBRARY\library\time\time.ecf"/>
+		<library name="uri" location="$ISE_LIBRARY\library\text\uri\uri.ecf">
+			<option warning="none"/>
+		</library>
+	</target>
+
+	<!-- Library Target: For use by external projects -->
+	<target name="library" extends="base">
+		<description>RESTFUL library - for use by external projects</description>
+		<cluster name="src" location="src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="RESOURCE" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="DNS" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+		</cluster>
+	</target>
+
+	<!-- Example Application Target: Demonstrates library usage -->
+	<target name="example" extends="base">
+		<description>RESTFUL example application</description>
+		<root class="APPLICATION" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="restful_example"/>
+
+		<cluster name="src" location="src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="RESOURCE" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="DNS" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+		</cluster>
+		<cluster name="example" location="example\" recursive="true">
+			<option warning="none"/>
+		</cluster>
+	</target>
+
+	<!-- Testing Target: For AutoTest execution -->
+	<target name="testing" extends="base">
+		<description>RESTFUL testing - for AutoTest execution</description>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+
+		<cluster name="src" location="src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="RESOURCE" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="DNS" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+		</cluster>
+		<cluster name="tests" location="tests\" recursive="true">
+			<option warning="none"/>
+		</cluster>
+	</target>
+
+	<!-- Test Runner Target: Runs tests from command line -->
+	<target name="test_runner" extends="base">
+		<description>RESTFUL test runner - runs tests from command line</description>
+		<root class="TEST_RUNNER" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="test_runner"/>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+
+		<cluster name="src" location="src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="RESOURCE" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+			<class_option class="DNS" warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning"/>
+		</cluster>
+		<cluster name="tests" location="tests\" recursive="true">
+			<option warning="none"/>
+		</cluster>
+		<cluster name="test_runner" location="test_runner\" recursive="true">
+			<option warning="none"/>
+		</cluster>
+	</target>
+</system>

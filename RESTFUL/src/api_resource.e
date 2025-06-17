@@ -1,0 +1,90 @@
+note
+	description: "Summary description for {GITHUB_PROXY}."
+	author: ""
+	date: "$Date$"
+	revision: "$Revision$"
+
+class
+	API_RESOURCE
+
+inherit
+	REST [STRING]
+		undefine
+			is_equal, copy
+		end
+	RESOURCE
+
+create
+	make_with_url
+
+feature -- http_client attributes
+	proxy: HTTP_CLIENT_SESSION
+		local
+			http_client: DEFAULT_HTTP_CLIENT
+			session: HTTP_CLIENT_SESSION -- Add this for the session
+			context: HTTP_CLIENT_REQUEST_CONTEXT
+
+		once
+				-- Create HTTP client
+			create http_client
+			session := http_client.new_session (address.string)
+			session.set_timeout (10)
+			session.set_connect_timeout (30)
+				-- Create request context
+			Result := session
+		end
+
+	context_proxy: HTTP_CLIENT_REQUEST_CONTEXT
+		once
+			create Result.make
+			Result.set_credentials_required (False)
+
+				-- Add headers to context
+				--Result.add_header ("Accept", "application/vnd.github.v3+json")
+			Result.add_header ("User-Agent", "Eiffel Repository Reporter")
+		end
+feature --http verbs
+	has_key (a_path: URL_PATH): BOOLEAN
+		local
+			response: HTTP_CLIENT_RESPONSE
+		do
+			response := proxy.head (a_path.out, context_proxy)
+			Result := 200 ~ response.status
+		end
+
+	item alias "[]" (a_path: URL_PATH): STRING
+		local
+			response: HTTP_CLIENT_RESPONSE
+			l_exception: POSTCONDITION_VIOLATION
+		do
+			create Result.make_empty
+			response := proxy.get (a_path.out, context_proxy)
+			if response.status = 200 and then attached response.body as body then
+				Result := body
+			else
+				create l_exception
+			end
+		end
+
+	force (data: STRING; a_path: URL_PATH)
+		local
+			response: HTTP_CLIENT_RESPONSE
+			l_exception: POSTCONDITION_VIOLATION
+		do
+			response := proxy.post (a_path.out, context_proxy, data)
+			check response.status ~ 200 and then attached response.body as body then
+--				Result := body
+			end
+		end
+
+	remove (a_path: URL_PATH)
+		do
+				-- should throw an exception
+		end
+
+	extend (data: STRING; key: detachable URL_PATH)
+		do
+				-- should throw an exception
+		end
+
+end
