@@ -1,0 +1,7 @@
+EIFGENs
+tests/temp/
+.svn/
+*.swp
+*~
+*.scm
+*#
