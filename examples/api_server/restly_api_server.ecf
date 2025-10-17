@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-22-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-22-0 http://www.eiffel.com/developers/xml/configuration-1-22-0.xsd" name="a_rest_handler" uuid="B1800B59-2F9F-48C5-8DF1-54CA53C62D0D">
+	<target name="common" abstract="true">
+		<file_rule>
+			<exclude>/CVS$</exclude>
+			<exclude>/EIFGENs$</exclude>
+			<exclude>/\.svn$</exclude>
+		</file_rule>
+		<option warning="warning" is_obsolete_iteration="true">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<library name="http" location="$ISE_LIBRARY\contrib\library\network\protocol\http\http.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<library name="wsf" location="$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\wsf.ecf">
+			<option warning="none">
+			</option>
+		</library>
+	</target>
+	<target name="restly_api_server_any" extends="common">
+		<root class="RESTLY_API_SERVER" feature="make_and_launch"/>
+		<option warning="none" is_obsolete_iteration="true">
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+		<library name="standalone" location="$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\connector\standalone.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<cluster name="launcher" location=".\launcher\">
+			<option warning="none" is_obsolete_iteration="true">
+			</option>
+			<cluster name="any_launcher" location="$|any\">
+				<option warning="none" is_obsolete_iteration="true">
+				</option>
+			</cluster>
+		</cluster>
+		<cluster name="src" location=".\src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true">
+			</option>
+		</cluster>
+	</target>
+	<target name="restly_api_server_standalone" extends="common">
+		<root class="RESTLY_API_SERVER" feature="make_and_launch"/>
+		<option warning="none" is_obsolete_iteration="true">
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+		<variable name="httpd_ssl_disabled" value="true"/>
+		<library name="default_standalone" location="$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\default\standalone.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<library name="json" location="iron:json:library\json.ecf"/>
+		<library name="restful" location="..\..\RESTFUL\restful.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<cluster name="launcher" location=".\launcher\">
+			<option warning="none" is_obsolete_iteration="true">
+			</option>
+			<cluster name="default_launcher" location="$|default\">
+				<option warning="none" is_obsolete_iteration="true">
+				</option>
+			</cluster>
+		</cluster>
+		<cluster name="src" location=".\src\" recursive="true">
+			<option warning="none" is_obsolete_iteration="true">
+			</option>
+			<class_option class="RESTLY_API_SERVER" warning="none" is_obsolete_iteration="true">
+			</class_option>
+			<class_option class="RESTLY_API_SERVER_EXECUTION" warning="none" is_obsolete_iteration="true">
+			</class_option>
+		</cluster>
+	</target>
+	<target name="restly_api_server" extends="restly_api_server_any">
+		<option warning="none" is_obsolete_iteration="true">
+		</option>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
+	</target>
+</system>
