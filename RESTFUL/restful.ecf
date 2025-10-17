@@ -26,6 +26,14 @@
 			</option>
 		</library>
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<library name="http" location="$ISE_LIBRARY\contrib\library\network\protocol\http\http.ecf">
+			<option warning="none">
+			</option>
+		</library>
+		<library name="wsf" location="$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\wsf.ecf">
+			<option warning="none">
+			</option>
+		</library>
 		<cluster name="src" location="src\" recursive="true">
 			<option warning="none" is_obsolete_iteration="true" manifest_array_type="mismatch_warning">
 			</option>
