@@ -31,7 +31,7 @@ create
 	make_with_url,
 	make
 
-feature
+feature {NONE}
 	make_with_url (a_dir: URL)
 		local
 			file_url: PATH_URI
@@ -85,14 +85,8 @@ feature -- http verbs
 
 	force (content: STRING; a_path: URL_PATH)
 			-- Write `content` to the file at `a_path` in a single pass.
-		local
-			file: PLAIN_TEXT_FILE
 		do
-
-			file := current_file (a_path)
-			file.create_read_write
-			file.put_string (content)
-			file.close
+			write_file (content, a_path)
 		end
 
 	remove (a_path: URL_PATH) local
@@ -108,8 +102,29 @@ feature -- http verbs
 	extend (content: STRING; key: detachable URL_PATH)
 			-- if we want to store files, without having a name for them
 			-- we can just use thir hash as name
+		local
+			actual_key: URL_PATH
 		do
-			force (content, content.hash_code.out)
+			if attached key as k then
+				actual_key := k
+			else
+				create actual_key.make_from_string (content.hash_code.out)
+			end
+			last_inserted_key := actual_key
+			write_file (content, actual_key)
+		end
+
+feature {NONE} -- Implementation
+
+	write_file (content: STRING; a_path: URL_PATH)
+			-- Write `content` to the file at `a_path` in a single pass.
+		local
+			file: PLAIN_TEXT_FILE
+		do
+			file := current_file (a_path)
+			file.create_read_write
+			file.put_string (content)
+			file.close
 		end
 
 end

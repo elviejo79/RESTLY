@@ -12,7 +12,8 @@ inherit
 
 
 create
-	make_from_string
+	make_from_string,
+	make_from_separate
 
 convert
 	make_from_string ({STRING}),

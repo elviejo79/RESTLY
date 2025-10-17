@@ -16,7 +16,7 @@ inherit
 create
 	make_with_url
 
-feature
+feature {NONE}
 	make_with_url (a_url: URL)
 		do
 			address := a_url

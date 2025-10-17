@@ -21,17 +21,14 @@ feature -- http_client attributes
 	proxy: HTTP_CLIENT_SESSION
 		local
 			http_client: DEFAULT_HTTP_CLIENT
-			session: HTTP_CLIENT_SESSION -- Add this for the session
 			context: HTTP_CLIENT_REQUEST_CONTEXT
 
 		once
 				-- Create HTTP client
 			create http_client
-			session := http_client.new_session (address.string)
-			session.set_timeout (10)
-			session.set_connect_timeout (30)
-				-- Create request context
-			Result := session
+			Result := http_client.new_session (address.string)
+			Result.set_timeout (10)
+			Result.set_connect_timeout (30)
 		end
 
 	context_proxy: HTTP_CLIENT_REQUEST_CONTEXT

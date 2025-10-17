@@ -10,17 +10,16 @@ once class
 create
 make
 
-feature
+feature {NONE}
 	make
-	local
-		dummy : like store
 	once
-		create dummy.make(10)
 		create store.make (10)
 	end
 
 feature -- mappers
 fromStore(stored_value: WEAK_REFERENCE[RESOURCE]):RESOURCE
+require
+	not_collected: attached stored_value.item
 do
 	check attached stored_value.item as l_resource then
 		Result := l_resource
@@ -61,8 +60,8 @@ feature -- static registry
 	local
 		dns:DNS
 	do
-		create DNS.make
-		DNS.post (a_resource)
+		create dns.make
+		dns.post (a_resource)
 	ensure
 		class
 	end
