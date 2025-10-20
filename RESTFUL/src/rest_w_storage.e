@@ -62,9 +62,9 @@ feature -- http verbs
 	last_inserted_key: URL_PATH
          -- there is NO equivalent for this in http protocol.
          -- but is necessary to keep the Command / Query Separation principle in Eiffel
-		attribute
-			create Result.make_from_string ("")
+      deferred 
 		end
+         
 	trace (key: URL_PATH): detachable S
           -- equivalent to http TRACE
           -- Performs a loop-back diagnostic test. In our interpretation since this is debugging operation.

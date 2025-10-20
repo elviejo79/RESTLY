@@ -84,4 +84,9 @@ feature --http verbs
 				-- should throw an exception
 		end
 
+	last_inserted_key: URL_PATH
+		attribute
+			create Result.make_from_string ("")
+		end
+
 end

@@ -20,14 +20,14 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_storage: REST_TABLE[JSON_OBJECT])
+	make (a_storage: like storage)
 		do
 			storage := a_storage
 		end
 
 feature {NONE} -- Fields
 
-	storage: REST_TABLE[JSON_OBJECT]
+	storage: REST[JSON_OBJECT]
 
 	id_parameter_name: STRING
 		attribute
@@ -169,28 +169,31 @@ feature {NONE} -- HTTP Handlers
 			-- POST to create new resource
 		local
 			json_data: detachable JSON_OBJECT
-			new_path: URL_PATH
+			input_data_path: URL_PATH
 		do
 			json_data := parse_json_object (req)
-
 			if attached json_data then
+                     print("que es el parsed json_data: %N"+ json_data.representation+"%N")
 				check attached {JSON_STRING} json_data ["name"] as l_name then
-					create new_path.make_from_string ("/" + l_name.unescaped_string_8)
-					if not storage.has_key (new_path) then
+            create input_data_path.make_from_string ("/" + l_name.unescaped_string_8)
+               print ("input_data_path: " + input_data_path.out +"%N%N")
+               check attached input_data_path as new_path then
+					-- if not storage.has_key (new_path) then
 						storage.extend (json_data, new_path)
-
+                     print ("salio del ewf_handler/storga_extend?: %N%N")
 						-- 201 Created with Location header using chainable interface
 						Result := {WSF_JSON_RESPONSE}.created
 							.with_json_object (json_data)
 							.with_location (new_path.out)
-					else
-						-- 409 Conflict: Resource already exists
-						Result := {WSF_JSON_RESPONSE}.conflict
-							.with_detail ("Resource already exists at " + new_path.out)
-					end
+                     end 
+					-- else
+					-- 	-- 409 Conflict: Resource already exists
+					-- 	Result := {WSF_JSON_RESPONSE}.conflict
+					-- 		.with_detail ("Resource already exists at " + new_path.out)
+					-- end
 				end
 			else
-				Result := {WSF_JSON_RESPONSE}.precondition_failed
+Result := {WSF_JSON_RESPONSE}.precondition_failed.with_detail("not_attached_json_data")
 			end
 		end
 
@@ -217,26 +220,26 @@ feature {NONE} -- HTTP Handlers
 
 feature {NONE} -- Helpers
 
-	list_all: WSF_JSON_RESPONSE
-			-- Return all resources as JSON array
-		local
-			json_array: JSON_ARRAY
-			obj: JSON_OBJECT
-		do
-			create json_array.make (storage.count)
-			across
-				storage as c
-			loop
-				create obj.make
-				-- "key" field
-				obj.put (create {JSON_STRING}.make_from_string (c.key.out), "key")
-				-- "value" field (number)
-				obj.put (c.item, "value")
-				json_array.extend (obj)
-			end
+	-- list_all: WSF_JSON_RESPONSE
+	-- 		-- Return all resources as JSON array
+	-- 	local
+	-- 		json_array: JSON_ARRAY
+	-- 		obj: JSON_OBJECT
+	-- 	do
+	-- 		create json_array.make (storage.count)
+	-- 		across
+	-- 			storage as c
+	-- 		loop
+	-- 			create obj.make
+	-- 			-- "key" field
+	-- 			obj.put (create {JSON_STRING}.make_from_string (c.key.out), "key")
+	-- 			-- "value" field (number)
+	-- 			obj.put (c.item, "value")
+	-- 			json_array.extend (obj)
+	-- 		end
 
-			Result := create {WSF_JSON_RESPONSE}.make_with_body (json_array.representation)
-		end
+	-- 		Result := create {WSF_JSON_RESPONSE}.make_with_body (json_array.representation)
+	-- 	end
 
 	parse_json_object (req: WSF_REQUEST): detachable JSON_OBJECT
 			-- Parse JSON object from request body
@@ -246,14 +249,11 @@ feature {NONE} -- Helpers
 		do
 			if req.content_length_value > 0 then
 				create input_data.make_empty
-				req.read_input_data_into (input_data)
-				create json_parser.make_with_string (input_data)
-				json_parser.parse_content
-				if attached {JSON_OBJECT} json_parser.parsed_json_value as jo then
-					Result := jo
-				end
-			end
-			-- Returns Void if parsing fails or no content
+               req.read_input_data_into (input_data)
+               print("input_data:" + input_data)
+               create Result.make_from_string(input_data)
+               -- Returns Void if parsing fails or no content
+         end 
 		end
 
    if_exists_execute (path: URL_PATH; handler: FUNCTION [URL_PATH, WSF_JSON_RESPONSE]): WSF_JSON_RESPONSE
