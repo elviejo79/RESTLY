@@ -39,29 +39,8 @@ feature -- Access
 	response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
 			-- Handle REST operations based on HTTP method
 		do
-      -- | TODO:
-      -- Escribir el articulo
-      -- hacer que en execution sólo tenga que declarar el handler una sola vez.
-      -- >> [x] Esto se hace con {/id} pero entonces ahora genera una 
-      -- tabla
-      -- la solucion fue crear el helper function request_path
-      -- >> [x] limpiar la implementación del router
-      -- >> [x] usar (if expression) para limpiar el código
-      -- >> >>  >> la solucion fue la funcion if_exists_execute
-      -- >> [x] investigar si starts with router podría darme el resto
-      -- >> >>> >>> si podría pero al final use el helper request_path
-      -- [x] crear mensajes de error más amigables.
-      -- >> [x] hacer que el creator sea más amigable.
-			-- [X] probablemente rehacer la de WSF_JSON_RESPONSE con los constructors.
-      -- exponer todos los demás metodos REST_W_STORAGE
-      -- ver qué se requiere para hacerlo concurent.
-      -- poner en el repositorio de código.
-      -- hacer la traducción del capítulo 3
-      -- hacer a single project canvas for the AI 
-      -- https://antonionietorodriguez.com/project-canvas/
-      
-      -- If the Result was attached, it means we are in a Retry, and 
-      -- must just send the Reuslt as it was managed in handle_rescue
+      -- If the Result was attached, it means we are in a Retry, and
+      -- must just send the Result as it was managed in handle_rescue
       
       if not attached Result then --if not has_failed_before then
          if attached requested_path(req) as path  then --if we have a Path 
@@ -173,24 +152,21 @@ feature {NONE} -- HTTP Handlers
 		do
 			json_data := parse_json_object (req)
 			if attached json_data then
-                     print("que es el parsed json_data: %N"+ json_data.representation+"%N")
 				check attached {JSON_STRING} json_data ["name"] as l_name then
             create input_data_path.make_from_string ("/" + l_name.unescaped_string_8)
-               print ("input_data_path: " + input_data_path.out +"%N%N")
                check attached input_data_path as new_path then
-					-- if not storage.has_key (new_path) then
+					if not storage.has_key (new_path) then
 						storage.extend (json_data, new_path)
-                     print ("salio del ewf_handler/storga_extend?: %N%N")
 						-- 201 Created with Location header using chainable interface
 						Result := {WSF_JSON_RESPONSE}.created
 							.with_json_object (json_data)
 							.with_location (new_path.out)
-                     end 
-					-- else
-					-- 	-- 409 Conflict: Resource already exists
-					-- 	Result := {WSF_JSON_RESPONSE}.conflict
-					-- 		.with_detail ("Resource already exists at " + new_path.out)
-					-- end
+					else
+						-- 409 Conflict: Resource already exists
+						Result := {WSF_JSON_RESPONSE}.conflict
+							.with_detail ("Resource already exists at " + new_path.out)
+					end
+                     end
 				end
 			else
 Result := {WSF_JSON_RESPONSE}.precondition_failed.with_detail("not_attached_json_data")
@@ -250,7 +226,6 @@ feature {NONE} -- Helpers
 			if req.content_length_value > 0 then
 				create input_data.make_empty
                req.read_input_data_into (input_data)
-               print("input_data:" + input_data)
                create Result.make_from_string(input_data)
                -- Returns Void if parsing fails or no content
          end 

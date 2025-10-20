@@ -33,21 +33,12 @@ feature -- Router
       fhdl: WSF_FILE_SYSTEM_HANDLER
       service_proxy: SERVICE_PROXY[JSON_OBJECT]
 		do
-			-- | exposing a dictionary
+			-- Exposing a SCOOP-enabled REST service
             create service_proxy
 
 				map_uri_template ("/people{/id}",
 					create {RESTLY_EWF_HANDLER}.make (service_proxy),
 					router.methods_GET + router.methods_PUT + router.methods_POST)
-
-            -- map_uri_template ("/people/",
-				-- 	create {RESTFUL_HANDLER}.make (people),
-				-- 	router.methods_GET + router.methods_POST)
-
-				-- map_uri_template ("/people",
-				-- 	create {RESTFUL_HANDLER}.make (people),
-				-- 	router.methods_POST)
-
 
 				--| As example:
 				--|   /doc is dispatched to self documentated page

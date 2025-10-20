@@ -7,19 +7,8 @@ make
 
 feature
 make
-               local
-			alice_path, bob_path: URL_PATH
       do
       create storage.make(10)
-			-- -- Result := {RESOURCE_TABLE[JSON_OBJECT]}.make_and_register("http://localhost/my_table")
-			-- create alice_path.make_from_string ("/alice")
-			-- create bob_path.make_from_string ("/bob")
-			-- storage [alice_path] := create {JSON_OBJECT}.make_with_capacity (2)
-			-- storage [alice_path].put_string ("alice", "name")
-			-- storage [alice_path].put_integer (20, "age")
-			-- storage [bob_path] := create {JSON_OBJECT}.make_with_capacity (2)
-			-- storage [bob_path].put_string ("bob", "name")
-			-- storage [bob_path].put_integer (30, "age")
 		end
 
     
@@ -54,7 +43,6 @@ extend(s_data:separate S)
          if attached {JSON_STRING} l_data["name"] as l_name then
          create l_key.make_from_string("/"+l_name.item)
             check attached l_key as ll_key then
-            print ("calculated ll_key: " + ll_key.out + "%N")
             storage.extend(l_data, ll_key)
                end
          end
