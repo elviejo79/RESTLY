@@ -1,0 +1,453 @@
+{
+  "leoHeader": {
+    "fileFormat": 2
+  },
+  "vnodes": [
+    {
+      "gnx": "agarciafdz.20251021194541.2",
+      "vh": "Implementing Storage Combinators in Eiffel",
+      "children": [
+        {
+          "gnx": "agarciafdz.20251021215206.1",
+          "vh": "Articles",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251022124429.1",
+              "vh": "Publishe / Finished",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251022131516.1",
+                  "vh": "@auto-markdown Experiment.md"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021215211.1",
+              "vh": "CaseStudy: An Iterative implementation of Storage Combinators",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021194722.1",
+                  "vh": "Abstract"
+                },
+                {
+                  "gnx": "agarciafdz.20251021215357.1",
+                  "vh": "Introduction"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021220354.1",
+              "vh": "Mapping the Design space implied by weihers storage combinators",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021200904.1",
+                  "vh": "Design space: 2 dimmensions http verbs and Location"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201312.1",
+                  "vh": "Design space: 3d http_verbs, location, storage_combinators"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201312.1"
+                },
+                {
+                  "gnx": "agarciafdz.20251021210246.1",
+                  "vh": "Design space: tick localhost server, http_client"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021194606.1",
+          "vh": "my KB of things to write",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021195816.1",
+              "vh": "Background",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021195824.1",
+                  "vh": "What is REST?",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021195944.1",
+                      "vh": "Intuitively"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021195956.1",
+                      "vh": "Fieldings Thesis"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021200014.1",
+                      "vh": "Formally defined with TCL"
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251021200105.1",
+                  "vh": "What is in-process REST?"
+                },
+                {
+                  "gnx": "agarciafdz.20251021200143.1",
+                  "vh": "What are storage combinators?"
+                },
+                {
+                  "gnx": "agarciafdz.20251021211732.1",
+                  "vh": "What is SCOOP / Concurrency",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021215446.1",
+                      "vh": "What are regions"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021215457.1",
+                      "vh": "What does it mean to be s"
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251021215531.1",
+                  "vh": "What are PolyMorphic Identfierst",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021215542.1",
+                      "vh": "What is an identifier?"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021215551.1",
+                      "vh": "What is a scheme?"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021215556.1",
+                      "vh": "What is polymorphic about an identifier?"
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251021215606.1",
+                  "vh": "What is an IPFS Content Identifier CID",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021215625.1",
+                      "vh": "What is an IPNS identifier",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251021220035.1",
+                          "vh": "and how to map it to Content Identfier"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021200205.1",
+          "vh": "Code implementations that I have done or working on",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021200240.1",
+              "vh": "Basic http verbs",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021205210.1",
+                  "vh": "Examples / Test"
+                },
+                {
+                  "gnx": "agarciafdz.20251021200343.1",
+                  "vh": "REST[S] class"
+                },
+                {
+                  "gnx": "agarciafdz.20251021200844.1",
+                  "vh": "The design space 1 dimension 5 verbs"
+                },
+                {
+                  "gnx": "agarciafdz.20251021200403.1",
+                  "vh": "REST_TABLE class"
+                },
+                {
+                  "gnx": "agarciafdz.20251021200904.1"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021201220.1",
+              "vh": "First Combinators",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021205343.1",
+                  "vh": "Examples"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201245.1",
+                  "vh": "Mapping "
+                },
+                {
+                  "gnx": "agarciafdz.20251021201235.1",
+                  "vh": "Passthrough"
+                },
+                {
+                  "gnx": "agarciafdz.20251021205517.1",
+                  "vh": "Prefix"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201312.1"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021200942.1",
+              "vh": "RESTLY_TREE",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021205223.1",
+                  "vh": "Examples / Tests"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201043.1",
+                  "vh": "REST_TREE"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201158.1",
+                  "vh": "Design space: 2 dimmensios with 2 examples"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021201422.1",
+              "vh": "RESTLY_FileSystem",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021205650.1",
+                  "vh": "Examples"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201445.1",
+                  "vh": "RESTLY_FILEIO",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021201519.1",
+                      "vh": "A Streaming Inferface"
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251021201740.1",
+                  "vh": "URL_PATH"
+                },
+                {
+                  "gnx": "agarciafdz.20251021201538.1",
+                  "vh": "Design Space",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021201550.1",
+                      "vh": "Add Streaming GET to http verbs"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021201604.1",
+                      "vh": "add a new tick to location filesystem"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021205721.1",
+              "vh": "An API Client",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021210227.1",
+                  "vh": "Example"
+                },
+                {
+                  "gnx": "agarciafdz.20251021210206.1",
+                  "vh": "GitHub Client"
+                },
+                {
+                  "gnx": "agarciafdz.20251021210246.1"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021210437.1",
+              "vh": "An API Server",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021220656.1",
+                  "vh": "Single Threaded"
+                },
+                {
+                  "gnx": "agarciafdz.20251021220708.1",
+                  "vh": "Multi threaded"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021220742.1",
+              "vh": "Polymorphic Identfiers Implementation"
+            },
+            {
+              "gnx": "agarciafdz.20251021210444.1",
+              "vh": "A Proxy to our own server"
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021210649.1",
+          "vh": "A new Dimmension Concurrency!",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021214005.1",
+              "vh": "newHeadline"
+            },
+            {
+              "gnx": "agarciafdz.20251021211738.1",
+              "vh": "Concurrency Patterns in SCOOP",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021212457.1",
+                  "vh": "CP_PROXY",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251021211749.1",
+                      "vh": "RESTLY_SCOOP_PROXY",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251021212302.1",
+                          "vh": "It has the remote_service: ONCE(\"PROCESS\")"
+                        }
+                      ]
+                    },
+                    {
+                      "gnx": "agarciafdz.20251021212132.1",
+                      "vh": "REMOTE_SERVICE",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251021212526.1",
+                          "vh": "has the inner_storage that we want to expose"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021210715.1",
+              "vh": "Impact on an API Server"
+            },
+            {
+              "gnx": "agarciafdz.20251021210733.1",
+              "vh": "Impact on Storage Combinators"
+            },
+            {
+              "gnx": "agarciafdz.20251021210800.1",
+              "vh": "the Pipe Combinator"
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021214011.1",
+          "vh": "Another new dimmension Distribution",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021214020.1",
+              "vh": "MQTT"
+            },
+            {
+              "gnx": "agarciafdz.20251021214028.1",
+              "vh": "WebApis with caching ETags"
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021214530.1",
+          "vh": "Another System GitLess ",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021214541.1",
+              "vh": "Systems that change through time."
+            },
+            {
+              "gnx": "agarciafdz.20251021214559.1",
+              "vh": "Modeling GitLess",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251021214735.1",
+                  "vh": "Modeling Pijul"
+                },
+                {
+                  "gnx": "agarciafdz.20251021214727.1",
+                  "vh": "Modeling JuJitsu"
+                },
+                {
+                  "gnx": "agarciafdz.20251021214608.1",
+                  "vh": "Modeling Fossil ?"
+                },
+                {
+                  "gnx": "agarciafdz.20251021214615.1",
+                  "vh": "Modeling Hg / Mercurial"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251021214629.1",
+              "vh": "Modeling TerminusDB"
+            },
+            {
+              "gnx": "agarciafdz.20251021214748.1",
+              "vh": "Modeling a BlockChain ???"
+            },
+            {
+              "gnx": "agarciafdz.20251021214636.1",
+              "vh": "A combinotar from RESTLY to GitLy"
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021214836.1",
+          "vh": "Modeling State Machine in Eiffel",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251021214847.1",
+              "vh": "Adding a new Syntax for State Machines with Eiffel"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "tnodes": {
+    "agarciafdz.20251022124531.1": "@language md\n",
+    "agarciafdz.20251022124531.2": "\nArchitecture Oriented Programming (AOP) is a programming paradigm that increases reusability and modularity of Object Oriented Languages.\nBy identifying patterns found at the *architecture level* of *systems* and shrinking them at the *code level* of *programs*.\nThe advanced features of Eiffel, such as Genericity, Aliasing, and Design by Contract, make it an ideal environment to implement AOP.\nAnd it would result in smaller code with more reusability in Eiffel programs.",
+    "agarciafdz.20251022124531.3": "\nArchitecture Oriented Programming (AOP) is the name given by Weiher and Hirschfeld to their ideas in developing the Objective Smalltalk language.\nThe main idea is delightfully simple:\n\n>  What if we took inspiration from the architecture of big systems,\n>    and shrink the techniques to organize a single program.\n\n(Weiher, 2020 a)  identified the first patterns and also made a summary in the YouTube presentation: \"Can programmers escape the gentle tyranny of call return\" (Weiher, 2020 b)\nAlso, each pattern was published independently. As is shown in table [Summary]:",
+    "agarciafdz.20251022124531.4": "\n| Inspired by                      | AOP Proposes                          | One Sentence Summary                                                                                                                                                                                 | Examples                                                                                                                                                     | Reference                                                                                                     |\n|----------------------------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|\n| Internet URLs and URIs           | Polymorphic identifiers               | If every resource on your program: variables, objects, files, APIs had a local URI that you can use to communicate with it.                                                                          | var:person/name var:person/{attribute},     file://tmp/button.png ,    http://www.example.com/button.png, file:{env:HOME}/rfcs/{rfcName}                     | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Internet Protocols FTP, WWW, IRC | Schemes                               | The same way that a URI like ftp://myDir/myImage.jpg has a different behavior, than www://myDy/myImage.jpg. Schemes change the behavior that Polymorphic URI will have                               |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Spreadsheet formulas             | References                            | The same way that changing a value in a cell in a spreadsheet automatically recalculates the derived values. Reference values will automatically update the derived values in a uniform identifier. |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Unix pipes and filters           | Polymorphic write streams             | What if unix pipes, instead of sending a chain of text to the next process, threw a nested object structure                                                                                           |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2019). Standard object out: streaming objects with polymorphic write streams.   |\n| Rest and stackable filesystems   | Storage combinators                   | With limited API verbs (like REST) you can create components that can compose, web servers combined with cache servers and load balancers.                                                           | A composition serving the files in $HOME/Sites, cached by memory. server := ref:file:{env:HOME} -> CachingStore -> SchemeHTTPServer port:8080. server start. | Weiher, M., & Hirschfeld, R. (2019). Storage combinators.                                                     |\n| Constraint programming           | Constraints as polymorphic connectors | What if the assignment operation had more meaning, such as keeping the values unidirectionally updated or synchronized?                                                                              |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2016). Constraints as polymorphic connectors.                                   |\n[Table [Summary]: Summary of AOP Patterns and their publication]\n\n",
+    "agarciafdz.20251022124531.5": "\nIn his conference, Marcel P. Weiher says that the comments for Unicon made it decide to create a new language (Objective Smalltalk) instead of a library for an existing language.\nAnd on this project, I'm doing exactly that: creating a library, not a new language.\nSo it might be a bad idea.\nHowever, the advanced tools of Eiffel make this a better approach in this language.",
+    "agarciafdz.20251022124531.6": "\nTo get the implementation of AOP in the Eiffel, I intend to:",
+    "agarciafdz.20251022124531.7": "\nWrite a complete design by contract specification of the architecture patterns identified.\nThis will require also the description of frame rules.\nProbably using \"model queries\" (Polikarpova et al. 2012)",
+    "agarciafdz.20251022124531.8": "\nI'll make several implementations.\nHere, I'll experiment.\nWhere I'd ask a set of 5 developers to each\ndevelop their storage combinator and polymorphic identifier.\nThen, I will try to compose all of them.\nAnd survey the developers to see how they feel about the patterns' specification and composability.",
+    "agarciafdz.20251022124531.9": "\nTo test that the code based on AOP is more reusable than the current call return style.\nI will reimplement a project in Eiffel (like the Nino Webserver).\nOn AOP and measure using Avontis & Mingis 93 \"Metrics from Object-Oriented Design.\"",
+    "agarciafdz.20251022124531.10": "\nIt seems pretentious to talk about \"future work\" when discussing a proposal for a future project.\nBut, assuming that I can achieve the goals in the plan. I.e., a specification and implementation for AOP in Eiffel.\nWhat other avenues will open for exploration?\nAt the moment, I can imagine the following:",
+    "agarciafdz.20251022124531.11": "\nWeiher has currently only identified six architectural patterns and shrunk them to the level of programs.\nSo, a natural progression of this work would be to specify and code even more patterns.\n\nFor example, how would a queue-based architecture (like Rabbit MQ) look at the program level? Something like Erlang with OTP?\n\nHow would an Event Sourcing architecture look at the program level?\nCould we reuse the agent and pub/sub mechanism in GUI Eiffel for other object communication, not only GUI?\nReusing it as the main means of communication among objects.",
+    "agarciafdz.20251022124531.12": "\nIf we follow the headlines, there are two ways of thinking about programming and Large Language Models (LLMs like chatgpt).\nEither:\n\n> Programming is dead, and ChatGPT killed it.\n\nor\n\n> ChatGPT and their inherent hallucinations make it irrelevant to programming.\n\nHowever, I think Design by Contract (DBC) opens an avenue for collaboration between the two approaches.\nIn this collaboration, humans would write a specification in DBC  with the appropriate frame rules.\nThen ChatGPT would try to code to the specification.\n\nSo it would be fascinating to see if, given a spec for AOP, we could get ChatGPT to implement it.",
+    "agarciafdz.20251022124531.13": "\nWhile developing this work, other avenues of growth will become more apparent.",
+    "agarciafdz.20251022124531.14": "\nAs a result of this work, I expect to deliver the following work products.\n\n- Write a design by contract specification of the AOP patterns documented by Weiher.\n- Program an Eiffel implementation of said patterns.\n- Share the specification and its benefits with the academic and development communities so they can use AOP.",
+    "agarciafdz.20251022124531.15": "\n",
+    "agarciafdz.20251022124531.16": "- Avotins, J., & Mingins, C. (1993). Metrics for Object-Oriented Design. International Conference on Software Technology: Methods and Tools.\n",
+    "agarciafdz.20251022124531.17": "- Polikarpova, N., Furia, C.A., Pei, Y., Wei, Y., & Meyer, B. (2012). What good are strong specifications? 2013 35th International Conference on Software Engineering (ICSE), 262-271.\n",
+    "agarciafdz.20251022124531.18": "- Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. Dynamic Languages Symposium.\n",
+    "agarciafdz.20251022124531.19": "- Weiher, M., & Hirschfeld, R. (2016). Constraints as polymorphic connectors. Proceedings of the 15th International Conference on Modularity.\n",
+    "agarciafdz.20251022124531.20": "- Weiher, M., & Hirschfeld, R. (2019). Storage combinators. Proceedings of the 2019 ACM SIGPLAN International Symposium on New Ideas, New Paradigms, and Reflections on Programming and Software.",
+    "agarciafdz.20251022124531.21": "- Weiher, M., & Hirschfeld, R. (2019). Standard object out: streaming objects with polymorphic write streams. Proceedings of the 15th ACM SIGPLAN International Symposium on Dynamic Languages.\n",
+    "agarciafdz.20251022124531.22": "- Weiher, M. (2020 a). Can programmers escape the gentle tyranny of call/return? Companion Proceedings of the 4th International Conference on Art, Science, and Engineering of Programming.",
+    "agarciafdz.20251022124531.23": "- Weiher, M. (2020 b). Can programmers escape the gentle tyranny of call/return? https://www.youtube.com/watch?v=Gel8ffr4pqw\n",
+    "agarciafdz.20251021194722.1": "Storage Combinators are a novel composition mechanism defined by MPWeiher.\nThe fundamental idea is to take the REST Archicture, defined by Fielding\nAnd shrink it to coordinate the colaboration of components inside a single program.\nNot between different servers in the internet.\n\nThe benefits of this style of composition have been reported to be between 2x and 10x smaller lines of code.\nAnd 33x reduction on hardware.\n\nCurrently there is only a prefered implementation of StorageCombinators in the Objective-Smalltalk programming language.\n\nThis papers presents an Specification of Storage Combinators,  using Eiffel's Design by Contract.\nThe specification was co-evolved with the implementation of the RESTLY library for Eiffel, that implements it.\n\nThe RESTLY library is directly beneficial for Eiffel developers,\nand the specification can be used by implementers in other languages to develop their own Storage Combinator libraries.\n",
+    "agarciafdz.20251021200904.1": "bla\n",
+    "agarciafdz.20251021201740.1": "URL_PATH is just a string that start with a / and doesn't have spaces",
+    "agarciafdz.20251021211749.1": "RESTLY_SCOOP_PROXY\n\nIs a pattern that isolates concurrent resource,\nso that it can communicate with single-threaded code.\n\nBy analogy is like a local_proxy to remote server that is located in another machine,\nand that requires serilazation deserealization of data.",
+    "agarciafdz.20251021212132.1": "this one is the one that has the same interface with SEPARATE parameters.\n\nAnd has inside the storage... "
+  }
+}
