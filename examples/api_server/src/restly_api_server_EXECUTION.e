@@ -30,22 +30,15 @@ feature -- Router
 	setup_router
 			-- Setup `router'
 		local
-			fhdl: WSF_FILE_SYSTEM_HANDLER
+      fhdl: WSF_FILE_SYSTEM_HANDLER
+      service_proxy: SERVICE_PROXY[JSON_OBJECT]
 		do
-			-- | exposing a dictionary
+			-- Exposing a SCOOP-enabled REST service
+            create service_proxy
 
 				map_uri_template ("/people{/id}",
-					create {RESTLY_EWF_HANDLER}.make (people),
+					create {RESTLY_EWF_HANDLER}.make (service_proxy),
 					router.methods_GET + router.methods_PUT + router.methods_POST)
-
-            -- map_uri_template ("/people/",
-				-- 	create {RESTFUL_HANDLER}.make (people),
-				-- 	router.methods_GET + router.methods_POST)
-
-				-- map_uri_template ("/people",
-				-- 	create {RESTFUL_HANDLER}.make (people),
-				-- 	router.methods_POST)
-
 
 				--| As example:
 				--|   /doc is dispatched to self documentated page
@@ -61,26 +54,5 @@ feature -- Router
 
 
 		end
-feature -- | Database (or state preserving variable)
-
-
-people: REST_TABLE[JSON_OBJECT]
--- Shared table instance, initialized once and accessible across all requests
-		local
-			alice_path, bob_path: URL_PATH
-		once
-			-- Result := {RESOURCE_TABLE[JSON_OBJECT]}.make_and_register("http://localhost/my_table")
-			create alice_path.make_from_string ("/alice")
-			create bob_path.make_from_string ("/bob")
-			create Result.make (10)
-			Result [alice_path] := create {JSON_OBJECT}.make_with_capacity (2)
-			Result [alice_path].put_string ("alice", "name")
-			Result [alice_path].put_integer (20, "age")
-			Result [bob_path] := create {JSON_OBJECT}.make_with_capacity (2)
-			Result [bob_path].put_string ("bob", "name")
-			Result [bob_path].put_integer (30, "age")
-		end
-
-
 
 end

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-22-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-22-0 http://www.eiffel.com/developers/xml/configuration-1-22-0.xsd" name="restful" uuid="0AA6AB17-0539-480B-ADAE-38CEA07000D3" readonly="false" library_target="library">
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-22-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-22-0 http://www.eiffel.com/developers/xml/configuration-1-22-0.xsd" name="restful" uuid="0AA6AB17-0539-480B-ADAE-38CEA07000D3" readonly="false" library_target="restly">
 	<description>RESTFUL library for RESTful API interactions</description>
 	<target name="base" abstract="true">
 		<description>Base configuration for all RESTFUL targets</description>
@@ -19,7 +19,10 @@
 			</option>
 		</library>
 		<library name="http_client" location="$ISE_LIBRARY\contrib\library\network\http_client\http_client.ecf"/>
-		<library name="json" location="$ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf"/>
+        <library name="json" location="$ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf">
+            <renaming old_name="JSON_OBJECT" new_name="EJSON_JSON_OBJECT"/>
+        </library>
+
 		<library name="time" location="$ISE_LIBRARY\library\time\time.ecf"/>
 		<library name="uri" location="$ISE_LIBRARY\library\text\uri\uri.ecf">
 			<option warning="none">
@@ -46,9 +49,12 @@
 			<option warning="none">
 			</option>
 		</cluster>
+        <capability>
+            <concurrency support="scoop"/>
+        </capability>
 	</target>
-	<target name="library" extends="base">
-		<description>RESTFUL library - for use by external projects</description>
+	<target name="restly" extends="base">
+		<description>REST inspired library to create composable systems</description>
 	</target>
 	<target name="example" extends="base">
 		<description>RESTFUL example application</description>

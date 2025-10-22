@@ -20,14 +20,14 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_storage: REST_TABLE[JSON_OBJECT])
+	make (a_storage: like storage)
 		do
 			storage := a_storage
 		end
 
 feature {NONE} -- Fields
 
-	storage: REST_TABLE[JSON_OBJECT]
+	storage: REST[JSON_OBJECT]
 
 	id_parameter_name: STRING
 		attribute
@@ -39,29 +39,8 @@ feature -- Access
 	response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
 			-- Handle REST operations based on HTTP method
 		do
-      -- | TODO:
-      -- Escribir el articulo
-      -- hacer que en execution sólo tenga que declarar el handler una sola vez.
-      -- >> [x] Esto se hace con {/id} pero entonces ahora genera una 
-      -- tabla
-      -- la solucion fue crear el helper function request_path
-      -- >> [x] limpiar la implementación del router
-      -- >> [x] usar (if expression) para limpiar el código
-      -- >> >>  >> la solucion fue la funcion if_exists_execute
-      -- >> [x] investigar si starts with router podría darme el resto
-      -- >> >>> >>> si podría pero al final use el helper request_path
-      -- [x] crear mensajes de error más amigables.
-      -- >> [x] hacer que el creator sea más amigable.
-			-- [X] probablemente rehacer la de WSF_JSON_RESPONSE con los constructors.
-      -- exponer todos los demás metodos REST_W_STORAGE
-      -- ver qué se requiere para hacerlo concurent.
-      -- poner en el repositorio de código.
-      -- hacer la traducción del capítulo 3
-      -- hacer a single project canvas for the AI 
-      -- https://antonionietorodriguez.com/project-canvas/
-      
-      -- If the Result was attached, it means we are in a Retry, and 
-      -- must just send the Reuslt as it was managed in handle_rescue
+      -- If the Result was attached, it means we are in a Retry, and
+      -- must just send the Result as it was managed in handle_rescue
       
       if not attached Result then --if not has_failed_before then
          if attached requested_path(req) as path  then --if we have a Path 
@@ -169,16 +148,15 @@ feature {NONE} -- HTTP Handlers
 			-- POST to create new resource
 		local
 			json_data: detachable JSON_OBJECT
-			new_path: URL_PATH
+			input_data_path: URL_PATH
 		do
 			json_data := parse_json_object (req)
-
 			if attached json_data then
 				check attached {JSON_STRING} json_data ["name"] as l_name then
-					create new_path.make_from_string ("/" + l_name.unescaped_string_8)
+            create input_data_path.make_from_string ("/" + l_name.unescaped_string_8)
+               check attached input_data_path as new_path then
 					if not storage.has_key (new_path) then
 						storage.extend (json_data, new_path)
-
 						-- 201 Created with Location header using chainable interface
 						Result := {WSF_JSON_RESPONSE}.created
 							.with_json_object (json_data)
@@ -188,9 +166,10 @@ feature {NONE} -- HTTP Handlers
 						Result := {WSF_JSON_RESPONSE}.conflict
 							.with_detail ("Resource already exists at " + new_path.out)
 					end
+                     end
 				end
 			else
-				Result := {WSF_JSON_RESPONSE}.precondition_failed
+Result := {WSF_JSON_RESPONSE}.precondition_failed.with_detail("not_attached_json_data")
 			end
 		end
 
@@ -217,26 +196,26 @@ feature {NONE} -- HTTP Handlers
 
 feature {NONE} -- Helpers
 
-	list_all: WSF_JSON_RESPONSE
-			-- Return all resources as JSON array
-		local
-			json_array: JSON_ARRAY
-			obj: JSON_OBJECT
-		do
-			create json_array.make (storage.count)
-			across
-				storage as c
-			loop
-				create obj.make
-				-- "key" field
-				obj.put (create {JSON_STRING}.make_from_string (c.key.out), "key")
-				-- "value" field (number)
-				obj.put (c.item, "value")
-				json_array.extend (obj)
-			end
+	-- list_all: WSF_JSON_RESPONSE
+	-- 		-- Return all resources as JSON array
+	-- 	local
+	-- 		json_array: JSON_ARRAY
+	-- 		obj: JSON_OBJECT
+	-- 	do
+	-- 		create json_array.make (storage.count)
+	-- 		across
+	-- 			storage as c
+	-- 		loop
+	-- 			create obj.make
+	-- 			-- "key" field
+	-- 			obj.put (create {JSON_STRING}.make_from_string (c.key.out), "key")
+	-- 			-- "value" field (number)
+	-- 			obj.put (c.item, "value")
+	-- 			json_array.extend (obj)
+	-- 		end
 
-			Result := create {WSF_JSON_RESPONSE}.make_with_body (json_array.representation)
-		end
+	-- 		Result := create {WSF_JSON_RESPONSE}.make_with_body (json_array.representation)
+	-- 	end
 
 	parse_json_object (req: WSF_REQUEST): detachable JSON_OBJECT
 			-- Parse JSON object from request body
@@ -246,14 +225,10 @@ feature {NONE} -- Helpers
 		do
 			if req.content_length_value > 0 then
 				create input_data.make_empty
-				req.read_input_data_into (input_data)
-				create json_parser.make_with_string (input_data)
-				json_parser.parse_content
-				if attached {JSON_OBJECT} json_parser.parsed_json_value as jo then
-					Result := jo
-				end
-			end
-			-- Returns Void if parsing fails or no content
+               req.read_input_data_into (input_data)
+               create Result.make_from_string(input_data)
+               -- Returns Void if parsing fails or no content
+         end 
 		end
 
    if_exists_execute (path: URL_PATH; handler: FUNCTION [URL_PATH, WSF_JSON_RESPONSE]): WSF_JSON_RESPONSE
