@@ -8,30 +8,636 @@
       "vh": "Implementing Storage Combinators in Eiffel",
       "children": [
         {
-          "gnx": "agarciafdz.20251021215206.1",
-          "vh": "Articles",
+          "gnx": "agarciafdz.20251024145644.1",
+          "vh": "random thoughts",
           "children": [
             {
-              "gnx": "agarciafdz.20251022124429.1",
-              "vh": "Publishe / Finished",
+              "gnx": "agarciafdz.20251107231447.1",
+              "vh": "The dark corners of URLs"
+            },
+            {
+              "gnx": "agarciafdz.20251102131736.1",
+              "vh": "How to Design an Internal Tree",
               "children": [
                 {
-                  "gnx": "agarciafdz.20251022131516.1",
-                  "vh": "@auto-markdown Experiment.md"
+                  "gnx": "agarciafdz.20251102132724.1",
+                  "vh": "What is my wishlist for an FileSystem Tree?",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251102135319.1",
+                      "vh": "It should let me create Fuse Filesystem Naturally, the same way RESTLY create api's naturally"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251102135402.1",
+                      "vh": "It should let me expose a filesystem internally in a natural way, like RESTLY let's me consult an API locally"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251102135428.1",
+                      "vh": "It should let me manipulate JSON and XML as a file system!"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251102135449.1",
+                      "vh": "let me expose a JSON and XML as filesystem, as the project that I like does"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251102140014.1",
+                      "vh": "then I should be able to create a RESTLY_TREE"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251102140116.1",
+                      "vh": "And finally expose a RESTLY_TREE as web-servie??"
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251102132727.1",
+                  "vh": "Maybe Develop a filesystem as TWO_WAY_TREE"
+                },
+                {
+                  "gnx": "agarciafdz.20251102131754.1",
+                  "vh": "A Paper for verified file system",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251102135910.1",
+                      "vh": "I no longer likes this tests, I thin the formally verified hirerchical file system is correct",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251031224149.1",
+                          "vh": "Unit test for a prefix-tree for a dirctory listing."
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
             {
-              "gnx": "agarciafdz.20251021215211.1",
-              "vh": "CaseStudy: An Iterative implementation of Storage Combinators",
+              "gnx": "agarciafdz.20251025192835.1",
+              "vh": "Bonito digaram de secuenca para RESTLY"
+            },
+            {
+              "gnx": "agarciafdz.20251026185733.1",
+              "vh": "Me encabrona mucho que PUT pueda crear un resource"
+            },
+            {
+              "gnx": "agarciafdz.20251024145651.1",
+              "vh": "Bertrand Meyer's The Component Challenge"
+            },
+            {
+              "gnx": "agarciafdz.20251026155326.1",
+              "vh": "Goldratt Standing on the shoulder of giants"
+            }
+          ]
+        },
+        {
+          "gnx": "agarciafdz.20251021215206.1",
+          "vh": "Articles",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251102140608.1",
+              "vh": "Examples to use in the paper",
               "children": [
                 {
-                  "gnx": "agarciafdz.20251021194722.1",
-                  "vh": "Abstract"
+                  "gnx": "agarciafdz.20251102140740.1",
+                  "vh": "TODO APP"
                 },
                 {
-                  "gnx": "agarciafdz.20251021215357.1",
-                  "vh": "Introduction"
+                  "gnx": "agarciafdz.20251102140728.1",
+                  "vh": "Building your own Key / Value store database"
+                },
+                {
+                  "gnx": "agarciafdz.20251102140718.1",
+                  "vh": "local cache of a remote api"
+                },
+                {
+                  "gnx": "agarciafdz.20251102140646.1",
+                  "vh": "Connecting a Thermal Printer to the internet"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251029143117.1",
+              "vh": "I will write",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251105131344.1",
+                  "vh": "@chapter Paper 0: Polymorphic Identifiers",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251105131446.1",
+                      "vh": "@auto-md ~/draft-paper-polymorphic-identifiers.md"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251105131453.1",
+                      "vh": "Article mode"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251111194028.1",
+                      "vh": "Ideas that don't want to be part of the document",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251111194144.1",
+                          "vh": "in PlantUML"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251111194200.1",
+                          "vh": "in markdown"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251024144120.1",
+                  "vh": "@chapter Paper 1: RESTly and implementation of Weiher's Storage Combinators in Eiffel",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251024144157.1",
+                      "vh": "Abstract"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251030154155.1",
+                      "vh": "Introduction"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251030171022.1",
+                      "vh": "A difficult Decision"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251024151757.1",
+                      "vh": "Background",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251024151802.1",
+                          "vh": "What is REST intuitively?",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251030174817.1",
+                              "vh": "Defined in Roy Fielding's thesis",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251030180812.1",
+                                  "vh": "Quote"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251024160750.1",
+                          "vh": "3 Overview of REST on HTTP",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026160323.1",
+                              "vh": "3 Overview of REST on HTTP",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251026160323.2",
+                                  "vh": "(1) Each resource has an id. "
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026160323.3",
+                                  "vh": "(2) Resources are linked together."
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026160323.4",
+                                  "vh": "(3) Using standard methods.",
+                                  "children": [
+                                    {
+                                      "gnx": "agarciafdz.20251026160323.5",
+                                      "vh": "GET"
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251026160323.6",
+                                      "vh": "PUT",
+                                      "children": [
+                                        {
+                                          "gnx": "agarciafdz.20251026160323.7",
+                                          "vh": "This is wrong"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251026160323.8",
+                                      "vh": "POST",
+                                      "children": [
+                                        {
+                                          "gnx": "agarciafdz.20251026160323.9",
+                                          "vh": "This is also wrong"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251026160323.10",
+                                      "vh": "DELETE"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026160323.11",
+                                  "vh": "(4) Representations of resources. "
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026160323.12",
+                                  "vh": "(5) Stateless behavior of the communications."
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251026175624.1",
+                          "vh": "HTTP",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026180909.1",
+                              "vh": "Request Methods",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251026180820.1",
+                                  "vh": "Request Methods Definition"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026180521.1",
+                                  "vh": "Request Methods Table"
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026180705.1",
+                              "vh": "Error Messages"
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029123227.1",
+                          "vh": "Weiher's Storage Combinators",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251029123313.1",
+                              "vh": "What are Storage Combinators"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251029123306.1",
+                              "vh": "newHeadline"
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251026160946.1",
+                          "vh": "Eiffel Method and the Eiffel Language",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026175334.1",
+                              "vh": "Principles introduced by Eiffel programming language",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251026175334.2",
+                                  "vh": "1. Design by contract (DbC)"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026175334.3",
+                                  "vh": "2. Command\u2013query separation (CQS)"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026175334.4",
+                                  "vh": "3. Uniform access principle (UAP)"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026175334.5",
+                                  "vh": "4. Single Choice Principle (SCP) / DRY"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026175334.6",
+                                  "vh": "5. Open/Closed Principle (OCP)"
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026161024.1",
+                              "vh": "Why Eiffel?",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251026191134.1",
+                                  "vh": "Uniform Access Principle"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026180110.1",
+                                  "vh": "Command\u2013query separation (CQS)"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026175540.1",
+                                  "vh": "Design By Contract"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026191006.1",
+                                  "vh": "Open / Closed Principle"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251026192150.1",
+                                  "vh": "DRY"
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026192735.1",
+                              "vh": "Componetization Karine Arnaut Thesis",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251026210148.1",
+                                  "vh": "The difference between a Pattern and a Component"
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251026210228.1",
+                          "vh": "Daniel Jackson",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026210234.1",
+                              "vh": "Concept Oriented Design"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "gnx": "agarciafdz.20251025181330.1",
+                      "vh": "Motivating Examples",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251025181602.1",
+                          "vh": "TODO APP"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251026174500.1",
+                          "vh": "Building your own Key / Value store database"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251025181348.1",
+                          "vh": "local cache of a remote api"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251025181625.1",
+                          "vh": "Connecting a Thermal Printer to the internet"
+                        }
+                      ]
+                    },
+                    {
+                      "gnx": "agarciafdz.20251026161015.1",
+                      "vh": "Development",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251103140048.1",
+                          "vh": "Translatig REST to Eiffel",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251104124706.1",
+                              "vh": "STORE protocl becomes RESTLY",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251104124949.1",
+                                  "vh": "Generat the Short view",
+                                  "children": [
+                                    {
+                                      "gnx": "agarciafdz.20251104131546.1",
+                                      "vh": "@edit /home/agarciafdz/daily/2510oct21/RESTFUL/for_paper/restly_short_form.e"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251026192725.1",
+                          "vh": "Combinators",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026210031.1",
+                              "vh": "Cache"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026210046.1",
+                              "vh": "Logging"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251102141251.1",
+                              "vh": "Switcher / Inspect / Router"
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "gnx": "agarciafdz.20251024160810.1",
+                      "vh": "References",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251026165856.1",
+                          "vh": "Principles introduced by Eiffel programming language",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251026165932.1",
+                              "vh": "1. Design by contract (DbC)"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026170038.1",
+                              "vh": "2. Command\u2013query separation (CQS)"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026170108.1",
+                              "vh": "3. Uniform access principle (UAP)"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026170147.1",
+                              "vh": "4. Single Choice Principle (SCP) / DRY"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251026170222.1",
+                              "vh": "5. Open/Closed Principle (OCP)"
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251024160821.1",
+                          "vh": "Formalization and verification of REST on HTTP",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251024160843.1",
+                              "vh": "3 Overview of REST on HTTP",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251024160953.1",
+                                  "vh": "(1) Each resource has an id. "
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251024161055.1",
+                                  "vh": "(2) Resources are linked together."
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251024161153.1",
+                                  "vh": "(3) Using standard methods.",
+                                  "children": [
+                                    {
+                                      "gnx": "agarciafdz.20251025161913.1",
+                                      "vh": "GET"
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251025161934.1",
+                                      "vh": "PUT",
+                                      "children": [
+                                        {
+                                          "gnx": "agarciafdz.20251025173047.1",
+                                          "vh": "This is wrong"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251025161949.1",
+                                      "vh": "POST",
+                                      "children": [
+                                        {
+                                          "gnx": "agarciafdz.20251025173623.1",
+                                          "vh": "This is also wrong"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "gnx": "agarciafdz.20251025162023.1",
+                                      "vh": "DELETE"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251024161629.1",
+                                  "vh": "(4) Representations of resources. "
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251024161647.1",
+                                  "vh": "(5) Stateless behavior of the communications."
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251029135726.1",
+                  "vh": "@chapter Paper 2: Extending RESTLy with new capabilities",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251029135918.1",
+                      "vh": "What new capabilities?",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251029140647.1",
+                          "vh": "The creation of the Streaming Pipe Operator"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029140222.1",
+                          "vh": "a streaming interface for POST"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029140156.1",
+                          "vh": "a Streaming Interface for GET"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029135933.1",
+                          "vh": "a Prefixed Tree Data Structure",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251029135958.1",
+                              "vh": "Has implications for the Directory Store / Entity / Resource / Endpoint?"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251029140114.1",
+                              "vh": "Has implications for the Single Threaded Web Server",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251029141430.1",
+                                  "vh": "Conduit Bench Mark"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251029141452.1",
+                                  "vh": "PetStore Swagger"
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "gnx": "agarciafdz.20251029141403.1",
+                      "vh": "Motivating Examples",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251029141442.1",
+                          "vh": "PetStore Swagger"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029141422.1",
+                          "vh": "Conduit Bench Mark"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251029135807.1",
+                  "vh": "@chapter Paper 3: Concurrent RESTly - SCOOP"
+                },
+                {
+                  "gnx": "agarciafdz.20251029142315.1",
+                  "vh": "@chapter Paper 4: Distributed RESTly and Reactive Programming Distributed",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251029142338.1",
+                      "vh": "implications",
+                      "children": [
+                        {
+                          "gnx": "agarciafdz.20251029142751.1",
+                          "vh": "When using the Pipe operator we can abstract to a Message Queue!! like Rabbit MQ"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251029142345.1",
+                          "vh": "When making an API call, we might also set the answer to be a web-hook"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "gnx": "agarciafdz.20251029182826.1",
+                  "vh": "@Chapter Paper 4.5: An implementation of State Machines, and Objective State Programming for Eiffel"
+                },
+                {
+                  "gnx": "agarciafdz.20251029142844.1",
+                  "vh": "@chapter Paper 5: A new paradigm GitLess-ly"
+                },
+                {
+                  "gnx": "agarciafdz.20251029181940.1",
+                  "vh": "@Chapter Paper 6: Implementing a Multi-Tree on top of a Graph with a Jsonata Query Language"
+                },
+                {
+                  "gnx": "agarciafdz.20251029182443.1",
+                  "vh": "@Chapter Paper 7: Implementing an IPFS and and IPLD scheme for the RESTLY library"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20251022124429.1",
+              "vh": "Published / Finished",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20251022131516.1",
+                  "vh": "@auto-markdown Experiment.md"
                 }
               ]
             },
@@ -421,33 +1027,167 @@
     }
   ],
   "tnodes": {
-    "agarciafdz.20251022124531.1": "@language md\n",
-    "agarciafdz.20251022124531.2": "\nArchitecture Oriented Programming (AOP) is a programming paradigm that increases reusability and modularity of Object Oriented Languages.\nBy identifying patterns found at the *architecture level* of *systems* and shrinking them at the *code level* of *programs*.\nThe advanced features of Eiffel, such as Genericity, Aliasing, and Design by Contract, make it an ideal environment to implement AOP.\nAnd it would result in smaller code with more reusability in Eiffel programs.",
-    "agarciafdz.20251022124531.3": "\nArchitecture Oriented Programming (AOP) is the name given by Weiher and Hirschfeld to their ideas in developing the Objective Smalltalk language.\nThe main idea is delightfully simple:\n\n>  What if we took inspiration from the architecture of big systems,\n>    and shrink the techniques to organize a single program.\n\n(Weiher, 2020 a)  identified the first patterns and also made a summary in the YouTube presentation: \"Can programmers escape the gentle tyranny of call return\" (Weiher, 2020 b)\nAlso, each pattern was published independently. As is shown in table [Summary]:",
-    "agarciafdz.20251022124531.4": "\n| Inspired by                      | AOP Proposes                          | One Sentence Summary                                                                                                                                                                                 | Examples                                                                                                                                                     | Reference                                                                                                     |\n|----------------------------------|---------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------|\n| Internet URLs and URIs           | Polymorphic identifiers               | If every resource on your program: variables, objects, files, APIs had a local URI that you can use to communicate with it.                                                                          | var:person/name var:person/{attribute},     file://tmp/button.png ,    http://www.example.com/button.png, file:{env:HOME}/rfcs/{rfcName}                     | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Internet Protocols FTP, WWW, IRC | Schemes                               | The same way that a URI like ftp://myDir/myImage.jpg has a different behavior, than www://myDy/myImage.jpg. Schemes change the behavior that Polymorphic URI will have                               |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Spreadsheet formulas             | References                            | The same way that changing a value in a cell in a spreadsheet automatically recalculates the derived values. Reference values will automatically update the derived values in a uniform identifier. |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. |\n| Unix pipes and filters           | Polymorphic write streams             | What if unix pipes, instead of sending a chain of text to the next process, threw a nested object structure                                                                                           |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2019). Standard object out: streaming objects with polymorphic write streams.   |\n| Rest and stackable filesystems   | Storage combinators                   | With limited API verbs (like REST) you can create components that can compose, web servers combined with cache servers and load balancers.                                                           | A composition serving the files in $HOME/Sites, cached by memory. server := ref:file:{env:HOME} -> CachingStore -> SchemeHTTPServer port:8080. server start. | Weiher, M., & Hirschfeld, R. (2019). Storage combinators.                                                     |\n| Constraint programming           | Constraints as polymorphic connectors | What if the assignment operation had more meaning, such as keeping the values unidirectionally updated or synchronized?                                                                              |                                                                                                                                                              | Weiher, M., & Hirschfeld, R. (2016). Constraints as polymorphic connectors.                                   |\n[Table [Summary]: Summary of AOP Patterns and their publication]\n\n",
-    "agarciafdz.20251022124531.5": "\nIn his conference, Marcel P. Weiher says that the comments for Unicon made it decide to create a new language (Objective Smalltalk) instead of a library for an existing language.\nAnd on this project, I'm doing exactly that: creating a library, not a new language.\nSo it might be a bad idea.\nHowever, the advanced tools of Eiffel make this a better approach in this language.",
-    "agarciafdz.20251022124531.6": "\nTo get the implementation of AOP in the Eiffel, I intend to:",
-    "agarciafdz.20251022124531.7": "\nWrite a complete design by contract specification of the architecture patterns identified.\nThis will require also the description of frame rules.\nProbably using \"model queries\" (Polikarpova et al. 2012)",
-    "agarciafdz.20251022124531.8": "\nI'll make several implementations.\nHere, I'll experiment.\nWhere I'd ask a set of 5 developers to each\ndevelop their storage combinator and polymorphic identifier.\nThen, I will try to compose all of them.\nAnd survey the developers to see how they feel about the patterns' specification and composability.",
-    "agarciafdz.20251022124531.9": "\nTo test that the code based on AOP is more reusable than the current call return style.\nI will reimplement a project in Eiffel (like the Nino Webserver).\nOn AOP and measure using Avontis & Mingis 93 \"Metrics from Object-Oriented Design.\"",
-    "agarciafdz.20251022124531.10": "\nIt seems pretentious to talk about \"future work\" when discussing a proposal for a future project.\nBut, assuming that I can achieve the goals in the plan. I.e., a specification and implementation for AOP in Eiffel.\nWhat other avenues will open for exploration?\nAt the moment, I can imagine the following:",
-    "agarciafdz.20251022124531.11": "\nWeiher has currently only identified six architectural patterns and shrunk them to the level of programs.\nSo, a natural progression of this work would be to specify and code even more patterns.\n\nFor example, how would a queue-based architecture (like Rabbit MQ) look at the program level? Something like Erlang with OTP?\n\nHow would an Event Sourcing architecture look at the program level?\nCould we reuse the agent and pub/sub mechanism in GUI Eiffel for other object communication, not only GUI?\nReusing it as the main means of communication among objects.",
-    "agarciafdz.20251022124531.12": "\nIf we follow the headlines, there are two ways of thinking about programming and Large Language Models (LLMs like chatgpt).\nEither:\n\n> Programming is dead, and ChatGPT killed it.\n\nor\n\n> ChatGPT and their inherent hallucinations make it irrelevant to programming.\n\nHowever, I think Design by Contract (DBC) opens an avenue for collaboration between the two approaches.\nIn this collaboration, humans would write a specification in DBC  with the appropriate frame rules.\nThen ChatGPT would try to code to the specification.\n\nSo it would be fascinating to see if, given a spec for AOP, we could get ChatGPT to implement it.",
-    "agarciafdz.20251022124531.13": "\nWhile developing this work, other avenues of growth will become more apparent.",
-    "agarciafdz.20251022124531.14": "\nAs a result of this work, I expect to deliver the following work products.\n\n- Write a design by contract specification of the AOP patterns documented by Weiher.\n- Program an Eiffel implementation of said patterns.\n- Share the specification and its benefits with the academic and development communities so they can use AOP.",
-    "agarciafdz.20251022124531.15": "\n",
-    "agarciafdz.20251022124531.16": "- Avotins, J., & Mingins, C. (1993). Metrics for Object-Oriented Design. International Conference on Software Technology: Methods and Tools.\n",
-    "agarciafdz.20251022124531.17": "- Polikarpova, N., Furia, C.A., Pei, Y., Wei, Y., & Meyer, B. (2012). What good are strong specifications? 2013 35th International Conference on Software Engineering (ICSE), 262-271.\n",
-    "agarciafdz.20251022124531.18": "- Weiher, M., & Hirschfeld, R. (2013). Polymorphic identifiers: uniform resource access in objective-smalltalk. Dynamic Languages Symposium.\n",
-    "agarciafdz.20251022124531.19": "- Weiher, M., & Hirschfeld, R. (2016). Constraints as polymorphic connectors. Proceedings of the 15th International Conference on Modularity.\n",
-    "agarciafdz.20251022124531.20": "- Weiher, M., & Hirschfeld, R. (2019). Storage combinators. Proceedings of the 2019 ACM SIGPLAN International Symposium on New Ideas, New Paradigms, and Reflections on Programming and Software.",
-    "agarciafdz.20251022124531.21": "- Weiher, M., & Hirschfeld, R. (2019). Standard object out: streaming objects with polymorphic write streams. Proceedings of the 15th ACM SIGPLAN International Symposium on Dynamic Languages.\n",
-    "agarciafdz.20251022124531.22": "- Weiher, M. (2020 a). Can programmers escape the gentle tyranny of call/return? Companion Proceedings of the 4th International Conference on Art, Science, and Engineering of Programming.",
-    "agarciafdz.20251022124531.23": "- Weiher, M. (2020 b). Can programmers escape the gentle tyranny of call/return? https://www.youtube.com/watch?v=Gel8ffr4pqw\n",
-    "agarciafdz.20251021194722.1": "Storage Combinators are a novel composition mechanism defined by MPWeiher.\nThe fundamental idea is to take the REST Archicture, defined by Fielding\nAnd shrink it to coordinate the colaboration of components inside a single program.\nNot between different servers in the internet.\n\nThe benefits of this style of composition have been reported to be between 2x and 10x smaller lines of code.\nAnd 33x reduction on hardware.\n\nCurrently there is only a prefered implementation of StorageCombinators in the Objective-Smalltalk programming language.\n\nThis papers presents an Specification of Storage Combinators,  using Eiffel's Design by Contract.\nThe specification was co-evolved with the implementation of the RESTLY library for Eiffel, that implements it.\n\nThe RESTLY library is directly beneficial for Eiffel developers,\nand the specification can be used by implementers in other languages to develop their own Storage Combinator libraries.\n",
+    "agarciafdz.20251107231447.1": "this article has a good review of all the many isuses with URLS.\n\nthe two thinks that are important to me:\none a not all schemes use :// some use only :\nand two web browsers don't send the #fragment part.\nand Apache even rejects the conection if it receives it.\n\nhttps://www.netmeister.org/blog/urls.html",
+    "agarciafdz.20251102131754.1": "I found this paper:\n\nFormalizing a Hirerchical File System by Wim H. Hesselnik and Muhammad Ikarm Lali.\n\nThat seems perfectly tailored, to the task of developing a FileSystem in Eiffel.\n\nI think I could do an exercise in transforming the paper to Eiffel with an AI assistant.\n\nThen I think I could make this tree as a generic interface,\nand then use it to communicate with \"real file system\"\n\nand then use the same interface to modify JSON documents,\ndoing it that way, I might be able to create an operational transformation for json documents.\nand xml documents and so on??",
+    "agarciafdz.20251031224149.1": "\nroot:PRFIX_TREE_DIRECTORY\n\ncreate root.make(\"~/home/\")\n\nprint root(\"/\") -- should list all the files and directories inside ~/home/\n\nacross root(\"/agarciafdz\") as entry do  -- root(\"/agarciafdz\") should return an iterable\n   print entry --should list all the files and directories inside ~/home/agarciafdz \nend \n\nprint root [\"/agarciafdz/file.txt\"] --should print the contents of ~/home/agarciafdz/file.txt\n\nroot[\"/agarciafdz/file.txt\"] := \"this is the contents of the file\" --should save the string in the file.\nroot[\"/agarciafdz\"] := another_prefix_tree -- should set the contents to a subdirectory?\n\n\nser\u00eda bueno tomar la convensi\u00f3n de que operaci\u00f3nes en [] son para el individuo y operaciones en () son para la colecci\u00f3n.\nEn este directorio hasta los nombres de directorio tinen contenido... (es como el listado default).\n\nroot[\"/agarciafdz/file.txt\"] := \"este es el contenido del archivo file1.txt\"\nroot(\"/agarciafdz/file.txt\") -- regresa vac\u00edo porque () no tiene sub archivos ni subdirectorios.\n\nroot(\"/agarciafdz/\") -- regresa un iterable de todos los archivos y sub archivos en agarciafdz\nroot(\"/agarciafdz\") :=  subdirectorio  --es un error ya que eso ser\u00eda como reemplazar una colecc\u00edon completa por otra?\nroot(\"/agarciafdz\").mkdir(\"books\") -- crea el subdirectorio ~/home/agarciafdz/books\nroot(\"/agarciafdz\").mkdir(\"books\").mkdir(\"Eiffel\") -- crea el directorio ~/home/agarciafdz/books/Eiffel\nroot(\"/agarciafdz\").mkdir(\"/books/Eiffel\") -- crea el directorio ~/home/agarciafdz/Eiffel\nroot.mkdir(\"/agarciafdz/books/Eiffel\") -- crea el directorio ~/home/agarciafdz/Eiffel\nroot.ls --should return all the files an directories in ~/home\nroot.touch(\"file1.txt\") -- should create ~/home/file1.txt\nroot[\"file1.txt\"] := \"this are the contents of the file1.txt\"\nroot.mv(\"/agarciafdz\").to(\"/another\") -- means move the whole subtree inside /another? -- if it was a rename it should be called rename???\nroot.remove(\"/agarciafdz\") -- should fail until the directory is empty?? so it doesn'n have any children??\nroot[\"/agarciafdz\"].remove --should fail because \"/agarcia\" is a directory not a file???\n\nEn definitiva a\u00fan no s\u00e9 c\u00f3mo manejar los directorios como \u00e1rboles... sin que la interfaz sea completamente confusa.\n\n# Otra idea mantener la semantica sujeto verbo\n\ncreate root.make(\"~/home/\")\n\nroot[\"/agarciafdz\"].ls  -- a HASH_TABLE of Files and Directories\nroot[\"/agarciafdz\"].mkdir(\"/books\") -- make ~/agarciafdz/books\nroot[\"/agarciafdz/file1.txt\"] := \"este es el contenido de file1\" -- que pasaba si file1 no exist\u00eda??\nroot[\"/agarciafdz/\"].extend(\"file1.txt\") -- crea el archivo vac\u00edo \"file1.txt\" ??\n\n",
+    "agarciafdz.20251025192835.1": "\nhttps://www.plantuml.com/plantuml/uml/SyfFKj2rKt3CoKnELR1Io4ZDoSa70000\n\nEste diagrama me gusta como formato para los diagramas de sequencia del sistema RESTLY\n\nla utilidad de estos diagramas, ademas de que se ven muy bonitos a la hora de escribir el paper.\n\nEs que pueden ayudar a la comprensi\u00f3n de lo que est\u00e1 haciendo cada componente.\n\nuna mejora a hacerle es que las l\u00edneas deben de ser consecutivas, como lo muestra casi al final de la p\u00e1gina.\ny la separaci\u00f3n e el tiempo podr\u00e1 ser despu\u00e9s.\n",
+    "agarciafdz.20251026185733.1": "PUT puede actualizar un resource,\no crear uno nuevo.\nEntonces, me imagina que depende de la llave.\nsi la llave viene, entonces debemos checar que exista.\ny actualizar la que existe.\nsi no viene entonces, hay que agregar el resource.\n\npero entonces el POST de que sirve??\n\nporque crear la llave es una responsabilidad del servidor.\n\nEste es un claro error de la especificaci\u00f3n de HTTP...",
+    "agarciafdz.20251024145651.1": "\nIn 2003 Bertrand Meyer isused the Components challenge. With the goal of developing an economy for reliable software components.\nI.e. Reusable pieces of code.\nNow on 2025 We have an approximation of the challenge in the form of WebAPI's.\nIn this year the WebAPI economy is valued at:\n\n@todo insert\n\nAnd we have compositions of said WebApi's called mashups.\nHowever unlique like Meyer requested, WebApi's are not trustworthy nor reliable. \nTheir code is opaque, and their status levels are below 99.99%\nAnd yet they are still used, constantly.\n\nBecause their value comes not from the code or operations,\nbut from the data they keep.\n\n",
+    "agarciafdz.20251026155326.1": "Identify a \"giant\", not a chupchick. Intuition will guide you - important enough subject for you.\nIdentify the enormity of the area not addressed by the giant. Reality gives the signals that so much more can be done. You are aiming for a broader, not a more confined, area than what was addressed by the giant.\nGet on the giant's shoulders. Gain the historical perspective - understand the giant's solution better than he did.\nIdentify the conceptual difference between the reality that was improved so dramatically by the giant and the area untouched.\nIdentify the wrong assumption.\nConduct the full analysis to determine the core problem, solution, et.\n\n",
+    "agarciafdz.20251102140740.1": "Todobackend.com\n\nIs an online benchmark where backend framewors and programming languages, implement a Web-Api that follows a specification.\n\nThe advantage is that all the different implementations follow the same spec, what has allowed us to compare how many LOC's does it take to implement the Web-Api.\n\n\nThis example is also ideal since the Todo App behaves like a list, so there are not nested-todos and that was one of the self imposed constraints for this paper.",
+    "agarciafdz.20251102140728.1": "\nhttps://www.nan.fyi/database",
+    "agarciafdz.20251111194144.1": "@startmindmap\ntop to bottom direction\n* http://www.example.com/content/pages/about.html?q=search_term#a_section\n** http\n***_ scheme\n** ://\n***_ separator\n** www.example.com\n***_ authority\n** /content/pages/about\n***_ path\n** .html\n***_ content type\n** q=search_term\n***_ query\n** .#a_section\n***_ fragment\n@endmindmap\n\nhttps://www.plantuml.com/plantuml/uml/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00",
+    "agarciafdz.20251111194200.1": "@language md\n[![](https://img.plantuml.biz/plantuml/svg/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00)](https://editor.plantuml.com/uml/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00)\n\n\n",
+    "agarciafdz.20251024144157.1": "\nWeiher's Storage Combinators are a novel composition mechanism,\ninspired by the Web's REST architecture,\nAnd shrinked to coordinate the colaboration of components inside a  a single program.\nNot between servers acrosss the network.\n\nThe benefits of this style of composition have been reported to be between 2x and 10x smaller lines of code.\nAnd 33x reduction on hardware.\n\nCurrently the canonical implementation of Weiher's Combinators is the Objective-Smalltalk programming language.\n\nIn this paper we present RESTLY a Weieher's Combinators library of for the Eiffel language,\n\nEiffel's philosophy of: Command and Query Separation, Design by Contract and Multiple Inheritance.\nMade it an ideal language to prototype, implement and specify Weiher's Combinators.\n\nThe RESTLY library is directly beneficial for Eiffel developers,\nand the contract-view can be used as an specification by programming language engineers to create their own Weiher Combinator library.\n\n",
+    "agarciafdz.20251030171022.1": "? what should I call the Abstract class that makes all the library possible?\n  * RESTLY\n    + It sounds exactly like what I want to say: \"REST-like\" \"REST-inspired\" protocol\n    + Combines well \"RESTLY_TABLE\" is a HASH_TABLE that folows a REST like protocol,\n      A RESTLY_TREE is a tree that follows a REST-like protocol, \n      A RESTLY_PRINTER is a printer that follows the REST-like protocol\n    - BUT, If I name the protocol RESTLY then \n      I should name the methods GET, PUT, POST, DELETE\n      Instead of ITEM, FORCE, EXTEND and REMOVE that are the ones used by default in Eiffel\n      And that would complicate the *reuse* of eiffel libraries.\n    - BUT it coulds also alianate me from the Eiffel Community for breaking well established patterns of communication!\n  * STORAGE\n    + It is the word that MPWEiher uses, and this could lead to better collaboration between us.\n    + It would give continuity to his papers, making it easy to follow my papers as a continuation of his.\n    - It would continue Feynman's Course that in computing we name everything slightly wrong.\n      In this case is not the storage that is important, is the fact that is \"REST-like\"\n    + I wouldn't need to change the name of the Eiffel Verbs\n      since we are already naming the thing wrong interface (Storage instead of RESTlike)\n      ",
+    "agarciafdz.20251024151802.1": "\nREST is the architecture of the world wide web.\nGoverned by the rules of the http protocol,\nand formalized in the thesis of Roy Fielding.\n\nYou are using REST princpiles everytime you use the web.\nWhen your Browser requests a website lke http://google.com/\nis actually issuing an `http get` request for the resource that lives in: `/`\nlocated in the `google.com`server.\n\nWhen you fill o web form, your browser issues an:\n`http post` action to the resource that lives in the webserver.\n\n",
+    "agarciafdz.20251030174817.1": "@language md\n\n# Fielding's thesis\nChapter 5 of Fielding thesis:\nhttps://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm\n\nIn particular we focused on Constraint 4.\n\n# Chatgpt Convesation\n(This is my conversation with Chatgpt)[https://chatgpt.com/s/t_6903f9ed61048191a1940edec39bc58a]\n\nHere\u2019s a developer-oriented cheat sheet after (re)reading Fielding\u2019s REST chapters.\n\n# What REST *is*\n\n* An **architectural style** for distributed hypermedia defined by a **set of constraints** chosen because of the system properties they induce (scalability, evolvability, visibility, etc.). ([UCI Bren School of ICS][1])\n\n## The constraints (how REST is derived)\n\n1. **Client-Server** \u2192 separation of concerns and independent evolution. ([UCI Bren School of ICS][1])\n2. **Stateless** \u2192 every request carries all context; improves visibility/reliability/scalability; trades off some per-request overhead. ([UCI Bren School of ICS][1])\n3. **Cache** \u2192 responses are explicitly/implicitly cacheable; reduces latency & load; watch for staleness. ([UCI Bren School of ICS][1])\n4. **Uniform Interface** (the distinguishing feature): four sub-constraints\n\n   * **Resource identification** (URIs identify *concepts*, not documents/files).\n   * **Manipulation via representations** (operate on representations, not the resource itself).\n   * **Self-descriptive messages** (enough metadata for intermediaries to understand/transform).\n   * **Hypermedia as the engine of application state (HATEOAS)** (links/forms in representations drive next actions). ([UCI Bren School of ICS][1])\n5. **Layered System** \u2192 components can\u2019t see beyond the next layer; enables proxies, load balancers, gateways. ([UCI Bren School of ICS][1])\n6. **Code-on-Demand (optional)** \u2192 download code to extend clients (e.g., applets/scripts) when appropriate. ([UCI Bren School of ICS][1])\n\n## Core elements & views\n\n* **Components / connectors / data elements** with **representations** (bytes + metadata) negotiated per client capability; interactions are **stateless**; common connectors include client, server, cache, resolver, tunnel. ([UCI Bren School of ICS][1])\n\n## Why these constraints matter (properties induced)\n\n* **Scalability & performance** (stateless + cache + intermediaries).\n* **Evolvability & independent deployment** (uniform interface and resource/representation separation).\n* **Visibility** (self-descriptive messages enable monitoring and intermediaries). ([UCI Bren School of ICS][1])\n\n# Definitions you\u2019ll want to quote\n\n* **Resource**: the *semantics* you intend to identify; **URIs** should change as infrequently as possible. Don\u2019t confuse a resource with a file or a server object. ([UCI Bren School of ICS][2])\n* **Representation**: the transferable form of a resource\u2019s state (+ metadata). You manipulate resources by exchanging representations across the generic interface. ([UCI Bren School of ICS][1])\n\n# How REST shaped the Web (HTTP/URI)\n\n* REST guided the (re)design and standardization of **URI** (resource definition) and **HTTP/1.1** (caching, versioning, content negotiation, self-descriptive messages, intermediaries). ([UCI Bren School of ICS][2])\n\n# What REST is *not*\n\n* Not \u201cJSON over HTTP.\u201d It\u2019s the **constraints** above, applied as a whole. REST optimizes for large-grain **hypermedia** transfer; other interaction styles can be more efficient for different problem shapes. ([UCI Bren School of ICS][1])\n\n---\n\n## Practical checklist for building a RESTful API (true to the thesis)\n\n* Model **resources** first; give them stable **URIs** that reflect semantics. ([UCI Bren School of ICS][2])\n* Define representations (media types) and include **links/actions** so clients can drive flows from hypermedia (HATEOAS). ([UCI Bren School of ICS][1])\n* Keep interactions **stateless**; put session/app state on the client; use standard **status codes** and **metadata** so messages are self-descriptive. ([UCI Bren School of ICS][1])\n* Exploit **caching** (cache headers, validators) and **layering** (proxies, gateways, CDNs). ([UCI Bren School of ICS][1])\n* Treat server implementations as **hidden behind the interface**; you can swap servers, storage, or generation logic without breaking clients. ([UCI Bren School of ICS][2])\n\nIf you want, I can extract a few direct, citable snippets for your paper/blog or map these constraints onto your Eiffel \u201cRESTly/Combinators\u201d design next.\n\n[1]: https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm \"\nFielding Dissertation: CHAPTER 5: Representational State Transfer (REST)\n\"\n[2]: https://ics.uci.edu/~fielding/pubs/dissertation/evaluation.htm \"Fielding Dissertation: CHAPTER 6: Experience and Evaluation\"\nHere\u2019s a developer-oriented cheat sheet after (re)reading Fielding\u2019s REST chapters.\n\n# What REST *is*\n\n* An **architectural style** for distributed hypermedia defined by a **set of constraints** chosen because of the system properties they induce (scalability, evolvability, visibility, etc.). ([UCI Bren School of ICS][1])\n\n## The constraints (how REST is derived)\n\n1. **Client-Server** \u2192 separation of concerns and independent evolution. ([UCI Bren School of ICS][1])\n2. **Stateless** \u2192 every request carries all context; improves visibility/reliability/scalability; trades off some per-request overhead. ([UCI Bren School of ICS][1])\n3. **Cache** \u2192 responses are explicitly/implicitly cacheable; reduces latency & load; watch for staleness. ([UCI Bren School of ICS][1])\n4. **Uniform Interface** (the distinguishing feature): four sub-constraints\n\n   * **Resource identification** (URIs identify *concepts*, not documents/files).\n   * **Manipulation via representations** (operate on representations, not the resource itself).\n   * **Self-descriptive messages** (enough metadata for intermediaries to understand/transform).\n   * **Hypermedia as the engine of application state (HATEOAS)** (links/forms in representations drive next actions). ([UCI Bren School of ICS][1])\n5. **Layered System** \u2192 components can\u2019t see beyond the next layer; enables proxies, load balancers, gateways. ([UCI Bren School of ICS][1])\n6. **Code-on-Demand (optional)** \u2192 download code to extend clients (e.g., applets/scripts) when appropriate. ([UCI Bren School of ICS][1])\n\n## Core elements & views\n\n* **Components / connectors / data elements** with **representations** (bytes + metadata) negotiated per client capability; interactions are **stateless**; common connectors include client, server, cache, resolver, tunnel. ([UCI Bren School of ICS][1])\n\n## Why these constraints matter (properties induced)\n\n* **Scalability & performance** (stateless + cache + intermediaries).\n* **Evolvability & independent deployment** (uniform interface and resource/representation separation).\n* **Visibility** (self-descriptive messages enable monitoring and intermediaries). ([UCI Bren School of ICS][1])\n\n# Definitions you\u2019ll want to quote\n\n* **Resource**: the *semantics* you intend to identify; **URIs** should change as infrequently as possible. Don\u2019t confuse a resource with a file or a server object. ([UCI Bren School of ICS][2])\n* **Representation**: the transferable form of a resource\u2019s state (+ metadata). You manipulate resources by exchanging representations across the generic interface. ([UCI Bren School of ICS][1])\n\n# How REST shaped the Web (HTTP/URI)\n\n* REST guided the (re)design and standardization of **URI** (resource definition) and **HTTP/1.1** (caching, versioning, content negotiation, self-descriptive messages, intermediaries). ([UCI Bren School of ICS][2])\n\n# What REST is *not*\n\n* Not \u201cJSON over HTTP.\u201d It\u2019s the **constraints** above, applied as a whole. REST optimizes for large-grain **hypermedia** transfer; other interaction styles can be more efficient for different problem shapes. ([UCI Bren School of ICS][1])\n\n---\n\n## Practical checklist for building a RESTful API (true to the thesis)\n\n* Model **resources** first; give them stable **URIs** that reflect semantics. ([UCI Bren School of ICS][2])\n* Define representations (media types) and include **links/actions** so clients can drive flows from hypermedia (HATEOAS). ([UCI Bren School of ICS][1])\n* Keep interactions **stateless**; put session/app state on the client; use standard **status codes** and **metadata** so messages are self-descriptive. ([UCI Bren School of ICS][1])\n* Exploit **caching** (cache headers, validators) and **layering** (proxies, gateways, CDNs). ([UCI Bren School of ICS][1])\n* Treat server implementations as **hidden behind the interface**; you can swap servers, storage, or generation logic without breaking clients. ([UCI Bren School of ICS][2])\n\nIf you want, I can extract a few direct, citable snippets for your paper/blog or map these constraints onto your Eiffel \u201cRESTly/Combinators\u201d design next.\n\n[1]: https://www.ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm \"\nFielding Dissertation: CHAPTER 5: Representational State Transfer (REST)\n\"\n[2]: https://ics.uci.edu/~fielding/pubs/dissertation/evaluation.htm \"Fielding Dissertation: CHAPTER 6: Experience and Evaluation\"\n\n\n\nhttps://ics.uci.edu/~fielding/pubs/dissertation/rest_arch_style.htm\n\nNot \u201cJSON over HTTP.\u201d It\u2019s the constraints above, applied as a whole. REST optimizes for large-grain hypermedia transfer; other interaction styles can be more efficient for different problem shapes. \nUCI Bren School of ICS\n\n\n\n\n\n\n\n\n",
+    "agarciafdz.20251030180812.1": " The name \"Representational State Transfer\" is intended to evoke an image of how a well-designed Web application behaves: a network of web pages (a virtual state-machine), where the user progresses through the application by selecting links (state transitions), resulting in the next page (representing the next state of the application) being transferred to the user and rendered for their use.\n \n https://ics.uci.edu/~fielding/pubs/dissertation/evaluation.htm",
+    "agarciafdz.20251024160750.1": "But in order to our engineering we need to have a more actionable definition.\n\nFournately for us \n\n\nYuan et al. \n\nMade a formal defintion of REST in: Formalization and Verification of REST on HTTP Using CSP.\n\nLets look at the 6 principles of REST, that they defined.\n\n@others\n\nWe will see how the 6 principles of rest influencied the definiton of RESTLY.\nOn later sections\n",
+    "agarciafdz.20251026160323.1": "\nREST is a set of principles that define how Web standards,\nsuch as HTTP and URIs,\nare supposed to be used (which often differs quite a bit from what many people actually do) [6]. \n\nHere we conclude all REST constriants into several key principles to be easily understood.\n",
+    "agarciafdz.20251026160323.2": "Resource is a concept newly shows up in [3].\nIt is an abstract unit of information with an intended meaning [9].\nA book is a resource,\nand at the same time, a collection of books is also a resource.\nA service, e.g., \u201ccurrent temperature of Shanghai\u201d, is a resource too.\nIn a word, everything merits being identifiable is a resource. \n\n\u201cEach resource has an id\u201d means we have a unified naming function mapping identifiers to resources.\nIn HTTP based applications, Uniform Resource Identifiers (URIs) [19] are the resource identifiers.\n",
+    "agarciafdz.20251026160323.3": "We can always see a confusing concept named \u201cHyper-media as the engine of application state\u201d in REST related articles.\nAt its core is the concept of hyper-media, or in other words, the idea of links.\nA resource is never a link, but a link exists between resources.\nWhen we request a resource, the server returns what we want,\ntogether with some more links that can take us to get more information.\nIt is the link that makes the state of system change [20].\nResources are linked together so that we can get every resource we want just by following links.\nWe give related representations in our model about this constraint.\n\n",
+    "agarciafdz.20251026160323.4": "With the URIs, the system aims to do something meaningful, so browser should know what to do with the URI.\nThe browser knows it because every resource supports the same interface.\nThe uniform interface T. Yuan et al. / Electronic Notes in Theoretical Computer Science 309 (2014) 75\u20139378\ntures. \n\nIt is the most important feature of REST.\nThe application of the generality to the component interface improves the visibility of the interaction and makes it possible for information to communicate between independent components.\nHTTP calls these uniform interfaces (or standard methods) verbs,\nand the set of standard methods includes GET, POST, PUT, DELETE, HEAD and OPTIONS.\n\nIn this paper, we only take the first four verbs into consideration because only these four methods are related to resources.\nAlmost all applications which claim to be RESTful use HTTP methods to communicate,\nbut many of them misuse these four basic methods.\n\nSo we introduce the whole REST architecture together with HTTP methods in our following model to approach the practical use of REST,\nwith a hope of reducing the misuse of the great and promising architecture.\nThe meanings of these methods are defined in the HTTP specification [2] and are introduced briefly in the following part,\nalong with some guarantees about their behaviors.\nA method is called safe if it has no effect on the resource.\nAnd if a method is idempotent, it means duplicate actions cause no effect.\n\n@others\n\nMore details about impacts on the entire system and the specifications of methods\nwill be given in the modeling section.",
+    "agarciafdz.20251026160323.5": "The GET method means to retrieve whatever information is identified by requesting URI.\nIt should be safe and idempotent.\n",
+    "agarciafdz.20251026160323.6": "The PUT method is used to create (if it does not exist) or modify the requested resource identified by URI.\nIt should be idempotent.\n\n",
+    "agarciafdz.20251026160323.7": "I think this is an error in this paper.\nPUT must have a valid, key\n\nBecause creating, a new resource is the POST responsibility.\n\nIn Design by Concept or whatever the book by daniel jackson is.\n\nThey find that purposes that interfere witch each other also lead to wrong confusions.\n\nSo POST purpose is to create, and PUT purpose is to update.\n\nNow something that I understand is that a POST must have all the data, te generate the ID.\n",
+    "agarciafdz.20251026160323.8": "The POST method is used to create a new resource under the requesting URI and make the new resource as its subordinate.\nIt is neither safe nor idempotent.\n\n",
+    "agarciafdz.20251026160323.9": "if it's indeponent or not depends on the resource,\nsome resource might allow the creation of more copies of the same resource,\nsome other might only allow unique resources.\n",
+    "agarciafdz.20251026160323.10": "\nThe DELETE method is used to delete the requested resource in the server identified by requesting URI. \nIt should be idempotent.\n\n",
+    "agarciafdz.20251026160323.11": "A resource representation is a description of the state of the resource at a given time [21].\n\nA state may have different multiple representations. \n\nFor example, a web page can be presented as HTML, or XML, or just an image of its content.\n\nThe format of representation is negotiated by the client and server and should be understood by the application.\nThe multiple representations of a resource make it available to anyone who knows how to use the web.\n\n",
+    "agarciafdz.20251026160323.12": "\nThe communication between client and server is stateless in REST. \n\nEach request contains all the information needed to understand the message.\nAnd all the session states are stored in clients.\nAny context remains in the server cannot be used.\nOne benefit of statelessness is the scalability of the system.\nIf the server needs to save clients\u2019 states, its footprint will be impacted.\n\nAnd stateless behavior brings another advantage.\nIf a server crashes while running, it can be replaced without\nclients\u2019 notice. We give a formal description of this constraint in the verification part.\nnext two sections.\n\nFig. 1. Combination strategy in our model\nT. Yuan et al. / Electronic Notes in Theoretical Computer Science 309 (2014) 75\u201393 79\n\n",
+    "agarciafdz.20251026180820.1": "@language html\n<dl>\n<dt id=\"get\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/GET\"><code>GET</code></a></dt>\n<dd>\n<p>The <code>GET</code> method requests a representation of the specified resource.\nRequests using <code>GET</code> should only retrieve data and should not contain a request <a href=\"/en-US/docs/Glossary/HTTP_Content\">content</a>.</p>\n</dd>\n<dt id=\"head\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/HEAD\"><code>HEAD</code></a></dt>\n<dd>\n<p>The <code>HEAD</code> method asks for a response identical to a <code>GET</code> request, but without a response body.</p>\n</dd>\n<dt id=\"post\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/POST\"><code>POST</code></a></dt>\n<dd>\n<p>The <code>POST</code> method submits an entity to the specified resource, often causing a change in state or side effects on the server.</p>\n</dd>\n<dt id=\"put\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PUT\"><code>PUT</code></a></dt>\n<dd>\n<p>The <code>PUT</code> method replaces all current representations of the target resource with the request <a href=\"/en-US/docs/Glossary/HTTP_Content\">content</a>.</p>\n</dd>\n<dt id=\"delete\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/DELETE\"><code>DELETE</code></a></dt>\n<dd>\n<p>The <code>DELETE</code> method deletes the specified resource.</p>\n</dd>\n<dt id=\"connect\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/CONNECT\"><code>CONNECT</code></a></dt>\n<dd>\n<p>The <code>CONNECT</code> method establishes a tunnel to the server identified by the target resource.</p>\n</dd>\n<dt id=\"options\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS\"><code>OPTIONS</code></a></dt>\n<dd>\n<p>The <code>OPTIONS</code> method describes the communication options for the target resource.</p>\n</dd>\n<dt id=\"trace\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/TRACE\"><code>TRACE</code></a></dt>\n<dd>\n<p>The <code>TRACE</code> method performs a message loop-back test along the path to the target resource.</p>\n</dd>\n<dt id=\"patch\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PATCH\"><code>PATCH</code></a></dt>\n<dd>\n<p>The <code>PATCH</code> method applies partial modifications to a resource.</p>\n</dd>",
+    "agarciafdz.20251026180521.1": "@language html\n<figure class=\"table-container\"><table>\n<thead>\n<tr>\n<th>Method</th>\n<th>Safe</th>\n<th>Idempotent</th>\n<th>Cacheable</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/GET\"><code>GET</code></a></td>\n<td>Yes</td>\n<td>Yes</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/HEAD\"><code>HEAD</code></a></td>\n<td>Yes</td>\n<td>Yes</td>\n<td>Yes</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS\"><code>OPTIONS</code></a></td>\n<td>Yes</td>\n<td>Yes</td>\n<td>No</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/TRACE\"><code>TRACE</code></a></td>\n<td>Yes</td>\n<td>Yes</td>\n<td>No</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PUT\"><code>PUT</code></a></td>\n<td>No</td>\n<td>Yes</td>\n<td>No</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/DELETE\"><code>DELETE</code></a></td>\n<td>No</td>\n<td>Yes</td>\n<td>No</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/POST\"><code>POST</code></a></td>\n<td>No</td>\n<td>No</td>\n<td>Conditional*</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PATCH\"><code>PATCH</code></a></td>\n<td>No</td>\n<td>No</td>\n<td>Conditional*</td>\n</tr>\n<tr>\n<td><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/CONNECT\"><code>CONNECT</code></a></td>\n<td>No</td>\n<td>No</td>\n<td>No</td>\n</tr>\n</tbody>\n</table></figure>",
+    "agarciafdz.20251029123227.1": "\nMarcel P. Weiher have ",
+    "agarciafdz.20251029123313.1": "A RESTLY (REST-Like) interface is a protocol inspired by the HTTP verbs,\nused setting and accessing values in a collection.\n\n```Eiffel\n@todo insert short view of the Eiffel RESTLY interface\n```\n\n\nA RESTLY_STORE is a first-class object that implements a RESTLY interface.\n\nFor example a HASH_TABLE[ANY,STRING].\n\nIs almost a RESTLY_STORE just with the following changes on its API\n\n```EIffel\n@todo present the part of inheritance of that renames some of the functions\n```\n\nAn STORAGE is the `thing behind` a RESOURCE\nFor example if you a printer connected to the internet the *Actual printer* is the STORAGE\nBut since we cannot have the actual printer, inside our programs we represent it as a RESTLY_STORE\n\n\nA RESOURCE is a RESTLY_STORE that also has an identifier most commonly a URI\n\n```Eiffel\n@todo Insert the short version of the RESOURCE class\n``` \n\n\n\nREPRESENTATION vs SOURCE\n\nA REPRESENTATION is the actual data being transefered between the client and the server.\nIn the web it is commonly HTML, XML, JSON or other data interchange format.\n\nSOURCE is the \"thing being represented by the RESOURCE\"\nfor exampple a document stored in the filesystem is a source.\na printer is a SOURCE.\nA database is a SOURCE\n\nSince we can't actually put the printer inside our program, \nwe will represent the printer as an STORAGE object,\nmeaning it will follow the RESTLY interface\n\n\n\n\nWeiherCombinator :: RESTLY -> OtherThing -> RESTLY",
+    "agarciafdz.20251026175334.1": "Principles introduced by Eiffel programming language\nhttps://dalibornasevic.com/posts/40-principles-introduced-by-eiffel-programming-language?utm_source=chatgpt.com",
+    "agarciafdz.20251026175334.2": "\nDbC is a metaphor on how elements of a software system collaborate with each other, on the basis of mutual obligations and benefits. It means that when defining a method we are actually signing a contract between the caller and the method with the following responsibilities:\n\ncaller ensures that preconditions of the method are met (correct inputs)\nmethod ensures that postcondiions are met (correct outputs and side effects) and invariants are met (object is left in a consistent state)\nThinking about contracts when defining methods is about deciding which contracts to sign. Of course, those that are in our favor: small, precise and strict.\n\n",
+    "agarciafdz.20251026175334.3": "\nEvery method should either perform action - command  or return data to the caller - query . The idea is to separate methods in two categories:\n\nqueries: methods that return value but does not change state or cause any side efects\ncommands: methods that change the state of the system but does not return value\nHaving a method that does both command and query is a good sign for refactoring to separate the two.\n",
+    "agarciafdz.20251026175334.4": "All services offered by a module should be available through a uniform notation, which does not betray whether they are implemented through storage or through computation. It means that there should not be a different notation for accessing an attribute and method or query. As an example would be object attributes in Ruby which satisfy this principle for both getter and setter values. Other example is Java which does not support this natively because the syntax is different for instance variables and functions accessing them (convention is that accessor methods include get/set prefix).\n\n",
+    "agarciafdz.20251026175334.5": "The exhaustive list of alternatives should live in exactly one place.\nThis principle was later formulated by Andy Hunt and Dave Thomas as Don\u2019t Repeat Yourself (DRY) principle in \u201cThe Pragmatic Programmer\u201d book. \nIt states that: Every piece of knowledge must have a single, unambiguous, authoritative representation within a system.\nDRY principle is not about typing, but it is about not duplicating concepts and isolating change. \nIf you have to change something in more than one place, then it\u2019s not DRY.\n\n",
+    "agarciafdz.20251026175334.6": "Software entities (classes, modules, functions, etc.) should be open for extension, but closed for modification. The idea is that once completed, the implementation of a class should only be modified to correct errors. New or changed features would require that a different class is created. That class could use the original class but it should not require change in it.\n",
+    "agarciafdz.20251026161024.1": "So now that we have a goal:\n\nImplement an Storage Combinator library.\nWe know what a Storage Combinator is:\n\nAn architecture inspired by REST applied to the level of a single program, and computer.\nThat follow the REST API.\n\nWe understand what a REST API is:\n\nOne that follows the constraints of REST, in particular the uniform interface.\n\nLe't see why Eiffel is great to implemnet it.\n",
+    "agarciafdz.20251026191134.1": "The fact that every thing in REST is named by a URI.\nso the name of the feature, object, class etc. is the same.\nit is the type of requset that makes the difference.\n\nThe same way that getters and setters can be modified in EIFFL",
+    "agarciafdz.20251026180110.1": "In the HTTP especification the talk about:\n\n\"SAFE\" commands, and what that means is simply\nthat they don't change the state of the server.\n\nIn eiffel those are called QUERIES, i.e. we ask the object to perform an operation for us.\n\nObfcourse \"UNSAFE\" commands are those that change the state of the server.\nOr in the Eiffel Method we ware talking about \"commands\"\n\n\nCommands\n* PUT \n* POST\n* DELETE\n\nQueries:\n* Get\n* Head\n* Trace\n\n",
+    "agarciafdz.20251026175540.1": "The whole HTTP specification is a big contract,\nthat tells what the clients and servers communiating through the http protocol must respect.\n\n\nIn Eiffel the contract specifies the responsibilites of the client and suppliers.\n\nThe http status codes can be seen as what the violations for a contracct mean.\n\na 4xx Error means that the client is not fulfilling it's part of the contract.\nie. \n\n404 not found, actually means the client has failed to provide a known uri.\n\na 5xx Error: means it has been the Server the one that failed it's post-condition.\n\nMeaning, eventhough the client did everything right (fulfilled the preconditions)\nthe server, failed to fulfill it's side of the deal.\n\nfor exapmle \n500 error means we don't know why the server failed.",
+    "agarciafdz.20251026191006.1": "\nStorage Combinators allow the creating of new objects based on the definitions of previous ones.\n\nYou will see it in the examples section\n\n",
+    "agarciafdz.20251026192150.1": "\nIn Eiffel we have ONCE methods and objects so that there is only one Resource with exactly the same point.\n\nIn the resource.",
+    "agarciafdz.20251026192735.1": "\nThis are not Patterns but Components, meaning you can reuse them easily\nwithout the need to implement again the logic.\nonly the parts that change.\n\nhttps://chatgpt.com/s/t_6903ff05c0ec8191bf68b7d9d8b97e05\n\n\nIn **Karine Arnout\u2019s thesis *From Patterns to Components***, the distinction between **componentization** and **design patterns** is central:\n\n---\n\n### \ud83e\udde9 **Design Patterns**\n\nA **design pattern** is a **reusable design solution**, not a reusable piece of code.\nIt captures **recurring problems** and their **conceptual solutions**, serving as a *guide* for software architects and developers.\n\nArnout notes that:\n\n> \u201cDesign patterns are good but components are better\u2026 Patterns are not reusable as code: developers must implement them anew for each application.\u201d\n\nPatterns help by:\n\n* Providing a **repository of design knowledge** and good practices.\n* Offering a **common vocabulary** (\u201cFactory\u201d, \u201cVisitor\u201d, \u201cObserver\u201d) that improves communication.\n* Promoting **better architectures** (e.g., decoupling, abstraction, flexibility).\n\nHowever, their main **limitation** is that they only describe *how to structure code*, not the code itself \u2014 so every developer reimplements them manually.\n\n---\n\n### \u2699\ufe0f **Componentization**\n\n**Componentization** is the process of **turning design patterns into reusable components** \u2014 concrete, reusable **library classes** that implement the intent of a pattern.\nArnout defines it explicitly:\n\n> **Definition:**\n> \u201cComponentization is the process of designing and implementing a reusable component (library classes) from a design pattern (the book description of an intent, a motivation, some use cases, and typical software architecture examples).\u201d\n\nComponentization aims to:\n\n* **Automate reuse**: provide off-the-shelf libraries instead of design blueprints.\n* **Reduce errors**: avoid repetitive, error-prone reimplementation of patterns.\n* **Increase trust**: produce *\u201ctrusted components\u201d* verified with **Design by Contract\u2122**.\n* **Leverage language mechanisms** (genericity, multiple inheritance, agents in Eiffel) to generalize pattern implementations.\n\nExample:\n\n* The **Observer** pattern was *componentized* into an **Event Library**, supporting publish-subscribe interactions.\n* The **Visitor** pattern became a **Visitor Library**, simplifying double dispatch.\n\n---\n\n### \ud83d\udd04 **In Summary**\n\n| Aspect          | **Design Pattern**                              | **Componentization**                            |\n| --------------- | ----------------------------------------------- | ----------------------------------------------- |\n| **Level**       | Conceptual (design-time)                        | Concrete (implementation-time)                  |\n| **Form**        | Textual description (problem\u2013solution template) | Code (reusable component/library)               |\n| **Reuse Type**  | *Design reuse*                                  | *Code reuse*                                    |\n| **User Effort** | Developer must reimplement pattern              | Developer reuses ready-made component           |\n| **Goal**        | Share design knowledge                          | Provide executable reuse                        |\n| **Example**     | Observer, Visitor, Factory                      | Event Library, Visitor Library, Factory Library |\n\n---\n\nArnout summarizes the relationship elegantly:\n\n> \u201cDesign patterns are, by nature, reusable in terms of design. However, they are not reusable in terms of code. The challenge is to capture these reusable design solutions into reusable pieces of code (classes or class libraries).\u201d\n",
+    "agarciafdz.20251026210234.1": "\nIn concept oriented design claims that a concept is somethng that the end user can recognize as part of the interface.\n\nSo it proposes that the same concept should permeate the software all way from the user interface to the bottom layers of the system.\n\nIn the case of Storage Combinators,\nthe concept is a RESOURCE\n\nand the popularity of REST-Apis provide the familiarity that the user in this case developers need to create aligned software.\n\nFor storage operation.",
+    "agarciafdz.20251025181330.1": "Before we embark in the long journey to understand how the RESTLY library works and the benefits it brings.\n\nLet's first explore what can we expect as a reward from our efforts.\n\nIn the following examples, we searched for sofware projects that already have implementations in other programming languages,\nand how those implementations would look like once we have the RESTLY library ready to use them.",
+    "agarciafdz.20251025181602.1": "Todobackend.com\n\nIs an online benchmark where backend framewors and programming languages, implement a Web-Api that follows a specification.\n\nThe advantage is that all the different implementations follow the same spec, what has allowed us to compare how many LOC's does it take to implement the Web-Api.\n\n\nThis example is also ideal since the Todo App behaves like a list, so there are not nested-todos and that was one of the self imposed constraints for this paper.",
+    "agarciafdz.20251026174500.1": "\nhttps://www.nan.fyi/database",
+    "agarciafdz.20251103140048.1": "@language md\n\n# HTTP Request Methods (Concise Tree)\n\n* **HEAD**\n\n  * Same as `GET`, but returns only headers, without a response body.\n  * It is **safe**, **idempotent**, and **cacheable**.\n\n* **GET**\n\n  * Requests a representation of the specified resource.\n    Should only retrieve data and should not contain a request body.\n  * It is **safe**, **idempotent**, and **cacheable**.\n\n\n* **POST**\n\n  * Submits an entity to the specified resource, often causing changes in state or side effects.\n  * It is **neither safe nor idempotent**; **conditionally cacheable**.\n\n* **PUT**\n\n  * Replaces all current representations of the target resource with the request content.\n  * It is **idempotent**, but **not safe** or **cacheable**.\n\n\n* **DELETE**\n\n  * Deletes the specified resource.\n  * It is **idempotent**, but **not safe** or **cacheable**.\n\n",
+    "agarciafdz.20251104124706.1": "In Eiffel the previous interface looks like this.\nIt is made on purpose from the definiton of a HASH_TABLE.\n\n```ssh\nec -config ./restful.cfg -short RESTLY\n```\n\nThere are several things to notice.\n\n* The deferred class (inJava abstract) (inObjective-S protocol) that Weiher's work called Store here is called RESTLY.\n  This because, Eiffel already had an Storage, and an Store.\n   \n* It is inspired by HTTP verbs, but it follows the HASH_TABLE protocol more closely. Weiher did the same with the orginal Store in Objective-S, he followed the Dict protocol from objective C.\n\nthis leads to the first design principle of StorageCombinators.\n\n<quote>\n\nWhen developing an Storage Combinator Library, be *inspired* by the REST Architecture,\nbut follow clowsely the interface of Dictionary or Hash_Table in your host language.\n\n</quote>",
+    "agarciafdz.20251104124949.1": "Command to generate the short view of the restly class:\n\n```bash\n$ ec -config ./restful.ecf -short RESTLY 2>&1 | sed -n '/note/,$p' | tee ./for_paper/restly_short_form.e\n```",
+    "agarciafdz.20251026165856.1": "Principles introduced by Eiffel programming language\nhttps://dalibornasevic.com/posts/40-principles-introduced-by-eiffel-programming-language?utm_source=chatgpt.com",
+    "agarciafdz.20251026165932.1": "\nDbC is a metaphor on how elements of a software system collaborate with each other, on the basis of mutual obligations and benefits. It means that when defining a method we are actually signing a contract between the caller and the method with the following responsibilities:\n\ncaller ensures that preconditions of the method are met (correct inputs)\nmethod ensures that postcondiions are met (correct outputs and side effects) and invariants are met (object is left in a consistent state)\nThinking about contracts when defining methods is about deciding which contracts to sign. Of course, those that are in our favor: small, precise and strict.\n\n",
+    "agarciafdz.20251026170038.1": "\nEvery method should either perform action - command  or return data to the caller - query . The idea is to separate methods in two categories:\n\nqueries: methods that return value but does not change state or cause any side efects\ncommands: methods that change the state of the system but does not return value\nHaving a method that does both command and query is a good sign for refactoring to separate the two.\n",
+    "agarciafdz.20251026170108.1": "All services offered by a module should be available through a uniform notation, which does not betray whether they are implemented through storage or through computation. It means that there should not be a different notation for accessing an attribute and method or query. As an example would be object attributes in Ruby which satisfy this principle for both getter and setter values. Other example is Java which does not support this natively because the syntax is different for instance variables and functions accessing them (convention is that accessor methods include get/set prefix).\n\n",
+    "agarciafdz.20251026170147.1": "The exhaustive list of alternatives should live in exactly one place. This principle was later formulated by Andy Hunt and Dave Thomas as Don\u2019t Repeat Yourself (DRY) principle in \u201cThe Pragmatic Programmer\u201d book. It states that: Every piece of knowledge must have a single, unambiguous, authoritative representation within a system. DRY principle is not about typing, but it is about not duplicating concepts and isolating change. If you have to change something in more than one place, then it\u2019s not DRY.\n\n",
+    "agarciafdz.20251026170222.1": "Software entities (classes, modules, functions, etc.) should be open for extension, but closed for modification. The idea is that once completed, the implementation of a class should only be modified to correct errors. New or changed features would require that a different class is created. That class could use the original class but it should not require change in it.\n",
+    "agarciafdz.20251024160821.1": "Formalization and Verification of REST on HTTP Using CSP\nTing Yuan, Yiting Tang, Xi Wu, Yue Zhang Huibiao Zhu, Jian Guo",
+    "agarciafdz.20251024160843.1": "\nREST is a set of principles that define how Web standards,\nsuch as HTTP and URIs,\nare supposed to be used (which often differs quite a bit from what many people actually do) [6]. \n\nHere we conclude all REST constriants into several key principles to be easily understood.\n",
+    "agarciafdz.20251024160953.1": "Resource is a concept newly shows up in [3].\nIt is an abstract unit of information with an intended meaning [9].\nA book is a resource,\nand at the same time, a collection of books is also a resource.\nA service, e.g., \u201ccurrent temperature of Shanghai\u201d, is a resource too.\nIn a word, everything merits being identifiable is a resource. \n\n\u201cEach resource has an id\u201d means we have a unified naming function mapping identifiers to resources.\nIn HTTP based applications, Uniform Resource Identifiers (URIs) [19] are the resource identifiers.\n",
+    "agarciafdz.20251024161055.1": "We can always see a confusing concept named \u201cHyper-media as the engine of application state\u201d in REST related articles.\nAt its core is the concept of hyper-media, or in other words, the idea of links.\nA resource is never a link, but a link exists between resources.\nWhen we request a resource, the server returns what we want,\ntogether with some more links that can take us to get more information.\nIt is the link that makes the state of system change [20].\nResources are linked together so that we can get every resource we want just by following links.\nWe give related representations in our model about this constraint.\n\n",
+    "agarciafdz.20251024161153.1": "With the URIs, the system aims to do something meaningful, so browser should know what to do with the URI.\nThe browser knows it because every resource supports the same interface.\nThe uniform interface T. Yuan et al. / Electronic Notes in Theoretical Computer Science 309 (2014) 75\u20139378\ntures. \n\nIt is the most important feature of REST.\nThe application of the generality to the component interface improves the visibility of the interaction and makes it possible for information to communicate between independent components.\nHTTP calls these uniform interfaces (or standard methods) verbs,\nand the set of standard methods includes GET, POST, PUT, DELETE, HEAD and OPTIONS.\n\nIn this paper, we only take the first four verbs into consideration because only these four methods are related to resources.\nAlmost all applications which claim to be RESTful use HTTP methods to communicate,\nbut many of them misuse these four basic methods.\n\nSo we introduce the whole REST architecture together with HTTP methods in our following model to approach the practical use of REST,\nwith a hope of reducing the misuse of the great and promising architecture.\nThe meanings of these methods are defined in the HTTP specification [2] and are introduced briefly in the following part,\nalong with some guarantees about their behaviors.\nA method is called safe if it has no effect on the resource.\nAnd if a method is idempotent, it means duplicate actions cause no effect.\n\n@others\n\nMore details about impacts on the entire system and the specifications of methods\nwill be given in the modeling section.",
+    "agarciafdz.20251025161913.1": "The GET method means to retrieve whatever information is identified by requesting URI.\nIt should be safe and idempotent.\n",
+    "agarciafdz.20251025161934.1": "The PUT method is used to create (if it does not exist) or modify the requested resource identified by URI.\nIt should be idempotent.\n\n",
+    "agarciafdz.20251025173047.1": "I think this is an error in this paper.\nPUT must have a valid, key\n\nBecause creating, a new resource is the POST responsibility.\n\nIn Design by Concept or whatever the book by daniel jackson is.\n\nThey find that purposes that interfere witch each other also lead to wrong confusions.\n\nSo POST purpose is to create, and PUT purpose is to update.\n\nNow something that I understand is that a POST must have all the data, te generate the ID.\n",
+    "agarciafdz.20251025161949.1": "The POST method is used to create a new resource under the requesting URI and make the new resource as its subordinate.\nIt is neither safe nor idempotent.\n\n",
+    "agarciafdz.20251025173623.1": "if it's indeponent or not depends on the resource,\nsome resource might allow the creation of more copies of the same resource,\nsome other might only allow unique resources.\n",
+    "agarciafdz.20251025162023.1": "\nThe DELETE method is used to delete the requested resource in the server identified by requesting URI. \nIt should be idempotent.\n\n",
+    "agarciafdz.20251024161629.1": "A resource representation is a description of the state of the resource at a given time [21].\n\nA state may have different multiple representations. \n\nFor example, a web page can be presented as HTML, or XML, or just an image of its content.\n\nThe format of representation is negotiated by the client and server and should be understood by the application.\nThe multiple representations of a resource make it available to anyone who knows how to use the web.\n\n",
+    "agarciafdz.20251024161647.1": "\nThe communication between client and server is stateless in REST. \n\nEach request contains all the information needed to understand the message.\nAnd all the session states are stored in clients.\nAny context remains in the server cannot be used.\nOne benefit of statelessness is the scalability of the system.\nIf the server needs to save clients\u2019 states, its footprint will be impacted.\n\nAnd stateless behavior brings another advantage.\nIf a server crashes while running, it can be replaced without\nclients\u2019 notice. We give a formal description of this constraint in the verification part.\nnext two sections.\n\nFig. 1. Combination strategy in our model\nT. Yuan et al. / Electronic Notes in Theoretical Computer Science 309 (2014) 75\u201393 79\n\n",
+    "agarciafdz.20251029140114.1": "and this would allow us to create the example of Conduit that is a Benchmark to create a Blogging Engine.\nWith kind of this characteristics",
+    "agarciafdz.20251029141430.1": "Post\n has: a_list_of Authors\n has: a_list_of Comments\n\nAuthor\n has_written: a_list_of Posts\n has_comented_in: a_list_of Comments\n \n\nComment\n  for: a Post or another Comment (Cmoments are Tree's\n  by: an Author",
+    "agarciafdz.20251029141442.1": "\nThis is an exapmle of one would implement a PetStore API documented using the Swagger (now OAS) standard.\n\nWhat this tests is that the API is built as a GRAPH database\n",
+    "agarciafdz.20251029141422.1": "Post\n has: a_list_of Authors\n has: a_list_of Comments\n\nAuthor\n has_written: a_list_of Posts\n has_comented_in: a_list_of Comments\n \n\nComment\n  for: a Post or another Comment (Cmoments are Tree's\n  by: an Author",
+    "agarciafdz.20251029142345.1": "\nimagine a fire and forget API call where we don't wait for the response from the server.\nbut instead create our own webserver with an endpoint that will be open for the answer from the \"Ether\"\nand then do the next part of the execution.\n\nThis could be the key for creating something like BPMN that is a client and server for different servers!!!\n",
+    "agarciafdz.20251029182826.1": "In order to expand RESTLY from REST only analogies.\nto other protocolos like Git\nI will need a a user friendly way to represent state machines inside objects.\n\nIn this regard Objective State Programming with Wyvern looked as the kind of functionality I want\nBUT not the kind of language.\nSince I need a way to see the complete state machine in a single place,\nnot spread all over the code.\n\n\nScribble\nThis language for describing protocols looks beautiful.\n\nhttps://www.pls-lab.org/Scribble_%28MPSTs%29?utm_source=chatgpt.com\n\nAnd what I like the most, is that it has different views according to the actor that participates.\n\nI can already imagine, a Global Class that is a single ton.\nand that can give me back the states and transitions that an object must follow in order to be part of the state machine!\n\nThis would be great!!",
+    "agarciafdz.20251029142844.1": "\nGitLess did a usability study of git,\nand then made an abstraction of what are the minimum primitives.\n\nGitless-ly\nIs the applicatin of the model of git,\nbut shrink it to the level of a single program.\nso that we can model all the distributed applications, that are often but not all the time conected.\n\nI think this could be a good model to abstract:\n\n* Blockchains\n* Bi-temporal databases\n* Append Only databases\n",
+    "agarciafdz.20251029181940.1": "\nMulti-tree is a graph that is seen as a tree, where a node can have multiple parents.\n\nI think this is the perfect way to do it.\n\nBecause I think we:\n\nThink in Graphs\n\nOrganize in Trees (categorizations)\n\nWrite in Lists (paragraphs are linear)\n\nAnd read in stacks ( we being reading at the top, and are putting things in the stack of our memory, until we need to do a pop, reach a conclusi\u00f3n conect an idea, and the we put the idea back into the stack. of our memory.\nuntil we have a single result of the interpretation of the text.\n",
     "agarciafdz.20251021200904.1": "bla\n",
     "agarciafdz.20251021201740.1": "URL_PATH is just a string that start with a / and doesn't have spaces",
     "agarciafdz.20251021211749.1": "RESTLY_SCOOP_PROXY\n\nIs a pattern that isolates concurrent resource,\nso that it can communicate with single-threaded code.\n\nBy analogy is like a local_proxy to remote server that is located in another machine,\nand that requires serilazation deserealization of data.",
     "agarciafdz.20251021212132.1": "this one is the one that has the same interface with SEPARATE parameters.\n\nAnd has inside the storage... "
+  },
+  "uas": {
+    "agarciafdz.20251107235240.1": {
+      "annotate": {
+        "priority": 19,
+        "prisetdate": "2025-11-07"
+      },
+      "icons": [
+        {
+          "type": "file",
+          "file": "/usr/local/lib/python3.10/dist-packages/leo/Icons/cleo/chkboxblk.png",
+          "relPath": "cleo/chkboxblk.png",
+          "where": "beforeHeadline",
+          "yoffset": 0,
+          "xoffset": 2,
+          "xpad": 1,
+          "on": "vnode",
+          "cleoIcon": "1"
+        }
+      ]
+    },
+    "agarciafdz.20251024144157.1": {
+      "annotate": {
+        "priority": 19,
+        "prisetdate": "2025-10-24"
+      },
+      "icons": [
+        {
+          "type": "file",
+          "file": "/usr/local/lib/python3.10/dist-packages/leo/Icons/cleo/chkboxblk.png",
+          "relPath": "cleo/chkboxblk.png",
+          "where": "beforeHeadline",
+          "yoffset": 0,
+          "xoffset": 2,
+          "xpad": 1,
+          "on": "vnode",
+          "cleoIcon": "1"
+        }
+      ]
+    },
+    "agarciafdz.20251026210228.1": {
+      "annotate": {
+        "priority": 19,
+        "prisetdate": "2025-11-03"
+      },
+      "icons": [
+        {
+          "type": "file",
+          "file": "/usr/local/lib/python3.10/dist-packages/leo/Icons/cleo/chkboxblk.png",
+          "relPath": "cleo/chkboxblk.png",
+          "where": "beforeHeadline",
+          "yoffset": 0,
+          "xoffset": 2,
+          "xpad": 1,
+          "on": "vnode",
+          "cleoIcon": "1"
+        }
+      ]
+    },
+    "agarciafdz.20251025181330.1": {
+      "annotate": {
+        "priority": 19,
+        "prisetdate": "2025-11-03"
+      },
+      "icons": [
+        {
+          "type": "file",
+          "file": "/usr/local/lib/python3.10/dist-packages/leo/Icons/cleo/chkboxblk.png",
+          "relPath": "cleo/chkboxblk.png",
+          "where": "beforeHeadline",
+          "yoffset": 0,
+          "xoffset": 2,
+          "xpad": 1,
+          "on": "vnode",
+          "cleoIcon": "1"
+        }
+      ]
+    }
   }
 }
