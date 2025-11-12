@@ -12,10 +12,11 @@ inherit
 		rename
 			extend as hash_extend,
 			item as hash_item,
-			at as hash_at
+			at as hash_at,
+			has_item as hash_has_item
 		end
 
-	REST [R]
+	RESTLY [R]
 		undefine
 			is_equal, copy
 		end
@@ -35,7 +36,7 @@ feature
 			create Result.make_from_string ("")
 		end
 
-      extend(data:R; key: detachable URL_PATH)
+      extend(data:R; key: URL_PATH)
       do
          check attached key as l_key then
             last_inserted_key := l_key

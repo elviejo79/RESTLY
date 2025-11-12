@@ -48,11 +48,11 @@ feature -- DIRECTORY_RESOURCE Tests
 			first_file := ["first.txt", "Content of first file"]
 			second_file := ["second.txt", "Content of second file"]
 			dir := {DIRECTORY_RESOURCE}.make_and_register (file_path)
-			dir.extend (first_file.content, first_file.name)
+			dir.force (first_file.content, first_file.name)
 			assert ("we must have the content stored", first_file.content ~ dir [first_file.name])
 				-- dir.remove, should clean the first_file
 			dir.remove (first_file.name)
-			dir.extend (second_file.content, second_file.name)
+			dir.force (second_file.content, second_file.name)
 			assert ("we must have the content stored", second_file.content ~ dir [second_file.name])
 				-- dir.remove, should clean the second_file
 			dir.remove (second_file.name)

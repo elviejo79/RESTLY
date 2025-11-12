@@ -8,7 +8,7 @@ class
 	API_RESOURCE
 
 inherit
-	REST [STRING]
+	RESTLY [STRING]
 		undefine
 			is_equal, copy
 		end
@@ -79,7 +79,7 @@ feature --http verbs
 				-- should throw an exception
 		end
 
-	extend (data: STRING; key: detachable URL_PATH)
+	collection_extend (data: STRING)
 		do
 				-- should throw an exception
 		end

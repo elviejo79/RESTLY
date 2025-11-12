@@ -27,7 +27,7 @@ feature {NONE} -- Initialization
 
 feature {NONE} -- Fields
 
-	storage: REST[JSON_OBJECT]
+	storage: RESTLY[JSON_OBJECT]
 
 	id_parameter_name: STRING
 		attribute
@@ -41,9 +41,9 @@ feature -- Access
 		do
       -- If the Result was attached, it means we are in a Retry, and
       -- must just send the Result as it was managed in handle_rescue
-      
+
       if not attached Result then --if not has_failed_before then
-         if attached requested_path(req) as path  then --if we have a Path 
+         if attached requested_path(req) as path  then --if we have a Path
             -- Path-based operations (GET, PUT, DELETE)
             if req.is_get_request_method then
                Result := if_exists_execute(path, agent item(req,?))
@@ -86,7 +86,7 @@ do
 					end
             end
             end
-               
+
 feature -- Exception handling
 
 	handle_rescue (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
@@ -228,7 +228,7 @@ feature {NONE} -- Helpers
                req.read_input_data_into (input_data)
                create Result.make_from_string(input_data)
                -- Returns Void if parsing fails or no content
-         end 
+         end
 		end
 
    if_exists_execute (path: URL_PATH; handler: FUNCTION [URL_PATH, WSF_JSON_RESPONSE]): WSF_JSON_RESPONSE

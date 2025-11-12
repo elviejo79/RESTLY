@@ -21,7 +21,7 @@ inherit
 			copy
 		end
 
-	REST [STRING]
+	RESTLY [STRING]
 		undefine
 			is_equal,
 			copy
@@ -99,19 +99,23 @@ feature -- http verbs
 
 		end
 
-	extend (content: STRING; key: detachable URL_PATH)
+	replace (content: STRING; key: URL_PATH)
+			-- if we want to store files, without having a name for them
+			-- we can just use thir hash as name
+		do
+			write_file (content, key)
+			last_inserted_key := key
+		end
+
+	collection_extend (content: STRING)
 			-- if we want to store files, without having a name for them
 			-- we can just use thir hash as name
 		local
 			actual_key: URL_PATH
 		do
-			if attached key as k then
-				actual_key := k
-			else
-				create actual_key.make_from_string (content.hash_code.out)
-			end
-			last_inserted_key := actual_key
+			create actual_key.make_from_string (content.hash_code.out)
 			write_file (content, actual_key)
+			last_inserted_key := actual_key
 		end
 
 feature {NONE} -- Implementation
