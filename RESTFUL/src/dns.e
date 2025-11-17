@@ -33,14 +33,14 @@ do
 
 end
 feature -- rest verbs
-	has(key:URL):BOOLEAN
+	has(key:URI):BOOLEAN
 	do
-		Result := store.has (key)
+		Result := store.has (key.string)
 	end
 
-	item alias "[]"(key:URL):attached RESOURCE
+	item alias "[]"(key:URI):attached RESOURCE
 	do
-		check attached store.item(key) as l_weak_ref then
+		check attached store.item(key.string) as l_weak_ref then
 			Result := fromStore(l_weak_ref)
 		end
 	end
@@ -50,9 +50,9 @@ feature -- rest verbs
 		put(a_resource, a_resource.address)
 	end
 
-	put(a_resource:RESOURCE; key:URL)
+	put(a_resource:RESOURCE; key:URI)
 	do
-		store.put (toStore(a_resource), key)
+		store.put (toStore(a_resource), key.string)
 	end
 
 feature -- static registry
@@ -67,7 +67,7 @@ feature -- static registry
 	end
 feature {NONE}
 	--internal storage
-	store : HASH_TABLE[WEAK_REFERENCE[RESOURCE],URL]
+	store : HASH_TABLE[WEAK_REFERENCE[RESOURCE],STRING]
 	attribute
 		create Result.make(10)
 	end

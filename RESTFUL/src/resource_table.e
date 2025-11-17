@@ -23,7 +23,7 @@ create
 	make_with_url
 
 feature {NONE}
-	make_with_url (a_url: URL)
+	make_with_url (a_url: URI)
 		do
 			make (10)
 			Precursor (a_url)

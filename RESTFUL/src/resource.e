@@ -17,13 +17,13 @@ create
 	make_with_url
 
 feature {NONE}
-	make_with_url (a_url: URL)
+	make_with_url (a_url: URI)
 		do
 			address := a_url
 		end
 
 feature --factory
-	make_and_register (a_uri: URL): like Current
+	make_and_register (a_uri: URI): like Current
 		local
 			dns: DNS
 		do
@@ -62,9 +62,9 @@ feature -- standard features from AN
 
 
 feature --implementation
-	address: URL
+	address: URI
 		attribute
-			create Result.make_from_string ("http://default")
+			create {URL} Result.make_from_string ("http://default")
 		end
 
 end

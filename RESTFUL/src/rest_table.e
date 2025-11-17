@@ -12,13 +12,12 @@ inherit
 		rename
 			extend as hash_extend,
 			item as hash_item,
-			at as hash_at,
-			has_item as hash_has_item
+			at as hash_at
 		end
 
 	RESTLY [R]
 		undefine
-			is_equal, copy
+			is_equal, copy, has_item
 		end
 create
 	make
