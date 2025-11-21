@@ -6,9 +6,9 @@ note
 
 class
 	URL_PATH
-      
+
 inherit
-	PATH
+	PATH_OR_STRING
       redefine
       make_from_separate
       end

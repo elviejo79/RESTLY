@@ -14,7 +14,7 @@ note
 deferred class
 	RESTLY [R]
 inherit
-	RESTLY_NEW[R,PATH]
+	RESTLY_NEW[R,PATH_OR_STRING]
 
 feature
 	has_item(data:R):BOOLEAN

@@ -8,7 +8,7 @@ class
 	REST_TABLE [R]
 
 inherit
-	HASH_TABLE [R, URL_PATH]
+	HASH_TABLE [R, PATH_OR_STRING]
 		rename
 			extend as hash_extend,
 			item as hash_item,
@@ -23,19 +23,19 @@ create
 	make
 
 feature
-	at alias "@", item alias "[]" (key: URL_PATH): R assign force
+	at alias "@", item alias "[]" (key: PATH_OR_STRING): R assign force
 		do
 			check attached hash_item(key) as value then
 				Result := value
 			end
 		end
 
-	last_inserted_key: URL_PATH
+	last_inserted_key: PATH_OR_STRING
 		attribute
 			create Result.make_from_string ("")
 		end
 
-      extend(data:R; key: URL_PATH)
+      extend(data:R; key: PATH_OR_STRING)
       do
          check attached key as l_key then
             last_inserted_key := l_key

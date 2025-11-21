@@ -39,12 +39,12 @@ feature -- Attributes
 
 feature -- Queries aka Http safe verbs
 
-    has_key(key:PATH):BOOLEAN
+    has_key(key:PATH_OR_STRING):BOOLEAN
     do
     	Result := attached env_item(key.name)
     end
 
-	item alias "[]"(key:PATH):STRING assign force
+	item alias "[]"(key:PATH_OR_STRING):STRING assign force
 	do
 		check attached env_item(key.name) as l_item then
 			Result := l_item
@@ -53,7 +53,7 @@ feature -- Queries aka Http safe verbs
 
 feature -- Commands aka Http unsafe verbs
 
-	force (data:STRING; key: PATH)
+	force (data:STRING; key: PATH_OR_STRING)
 		-- Equivalent to http PUT
         -- Replaces the resource's representation with the request content.
         -- if key didn't exist it stil inserts it
@@ -80,7 +80,7 @@ feature {NONE}
          command_not_valid_for_env_variables: false
 		end
 
-   remove (key: PATH)
+   remove (key: PATH_OR_STRING)
 		-- Not supported for environment variables
 		do
       ensure then
@@ -88,7 +88,7 @@ feature {NONE}
 		end
       
 feature -- helpers
-	last_inserted_key: detachable PATH
+	last_inserted_key: detachable PATH_OR_STRING
          -- There is NO equivalent for this in http protocol.
          -- but is necessary to keep the Command / Query Separation principle in Eiffel
 

@@ -6,7 +6,7 @@ RESTLY[S]
 
 feature -- http vebrs
 
-has_key(key:URL_PATH):BOOLEAN
+has_key(key:PATH_OR_STRING):BOOLEAN
 
       do
       separate remote_api_service as remote do
@@ -14,7 +14,7 @@ has_key(key:URL_PATH):BOOLEAN
             end
       end
 
-item alias "[]" (a_key:URL_PATH):S
+item alias "[]" (a_key:PATH_OR_STRING):S
       do
       separate remote_api_service as remote do
          create Result.make_from_separate(remote.item(a_key))
@@ -28,21 +28,21 @@ collection_extend(data:S)
       end
       end
 
-force(data:S; key: URL_PATH)
+force(data:S; key: PATH_OR_STRING)
       do
       separate remote_api_service as remote do
          remote.force(data, key)
             end
       end
 
-remove(key: URL_PATH)
+remove(key: PATH_OR_STRING)
       do
       separate remote_api_service as remote do
          remote.remove(key)
       end
       end
 
-last_inserted_key: URL_PATH
+last_inserted_key: PATH_OR_STRING
       do
       separate remote_api_service as remote do
          create Result.make_from_separate(remote.last_inserted_key)

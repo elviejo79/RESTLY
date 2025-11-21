@@ -44,21 +44,18 @@ feature -- DIRECTORY_RESOURCE Tests
 		local
 			first_file, second_file: TUPLE [name: STRING; content: STRING]
 			dir, other, different: DIRECTORY_RESOURCE
-			first_key, second_key: PATH
 		do
 			first_file := ["first.txt", "Content of first file"]
 			second_file := ["second.txt", "Content of second file"]
-			create first_key.make_from_string (first_file.name)
-			create second_key.make_from_string (second_file.name)
 			dir := {DIRECTORY_RESOURCE}.make_and_register (file_path)
-			dir.force (first_file.content, first_key)
-			assert ("we must have the content stored", first_file.content ~ dir [first_key])
+			dir.force (first_file.content, first_file.name)
+			assert ("we must have the content stored", first_file.content ~ dir [first_file.name])
 				-- dir.remove, should clean the first_file
-			dir.remove (first_key)
-			dir.force (second_file.content, second_key)
-			assert ("we must have the content stored", second_file.content ~ dir [second_key])
+			dir.remove (first_file.name)
+			dir.force (second_file.content, second_file.name)
+			assert ("we must have the content stored", second_file.content ~ dir [second_file.name])
 				-- dir.remove, should clean the second_file
-			dir.remove (second_key)
+			dir.remove (second_file.name)
 		end
 
 feature -- DNS Tests
@@ -150,34 +147,28 @@ feature -- ENV_SCHEME
 			-- Test has_key with real environment variables
 		local
 			env: ENV_SCHEME
-			path_key: PATH
 		do
 			create env.make (env_url)
-			create path_key.make_from_string ("PATH")
-			assert ("PATH environment variable should exist", env.has_key (path_key))
+			assert ("PATH environment variable should exist", env.has_key ("PATH"))
 		end
 
 	test_has_key_nonexistent_var
 			-- Test has_key with non-existent variable
 		local
 			env: ENV_SCHEME
-			fake_key: PATH
 		do
 			create env.make (env_url)
-			create fake_key.make_from_string ("NONEXISTENT_VAR_XYZ_12345")
-			assert ("Non-existent variable should not exist", not env.has_key (fake_key))
+			assert ("Non-existent variable should not exist", not env.has_key ("NONEXISTENT_VAR_XYZ_12345"))
 		end
 
 	test_item_existing_var
 			-- Test retrieving actual environment variable values
 		local
 			env: ENV_SCHEME
-			path_key: PATH
 			path_value: STRING
 		do
 			create env.make (env_url)
-			create path_key.make_from_string ("PATH")
-			path_value := env.item (path_key)
+			path_value := env.item ("PATH")
 			assert ("PATH value should not be empty", not path_value.is_empty)
 			assert ("PATH value should contain path separators", path_value.has (':') or path_value.has (';'))
 		end
@@ -186,16 +177,14 @@ feature -- ENV_SCHEME
 			-- Test creating a new environment variable
 		local
 			env: ENV_SCHEME
-			test_key: PATH
 			test_value: STRING
 		do
 			create env.make (env_url)
-			create test_key.make_from_string ("TEST_NEW_VAR_12345")
 			test_value := "test_value_new"
 
-			env.force (test_value, test_key)
-			assert ("New variable should exist after force", env.has_key (test_key))
-			assert ("New variable should have correct value", env.item (test_key) ~ test_value)
+			env.force (test_value, "TEST_NEW_VAR_12345")
+			assert ("New variable should exist after force", env.has_key ("TEST_NEW_VAR_12345"))
+			assert ("New variable should have correct value", env.item ("TEST_NEW_VAR_12345") ~ test_value)
 		end
 
 	test_keys_returns_environment
@@ -214,16 +203,14 @@ feature -- ENV_SCHEME
 			-- Test storing an emty string should throw an exception
 		local
 			env: ENV_SCHEME
-			test_key: PATH
 			empty_value: STRING
 			exception_caught: BOOLEAN
 		do
 			if not exception_caught then
 				create env.make (env_url)
-				create test_key.make_from_string ("TEST_EMPTY_VAR_12345")
 				create empty_value.make_empty
 
-				env.force (empty_value, test_key)
+				env.force (empty_value, "TEST_EMPTY_VAR_12345")
 				assert ("Should have thrown check violation", False)
 			end
 		rescue
@@ -235,24 +222,21 @@ feature -- ENV_SCHEME
 			-- Test environment variable name case sensitivity (OS-dependent)
 		local
 			env: ENV_SCHEME
-			lower_key, upper_key: PATH
 			test_value: STRING
 		do
 			create env.make (env_url)
-			create lower_key.make_from_string ("test_case_var_12345")
-			create upper_key.make_from_string ("TEST_CASE_VAR_12345")
 			test_value := "case_test_value"
 
-			env.force (test_value, lower_key)
+			env.force (test_value, "test_case_var_12345")
 
 				-- On Unix: case-sensitive (different keys)
 				-- On Windows: case-insensitive (same key)
-			if env.has_key (upper_key) then
+			if env.has_key ("TEST_CASE_VAR_12345") then
 				assert ("On case-insensitive OS, upper and lower should access same var",
-					env.item (upper_key) ~ test_value)
+					env.item ("TEST_CASE_VAR_12345") ~ test_value)
 			else
 				assert ("On case-sensitive OS, upper key should not exist",
-					not env.has_key (upper_key))
+					not env.has_key ("TEST_CASE_VAR_12345"))
 			end
 		end
 
@@ -260,17 +244,15 @@ feature -- ENV_SCHEME
 			-- Test that multiple ENV_SCHEME instances share process environment
 		local
 			env1, env2: ENV_SCHEME
-			test_key: PATH
 			test_value: STRING
 		do
 			create env1.make (env_url)
 			create env2.make (env_url)
-			create test_key.make_from_string ("TEST_SHARED_VAR_12345")
 			test_value := "shared_value"
 
-			env1.force (test_value, test_key)
-			assert ("Value set in env1 should be visible in env2", env2.has_key (test_key))
-			assert ("Value from env1 should match in env2", env2.item (test_key) ~ test_value)
+			env1.force (test_value, "TEST_SHARED_VAR_12345")
+			assert ("Value set in env1 should be visible in env2", env2.has_key ("TEST_SHARED_VAR_12345"))
+			assert ("Value from env1 should match in env2", env2.item ("TEST_SHARED_VAR_12345") ~ test_value)
 		end
 
 feature -- FILE_SCHEME
@@ -304,85 +286,77 @@ feature -- FILE_SCHEME
 			-- Test has_key returns true for existing file
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("test_file.txt")
 
 				-- Create the test file first
-			file_scheme.force ("test content", test_key)
+			file_scheme.force ("test content", "test_file.txt")
 
-			assert ("File should exist", file_scheme.has_key (test_key))
+			assert ("File should exist", file_scheme.has_key ("test_file.txt"))
 
 				-- Cleanup
-			file_scheme.remove (test_key)
+			file_scheme.remove ("test_file.txt")
 		end
 
 	test_item_existing_file
 			-- Test retrieving content from existing file
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 			test_content, retrieved_content: STRING
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("test_read_file.txt")
 			test_content := "This is test content for reading"
 
 				-- Create the test file first
-			file_scheme.force (test_content, test_key)
+			file_scheme.force (test_content, "test_read_file.txt")
 
-			retrieved_content := file_scheme.item (test_key)
+			retrieved_content := file_scheme.item ("test_read_file.txt")
 			assert ("Retrieved content should match stored content", retrieved_content ~ test_content)
 
 				-- Cleanup
-			file_scheme.remove (test_key)
+			file_scheme.remove ("test_read_file.txt")
 		end
 
 	test_force_new_file
 			-- Test creating new file with explicit filename
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 			test_content: STRING
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("new_file.txt")
 			test_content := "New file content"
 
-			file_scheme.force (test_content, test_key)
+			file_scheme.force (test_content, "new_file.txt")
 
-			assert ("File should exist after force", file_scheme.has_key (test_key))
-			assert ("Content should match", file_scheme.item (test_key) ~ test_content)
-			assert ("Last inserted key should be set", file_scheme.last_inserted_key ~ test_key)
+			assert ("File should exist after force", file_scheme.has_key ("new_file.txt"))
+			assert ("Content should match", file_scheme.item ("new_file.txt") ~ test_content)
+			assert ("Last inserted key should be set", file_scheme.last_inserted_key.out ~ "new_file.txt")
 
 				-- Cleanup
-			file_scheme.remove (test_key)
+			file_scheme.remove ("new_file.txt")
 		end
 
 	test_force_overwrite_file
 			-- Test overwriting existing file content
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 			original_content, new_content: STRING
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("overwrite_test.txt")
 			original_content := "Original content"
 			new_content := "New overwritten content"
 
 				-- Create initial file
-			file_scheme.force (original_content, test_key)
-			assert ("Original content stored", file_scheme.item (test_key) ~ original_content)
+			file_scheme.force (original_content, "overwrite_test.txt")
+			assert ("Original content stored", file_scheme.item ("overwrite_test.txt") ~ original_content)
 
 				-- Overwrite
-			file_scheme.force (new_content, test_key)
-			assert ("Content should be overwritten", file_scheme.item (test_key) ~ new_content)
-			assert ("Content should not be original", not (file_scheme.item (test_key) ~ original_content))
+			file_scheme.force (new_content, "overwrite_test.txt")
+			assert ("Content should be overwritten", file_scheme.item ("overwrite_test.txt") ~ new_content)
+			assert ("Content should not be original", not (file_scheme.item ("overwrite_test.txt") ~ original_content))
 
 				-- Cleanup
-			file_scheme.remove (test_key)
+			file_scheme.remove ("overwrite_test.txt")
 		end
 
 	test_collection_extend
@@ -390,7 +364,7 @@ feature -- FILE_SCHEME
 		local
 			file_scheme: FILE_SCHEME
 			test_content: STRING
-			generated_key: PATH
+			generated_key: PATH_OR_STRING
 		do
 			create file_scheme.make (file_path)
 			test_content := "Content for auto-generated filename"
@@ -410,85 +384,76 @@ feature -- FILE_SCHEME
 			-- Test deleting file
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 			test_content: STRING
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("file_to_remove.txt")
 			test_content := "This file will be removed"
 
 				-- Create file
-			file_scheme.force (test_content, test_key)
-			assert ("File should exist before removal", file_scheme.has_key (test_key))
+			file_scheme.force (test_content, "file_to_remove.txt")
+			assert ("File should exist before removal", file_scheme.has_key ("file_to_remove.txt"))
 
 				-- Remove file
-			file_scheme.remove (test_key)
-			assert ("File should not exist after removal", not file_scheme.has_key (test_key))
+			file_scheme.remove ("file_to_remove.txt")
+			assert ("File should not exist after removal", not file_scheme.has_key ("file_to_remove.txt"))
 		end
 
 	test_keys_returns_files
 			-- Test that keys lists directory entries
 		local
 			file_scheme: FILE_SCHEME
-			test_key1, test_key2: PATH
 			file_keys: ARRAYED_LIST [PATH]
 		do
 			create file_scheme.make (file_path)
-			create test_key1.make_from_string ("keys_test1.txt")
-			create test_key2.make_from_string ("keys_test2.txt")
 
 				-- Create test files
-			file_scheme.force ("content1", test_key1)
-			file_scheme.force ("content2", test_key2)
+			file_scheme.force ("content1", "keys_test1.txt")
+			file_scheme.force ("content2", "keys_test2.txt")
 
 			file_keys := file_scheme.keys
 			assert ("Keys should not be empty", file_keys.count >= 2)
 
 				-- Cleanup
-			file_scheme.remove (test_key1)
-			file_scheme.remove (test_key2)
+			file_scheme.remove ("keys_test1.txt")
+			file_scheme.remove ("keys_test2.txt")
 		end
 
 	test_multiple_instances_same_path
 			-- Test multiple FILE_SCHEME instances with same base_uri access same files
 		local
 			file_scheme1, file_scheme2: FILE_SCHEME
-			test_key: PATH
 			test_content: STRING
 		do
 			create file_scheme1.make (file_path)
 			create file_scheme2.make (file_path)
-			create test_key.make_from_string ("shared_file.txt")
 			test_content := "Shared content"
 
 				-- Write with first instance
-			file_scheme1.force (test_content, test_key)
+			file_scheme1.force (test_content, "shared_file.txt")
 
 				-- Read with second instance
-			assert ("Second instance should see the file", file_scheme2.has_key (test_key))
-			assert ("Second instance should read same content", file_scheme2.item (test_key) ~ test_content)
+			assert ("Second instance should see the file", file_scheme2.has_key ("shared_file.txt"))
+			assert ("Second instance should read same content", file_scheme2.item ("shared_file.txt") ~ test_content)
 
 				-- Cleanup
-			file_scheme1.remove (test_key)
+			file_scheme1.remove ("shared_file.txt")
 		end
 
 	test_empty_file_content
 			-- Test storing and retrieving empty string
 		local
 			file_scheme: FILE_SCHEME
-			test_key: PATH
 			empty_content: STRING
 		do
 			create file_scheme.make (file_path)
-			create test_key.make_from_string ("empty_file.txt")
 			create empty_content.make_empty
 
-			file_scheme.force (empty_content, test_key)
-			assert ("Empty file should exist", file_scheme.has_key (test_key))
-			assert ("Retrieved content should be empty", file_scheme.item (test_key).is_empty)
+			file_scheme.force (empty_content, "empty_file.txt")
+			assert ("Empty file should exist", file_scheme.has_key ("empty_file.txt"))
+			assert ("Retrieved content should be empty", file_scheme.item ("empty_file.txt").is_empty)
 
 				-- Cleanup
-			file_scheme.remove (test_key)
+			file_scheme.remove ("empty_file.txt")
 		end
 
 feature -- Test values
