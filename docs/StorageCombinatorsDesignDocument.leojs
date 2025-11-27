@@ -120,6 +120,20 @@
               "vh": "I will write",
               "children": [
                 {
+                  "gnx": "agarciafdz.20251126112941.1",
+                  "vh": "@chapter Paper: Leap of faith an I trust AI generated code?",
+                  "children": [
+                    {
+                      "gnx": "agarciafdz.20251126113008.1",
+                      "vh": "Abstract"
+                    },
+                    {
+                      "gnx": "agarciafdz.20251126133837.1",
+                      "vh": "Indiana Jones Story"
+                    }
+                  ]
+                },
+                {
                   "gnx": "agarciafdz.20251105131344.1",
                   "vh": "@chapter Paper 0: Polymorphic Identifiers",
                   "children": [
@@ -129,7 +143,7 @@
                     },
                     {
                       "gnx": "agarciafdz.20251117143143.1",
-                      "vh": "@auto-org ./tmp/draf-for-emacs.org"
+                      "vh": "@auto-org ./tmp/draft-httpym.org"
                     },
                     {
                       "gnx": "agarciafdz.20251105131446.1",
@@ -139,6 +153,32 @@
                       "gnx": "agarciafdz.20251111194028.1",
                       "vh": "Ideas that don't want to be part of the document",
                       "children": [
+                        {
+                          "gnx": "agarciafdz.20251126142713.1",
+                          "vh": "Example of URI_PYM"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251126125321.1",
+                          "vh": "resourc equote long version"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251126125138.1",
+                          "vh": "Respone status code :ignore:",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251126125138.2",
+                              "vh": "Client errors :ignore:"
+                            },
+                            {
+                              "gnx": "agarciafdz.20251126125138.3",
+                              "vh": "Server errors :ignore:"
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251120231921.10",
+                          "vh": "Fielding's REST architectural style"
+                        },
                         {
                           "gnx": "agarciafdz.20251119230824.56",
                           "vh": "Why is Eiffel an Ideal Language to implement Polymorphic Identfiers and Rest Stores",
@@ -318,6 +358,106 @@
                         {
                           "gnx": "agarciafdz.20251111194200.1",
                           "vh": "in markdown"
+                        },
+                        {
+                          "gnx": "agarciafdz.20251124132158.52",
+                          "vh": "Correspondence with HTTP",
+                          "children": [
+                            {
+                              "gnx": "agarciafdz.20251124132158.53",
+                              "vh": "Design by Contract (DbC) vs HTTP Methods and Status Codes",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251124132158.54",
+                                  "vh": "Eiffel"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.55",
+                                  "vh": "HTTP"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.56",
+                                  "vh": "Summary link"
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251124132158.57",
+                              "vh": "Command\u2013Query Separation (CQS) vs HTTP Safe and Unsafe Methods",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251124132158.58",
+                                  "vh": "Eiffel"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.59",
+                                  "vh": "HTTP"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.60",
+                                  "vh": "Summary link: HTTP\u2019s safe/unsafe and idempotent/non-idempotent distinctions are a protocol-level incarnation of CQS."
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251124132158.61",
+                              "vh": "Uniform Access Principle (UAP) vs HTTP URIs and methods",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251124132158.62",
+                                  "vh": "Eiffel"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.63",
+                                  "vh": "HTTP"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.64",
+                                  "vh": "Summary link: Just as UAP hides attribute vs. function behind the same call syntax, HTTP hides storage vs. computation vs. aggregation behind URIs and a uniform message format."
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251124132158.65",
+                              "vh": "Open/Closed Principle (OCP) vs HTTP Proxies",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251124132158.66",
+                                  "vh": "Eiffel"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.67",
+                                  "vh": "HTTP"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.68",
+                                  "vh": "Summary link: Just as the Open/Closed Principle lets us extend the functionality of classes, proxies and middleware add functionality to an HTTP resource."
+                                }
+                              ]
+                            },
+                            {
+                              "gnx": "agarciafdz.20251124132158.69",
+                              "vh": "Systematic / Uniform Naming Principle vs HTTP methods",
+                              "children": [
+                                {
+                                  "gnx": "agarciafdz.20251124132158.70",
+                                  "vh": "Eiffel"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.71",
+                                  "vh": "HTTP"
+                                },
+                                {
+                                  "gnx": "agarciafdz.20251124132158.72",
+                                  "vh": "Summary link: HTTP\u2019s power comes from a single, uniform naming and classification scheme for methods, codes, and resource identifiers, mirroring Eiffel\u2019s systematic naming principle."
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "gnx": "agarciafdz.20251126124746.1",
+                          "vh": "Examples of URIs"
                         }
                       ]
                     }
@@ -1050,7 +1190,16 @@
     "agarciafdz.20251026155326.1": "Identify a \"giant\", not a chupchick. Intuition will guide you - important enough subject for you.\nIdentify the enormity of the area not addressed by the giant. Reality gives the signals that so much more can be done. You are aiming for a broader, not a more confined, area than what was addressed by the giant.\nGet on the giant's shoulders. Gain the historical perspective - understand the giant's solution better than he did.\nIdentify the conceptual difference between the reality that was improved so dramatically by the giant and the area untouched.\nIdentify the wrong assumption.\nConduct the full analysis to determine the core problem, solution, et.\n\n",
     "agarciafdz.20251102140740.1": "Todobackend.com\n\nIs an online benchmark where backend framewors and programming languages, implement a Web-Api that follows a specification.\n\nThe advantage is that all the different implementations follow the same spec, what has allowed us to compare how many LOC's does it take to implement the Web-Api.\n\n\nThis example is also ideal since the Todo App behaves like a list, so there are not nested-todos and that was one of the self imposed constraints for this paper.",
     "agarciafdz.20251102140728.1": "\nhttps://www.nan.fyi/database",
+    "agarciafdz.20251126113008.1": "As an AI coding esceptic it has been painful to be a netcitizen the past years.\nThe amount of bombastic AI headlines has left a bad flavour in my mouth.\n\nBut since many people that I respect kept telling me that AI coding was important and not just a gimmick I decided to run this experiment.\n\nIn this experiment we incremented the amount of pre-made compontents for the HTTPYM Library.From just 4\nto 40 (a 10x increase) using only AI generated code.\n\nThe othe rule was that the code was a black box.\nI didn't allow myself to modify or even read the code generated by the AI. This included AI generated Tests.\n\nSo in order for me to trust this generated code.\nThe only thing I could modify was the Spcefication that the AI used to generate the code.\n\n\nFortunately for me I'm using Eiffel, which is the most practical formal methods language.\nSo I could only modify the Contracts of the features of the classes.  Constraint the Generic types and DesigCn by Contract, Constrainde Genericity and AutoTest we were able to increment the diversity of components for the HTTPYM library.\n\n\n\nthe Contracts in the Clases of HTTPYm the types, adding constraints.\nAnd I let AutoTest go wild creating compositions by itself.\n\n\nIn this paper I present my learning, and to see if I could finally trust, AI generated code.\n",
+    "agarciafdz.20251126133837.1": "In Inidiana Jones and the last cruzade there is an scene that shows that Indy has to \"take a leap of faith, and give a step into an abyss in order to get the holy grail.\"\n\nWhen Indy faithfuly take the step we can show that the abys is actually a realistic painting of an abyss and that he is actually walking in a rock solidg bridge.\n\nWell this is kind of this work,\nIn order to use the code created by an AI,\nI need to take a leap of faith.\nBUT my rock solid bridge are design by contract, auto-test and auto-proof.\n",
     "agarciafdz.20251117201313.1": "@language md\nhttps://chatgpt.com/s/t_691bd68dd28c81919c007b455258e69f\n\n## 4. A concrete proposed outline (mapping your current content)\n\nHere\u2019s a suggested reorganized table of contents, with where your existing material would go:\n\n1. **Abstract**\n\n   * Clean up existing abstract; keep the promise: RESTLY implements Weiher\u2019s AOP ideas (URLs + store protocol) in Eiffel.\n\n2. **Introduction** *(new)*\n\n   * Motivation: non-uniform resource access; mini-protocol per library.\n   * Weiher\u2019s insight (shrinking web architecture into a program).\n   * Key idea: RESTLY = polymorphic identifiers + REST-inspired STORE protocol in Eiffel.\n   * Contributions (bullet list).\n   * Paper structure overview.\n\n3. **Background**\n   3.1 Weiher\u2019s Architecture Oriented Programming\n\n   * Use your 2.1 + the quote.\n   * Briefly define polymorphic identifiers and STORE (no deep dive).\n\n   3.2 REST and HTTP in a nutshell\n\n   * Condense 2.2, 2.2.2, 2.2.3, 2.3, 3 into 1\u20132 pages.\n   * Keep only method table, safe/idempotent/cacheable definitions, and 404/500/501/412 status codes.\n\n   3.3 Eiffel principles relevant to RESTLY\n\n   * Condensed 2.4 + 2.5: DbC, UAP, CQS, maybe SCP.\n   * Short bridging paragraphs to \u201cWhy Eiffel is a good host for AOP / RESTLY\u201d.\n\n4. **Design of RESTLY**\n   4.1 Design goals\n\n   * Move 3 Claim / research question + 3.1 URLs are effective here.\n\n   4.2 RESTLY STORE interface\n\n   * Present a cleaned up version of the RESTLY class once.\n   * Explain mapping GET/HEAD/POST/PUT/DELETE to Eiffel features (`item`, `has_key`, `collection_extend`, etc.).\n\n   4.3 URL model inside a program\n\n   * 2.1.1 \u201cURLs as the addressing mechanism inside a program\u201d (shortened).\n   * Show Figure 1 (URL components).\n   * Brief discussion of URI/URL/URN; maybe move exhaustive examples to appendix.\n\n   4.4 Schema handlers\n\n   * 6.2 Three levels: RAW_SCHEMA_HANDLER, RESTLY_SCHEMA and PREFIXED_SCHEMA (structured and cleaned).\n\n   4.5 Origins and combinators\n\n   * PREFIX combinator, ORIGIN concept (HTTP_ORIGIN, FILE_ORIGIN, ENV_ORIGIN).\n   * Move the PrefixCombinator and ORIGIN examples here.\n\n5. **Implementation in Eiffel**\n   5.1 Reusing Eiffel\u2019s URI and base libraries\n\n   * 4.1/4.1.2 (\u201cHow do we parse a URL?\u201d, the short view, use of `URL`, `FILE_URL`, `ENV_URL`).\n\n   5.2 Implementing schema handlers\n\n   * 6.3.1 Env handler, 6.3.2 file handler, HTTP handler.\n\n   5.3 Contracts and HTTP semantics\n\n   * Map 404/500/501 etc. to pre/postconditions (`require else`, `ensure`).\n   * Reuse 2.5.2 (\u201ccorrect REST APIs are designed to respect contracts\u2026\u201d).\n\n   5.4 Tooling and short forms\n\n   * Show how you use `ec -short` with RESTLY (and move raw output to an appendix).\n\n6. **Examples and Usage**\n\n   * Collect:\n\n     * `SCHEME_CLIENT = \"http://\u2026\"` examples.\n     * `FILE_URL`, `ENV_URL`, `HTTP_ORIGIN[JSON]` examples.\n   * Show how the same syntax works across env://, file://, http://.\n   * Optionally a small scenario (e.g. \u201cConfigurable resource access in a small application\u201d).\n\n7. **Related Work** *(new)*\n\n   * Weiher\u2019s original Objective-S implementation.\n   * Other REST/HTTP libraries in Eiffel and elsewhere.\n   * Other approaches to polymorphic identifiers / resource abstractions.\n\n8. **Conclusion and Future Work**\n\n   * Summarize what RESTLY achieves.\n   * Fold in all your \u201cin the next paper / in the 3rd paper\u2026\u201d content in a structured way.\n\n9. **Appendices**\n\n   * A. Full RESTLY short form.\n   * B. Full HTTP method table and semantics.\n   * C. Extended Eiffel vs Java UAP example (optional).\n\n",
+    "agarciafdz.20251125135115.20": "\n#+NAME: fig:complex-web-interaction\n#+CAPTION: Composed web interaction\n#+BEGIN_SRC plantuml :file complex-web-interaction.svg :results file :exports results\n@startuml\n\nbox \"Local Computer\" #LightBlue\nparticipant Browser\ndatabase Cache\nend box\ncontrol Internet\nbox \"Remote Server\" #LightBlue\nqueue Load_Balancer\nparticipant Web_Server\nend box\n\n\n\nBrowser -> Cache : get index.html\nCache -> Internet : get index.html\nInternet -> Load_Balancer : get index.html\nLoad_Balancer -> Web_Server : get index.html\n@enduml\n#+END_SRC\n\n#+RESULTS: fig:complex-web-interaction\n[[file:complex-web-interaction.svg]]\n\n",
+    "agarciafdz.20251126142713.1": "In order to use URLs in our programs\nwe simply want to be able te say:\n\n#+BEGIN_EXAMPLE\n    my_file:FILE_URL = \"file:///home/my_user/my_file.txt\"\n#+END_EXAMPLE\n\nwhich translates into: my_file variable of type FILE_URL assign the string the url with file scheme \"file:///home....\"\n\nand have that actually create an object of type FILE_URL that has separated the parts of the URL as in the diagram before.\n\nAn equivalent creating would be something like:\n\n#+BEGIN_EXAMPLE\n    my_file := create {FILE_URL}.make_from_string(\"file:///home/my_user/my_file.txt\")\n#+END_EXAMPLE\n\nOf course if we are sending an invalid file url it should throw an error\n\n#+BEGIN_EXAMPLE\n  wrong_file_uri : FILE_URL = \"http://this-is-not-file-uri/although/it/is/valid/http/uri\"\n#+END_EXAMPLE\n\n",
+    "agarciafdz.20251126125321.1": "\n#+BEGIN_QUOTE\nAny information that can be named can be a resource {{{impmark(2)}}}:\na document or image, a temporal service (e.g. \"today's weather in Los Angeles\"),\na collection of other resources.\n\na non-virtual object (e.g. a person), and so on.\nIn other words, any concept that might be the target of an author's hypertext reference must fit within the definition of a resource.\nA resource is a conceptual mapping to a set of entities,\nnot the entity that corresponds to the mapping at any particular point in time.\n-- Roy Fielding [cite:Fieldingsthesis chapter 5]\n#+END_QUOTE\n\n",
+    "agarciafdz.20251126125138.1": "Probably all of us have experienced a /404 Page not found/ which is the most common client error.\nAnd there is of course the /500 Internal Server error/ which is the most common server error.\n\nThere are other examples such as:",
+    "agarciafdz.20251126125138.2": "\n+ 400 Bad Request :: The server will not process the request due to something perceived to be a client error.\n+ 403 Forbidden :: The client doesn't have access rights to the content.\n+ 412 Precondition Failed :: In conditional requests, the client has indicated preconditions in its headers which the server does not meet.\n\n\n",
+    "agarciafdz.20251126125138.3": "\nAnd for server errors:\n\n+ 500 Internal Server Error :: The server has encountered a situation it does not know how to handle. This error is generic, indicating that the server cannot find a more appropriate 5xx status code to respond with.\n+ 501 Not Implemented :: The request method is not supported by the server and cannot be handled. The only methods that servers are required to support (and therefore that must not return this code) are `GET` and `HEAD` methods.\n+ 507 Insufficient Storage :: The method could not be performed on the resource because the server is unable to store the representation.\n\n",
+    "agarciafdz.20251120231921.10": "\nRoy Fielding worked on the HTTP 1.0  and 1.1 Specifications, was also one of the original authors of Apache WebServer.\n\nThen in 2000 documented his experince in his Phd Thesis: @Chatgpt create BibTex Citation for Fielding's Thesis.\n\nIn Chapter 5 He defines the constraints that differentiate REST from other Architectural styles:\n\nThis set of constraints where chosen because of the system properties they induce (scalability, evolvability, visibility, etc.).\n\n\n1. Client-Server :: separation of concerns and independent evolution.\n2. Stateless :: every request carries all context; improves visibility/reliability/scalability; trades off some per-request overhead.\n3. Cache :: responses are explicitly/implicitly cacheable; reduces latency & load; watch for staleness.\n4. Uniform Interface :: the distinguishing feature\n     Characterized for the use of known \"verbs\" for interacting with e resource. The set of verbs are (get, head, post, put, delete, etc.)\n     This constraint has four sub-constraints:\n\n   1. Resource identification (with URIs) :: URIs identify *concepts*, not documents/files.\n   1. Manipulation via representations :: (operate on representations, not the resource itself.\n   1. Self-descriptive messages :: enough metadata for intermediaries to understand/transform.\n   1. Hypermedia as the engine of application state (HATEOAS) :: links/forms in representations drive next actions\n5. Layered System :: components can\u2019t see beyond the next layer; enables proxies, load balancers, gateways.\n6. Code-on-Demand (optional) :: download code to extend clients (e.g., applets/scripts) when appropriate.\n\nThe MOST successful implementation of the REST Architecture and it's constraints is the HTTP protocol.\n\n",
     "agarciafdz.20251119230824.56": "\n",
     "agarciafdz.20251119230824.57": "So a URL is the application of the Uniform Access Principl but at the level of the internet.\n\n\nFor example:\n\nand address like\n\nhttp://www.example.com/about\n\nabout\n\ncan be an html page,\nit can be php script,\nor a python script\nor CGI program in perl.\n\nIt doesn't matter, it is the same address without requirement to know what the underlaying implementation is.\n\nEven better the provider of that page can change the underlaying technology and the web browser doesn't need to know that!\n\nIt's important to know that's why the use of extensions is discouraged, in the paper about URL design\n\nbecause:\n\nhttp://www.example.com/about.html\n\nmight need to change when you migrate to php script:\n\nhttp://www.example.com/about.php\n\nor an ASP.net page\n\nhttp://www.example.com/about.asp\n\n",
     "agarciafdz.20251119230824.58": "When trying to access a Resource using your browser you might have gotteng the \"404 Page Not Found Error\"\nOr perhaps if the server was having problems you got the message \"500 Internal Server Error\"\n\nWell those are \"Contracts\" in Eiffel's Sense.\n\nIn the 404 Error the customer (your browser) Didn't satisfy its side of the bargain of only asking for valid resources.\n\nSo as in this meme image implies,\ndoesn't matter how many times the user clicks refresh.\nIt won't fix the problem because the error is on his side.\nOther\n\nIn the 500 Error, it means tha by no fautl of your own the server. Cannot fulfill it's side of the contract and that you should retry later.\n\n",
@@ -1084,6 +1233,28 @@
     "agarciafdz.20251113220152.14": "\nThis are not Patterns but Components, meaning you can reuse them easily\nwithout the need to implement again the logic.\nonly the parts that change.\n\nhttps://chatgpt.com/s/t_6903ff05c0ec8191bf68b7d9d8b97e05\n\n\nIn **Karine Arnout\u2019s thesis *From Patterns to Components***, the distinction between **componentization** and **design patterns** is central:\n\n---\n\n### \ud83e\udde9 **Design Patterns**\n\nA **design pattern** is a **reusable design solution**, not a reusable piece of code.\nIt captures **recurring problems** and their **conceptual solutions**, serving as a *guide* for software architects and developers.\n\nArnout notes that:\n\n> \u201cDesign patterns are good but components are better\u2026 Patterns are not reusable as code: developers must implement them anew for each application.\u201d\n\nPatterns help by:\n\n* Providing a **repository of design knowledge** and good practices.\n* Offering a **common vocabulary** (\u201cFactory\u201d, \u201cVisitor\u201d, \u201cObserver\u201d) that improves communication.\n* Promoting **better architectures** (e.g., decoupling, abstraction, flexibility).\n\nHowever, their main **limitation** is that they only describe *how to structure code*, not the code itself \u2014 so every developer reimplements them manually.\n\n---\n\n### \u2699\ufe0f **Componentization**\n\n**Componentization** is the process of **turning design patterns into reusable components** \u2014 concrete, reusable **library classes** that implement the intent of a pattern.\nArnout defines it explicitly:\n\n> **Definition:**\n> \u201cComponentization is the process of designing and implementing a reusable component (library classes) from a design pattern (the book description of an intent, a motivation, some use cases, and typical software architecture examples).\u201d\n\nComponentization aims to:\n\n* **Automate reuse**: provide off-the-shelf libraries instead of design blueprints.\n* **Reduce errors**: avoid repetitive, error-prone reimplementation of patterns.\n* **Increase trust**: produce *\u201ctrusted components\u201d* verified with **Design by Contract\u2122**.\n* **Leverage language mechanisms** (genericity, multiple inheritance, agents in Eiffel) to generalize pattern implementations.\n\nExample:\n\n* The **Observer** pattern was *componentized* into an **Event Library**, supporting publish-subscribe interactions.\n* The **Visitor** pattern became a **Visitor Library**, simplifying double dispatch.\n\n---\n\n### \ud83d\udd04 **In Summary**\n\n| Aspect          | **Design Pattern**                              | **Componentization**                            |\n| --------------- | ----------------------------------------------- | ----------------------------------------------- |\n| **Level**       | Conceptual (design-time)                        | Concrete (implementation-time)                  |\n| **Form**        | Textual description (problem\u2013solution template) | Code (reusable component/library)               |\n| **Reuse Type**  | *Design reuse*                                  | *Code reuse*                                    |\n| **User Effort** | Developer must reimplement pattern              | Developer reuses ready-made component           |\n| **Goal**        | Share design knowledge                          | Provide executable reuse                        |\n| **Example**     | Observer, Visitor, Factory                      | Event Library, Visitor Library, Factory Library |\n\n---\n\nArnout summarizes the relationship elegantly:\n\n> \u201cDesign patterns are, by nature, reusable in terms of design. However, they are not reusable in terms of code. The challenge is to capture these reusable design solutions into reusable pieces of code (classes or class libraries).\u201d\n",
     "agarciafdz.20251111194144.1": "@startmindmap\ntop to bottom direction\n* http://www.example.com/content/pages/about.html?q=search_term#a_section\n** http\n***_ scheme\n** ://\n***_ separator\n** www.example.com\n***_ authority\n** /content/pages/about\n***_ path\n** .html\n***_ content type\n** q=search_term\n***_ query\n** .#a_section\n***_ fragment\n@endmindmap\n\nhttps://www.plantuml.com/plantuml/uml/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00",
     "agarciafdz.20251111194200.1": "@language md\n[![](https://img.plantuml.biz/plantuml/svg/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00)](https://editor.plantuml.com/uml/RP2n3i8m34JtVaKaDePcHqBm9vK9XbJ2TN2kAlrxqgOC82PBv-VpwSuPP91-k0gb1feSr5qKK77NtZYWrw7PkmYaW_VJDBNy8aaFReEA3pg01_X4TywUBZgYZP37wNdCJ1PY1pRPKPS_JjMgp7tdSeWil6Z5UfCuaH7K5lNdMoLeH5JhCI_4lm0LIuIu46kSAcsimvpMfryPA_8SsLRZzYjpsToCxbAkcpENhhQ-tW00)\n\n\n",
+    "agarciafdz.20251124132158.52": "\n\n\n",
+    "agarciafdz.20251124132158.53": "\n",
+    "agarciafdz.20251124132158.54": "\n Interactions are modeled as *contracts* between client and supplier, with preconditions, postconditions, and invariants. When a contract is violated, we get an appropriate exception that clarifies whether the client is at fault or the supplier.\n\n",
+    "agarciafdz.20251124132158.55": "\n * Each HTTP method (GET, POST, PUT, DELETE, etc.) has a specified contract.\n\n   * **Preconditions**: when it is valid to invoke (resource existence, auth, headers like `If-Match`, valid payload, etc.).\n   * **Postconditions**: what the server must guarantee (e.g., PUT replaces a representation, DELETE removes it, GET does not change state).\n\n * When the contract is violated, we get an appropriate status code:\n\n   * a 4xx -> client broke a precondition (e.g., 400, 404, 412).\n   * a 5xx -> server failed to uphold its obligations, like a post-condition violation in DbC.\n\n * Codes like **412 Precondition Failed** are almost literal preconditions that did not hold.\n\n",
+    "agarciafdz.20251124132158.56": "HTTP contracts are written in the official specification. When one of the parties does not fulfill their side of the contract, they get an appropriate message clarifying which side is at fault.\n\n",
+    "agarciafdz.20251124132158.57": "\n",
+    "agarciafdz.20251124132158.58": "\nA routine is either a **command** (changes state, no result) or a **query** (returns a result, no observable side effects).\n\n",
+    "agarciafdz.20251124132158.59": "\n * Explicit distinction between safe and unsafe methods:\n\n   * **Safe methods** (`GET`, `HEAD`, `OPTIONS`, `TRACE`) behave like **queries**:\n\n     * They are specified as *read-only* (no state changes on the server).\n   * **Unsafe methods** (`POST`, `PUT`, `DELETE`, `PATCH`, `CONNECT`) behave like **commands**:\n\n     * Their purpose is to change server state or connections.\n * **Idempotency** refines the command side:\n\n   * `PUT` and `DELETE` are idempotent (repeating them doesn\u2019t change the outcome after the first time).\n   * `POST` is non-idempotent.\n\n",
+    "agarciafdz.20251124132158.60": "\n",
+    "agarciafdz.20251124132158.61": "\n",
+    "agarciafdz.20251124132158.62": "\n * Clients must use a **single, uniform notation** for services, regardless of whether they are implemented as attributes or computed functions.\n\n",
+    "agarciafdz.20251124132158.63": "\n * A **URI/URL** is a uniform *handle* for \"whatever is behind it\": static file, database row, computed view, aggregation of services, etc.\n * The client always uses the same notation, e.g.: `GET /resource/42 HTTP/1.1`,\n  without knowing whether `/resource/42` is served from disk, database, cache, or another service.\n * HTTP\u2019s uniform interface (methods, status codes, headers) ensures that all resources are accessed and manipulated with the same small vocabulary.\n\n",
+    "agarciafdz.20251124132158.64": "\n",
+    "agarciafdz.20251124132158.65": "\n",
+    "agarciafdz.20251124132158.66": "\n * Classes should be **open for extension**, but **closed for modification**.\n * Extension is mostly done by inheritance, thus extending the functionality of a class that already existed without modifying it.\n * This is one of the enablers of reuse.\n\n",
+    "agarciafdz.20251124132158.67": "\n * A middleware component, such as a router or reverse proxy in front of a web server, can provide encryption or authentication. So we can extend a web server with new functionality without modifying the original server.\n * It is also common and desirable for a new resource to live at the same URI as the one it replaces. For example, a page like [http://example.com/about](http://example.com/about) might first be served by a static HTML page, but later be served by a PHP page.\n\n",
+    "agarciafdz.20251124132158.68": "\n",
+    "agarciafdz.20251124132158.69": "\n",
+    "agarciafdz.20251124132158.70": "\n * Across a library, **similar operations use the same names and argument conventions**.\n * Avoid per-class micro dialects (e.g., `push`/`pop` here, `insert`/`remove` there) when the underlying operation is the same.\n * So instead we use systematic naming such as `item`, `put`, `remove`, `before`, `after` that are standardized across the whole container hierarchy of classes.\n\n",
+    "agarciafdz.20251124132158.71": "\n * Very small, **globally shared vocabulary**:\n\n   * Methods: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `PATCH`, etc., with consistent semantics across all resources.\n   * Status codes: grouped by first digit (2xx success, 4xx client error, 5xx server error), with systematic naming patterns (e.g., 404 Not Found, 403 Forbidden, 400 Bad Request).\n * **URI structure** is consistent:\n\n   * Scheme, authority, path, query, fragment: same overall pattern for `http://`, `https://`, `ftp://`, `mailto:`, `tel:`, etc.\n   * Within a single API, good practice mirrors Eiffel\u2019s principle by using consistent path and parameter naming patterns.\n\n",
+    "agarciafdz.20251124132158.72": "\n",
+    "agarciafdz.20251126124746.1": "\n+ https://a.b.site.co.uk:80/path/to/my.img.jpg?q=x&q=#hash :: a URL as the ones you would see in your browser\n+ ftp://user:pass@site.com/~user/file.txt :: Using the FTP scheme and protocol get file.txt\n+ //protocol-relative.url/\ud83d\udda4 :: Doesn't provide scheme information, but has unicode as part of the address\n+ ssh://myid@192.168.1.101 :: Using the SSH scheme connect with the user myid to the ip: 192.168.1.101\n+ https://[db8:85a3::7334]:80?q=x\n+ https://[db8:85a3::7334%en1]/ipv6-zone-identifier\n+ git://localhost:123\n+ file:///path/file\n+ file://host/path/file\n+ ../path/to/file.html?q=x\n+ example.com/file.html\n+ mailto:me@my.com?subject=Hey&body=Sign%20me%20up!\n+ urn:isbn:0451450523\n+ tel:+1-800-555-0123\n+ http:\\\\\\///site.com:0/web-protocol-edge-cases\n+ non-web-protocol:\\\\\\///site.com:0/\n+ http:query-edge-cases??q=a&&?q&q=&=be\n\ntaken from: [cite:@ParseUriDemo]\n\n",
     "agarciafdz.20251024144157.1": "\nWeiher's Storage Combinators are a novel composition mechanism,\ninspired by the Web's REST architecture,\nAnd shrinked to coordinate the colaboration of components inside a  a single program.\nNot between servers acrosss the network.\n\nThe benefits of this style of composition have been reported to be between 2x and 10x smaller lines of code.\nAnd 33x reduction on hardware.\n\nCurrently the canonical implementation of Weiher's Combinators is the Objective-Smalltalk programming language.\n\nIn this paper we present RESTLY a Weieher's Combinators library of for the Eiffel language,\n\nEiffel's philosophy of: Command and Query Separation, Design by Contract and Multiple Inheritance.\nMade it an ideal language to prototype, implement and specify Weiher's Combinators.\n\nThe RESTLY library is directly beneficial for Eiffel developers,\nand the contract-view can be used as an specification by programming language engineers to create their own Weiher Combinator library.\n\n",
     "agarciafdz.20251030171022.1": "? what should I call the Abstract class that makes all the library possible?\n  * RESTLY\n    + It sounds exactly like what I want to say: \"REST-like\" \"REST-inspired\" protocol\n    + Combines well \"RESTLY_TABLE\" is a HASH_TABLE that folows a REST like protocol,\n      A RESTLY_TREE is a tree that follows a REST-like protocol, \n      A RESTLY_PRINTER is a printer that follows the REST-like protocol\n    - BUT, If I name the protocol RESTLY then \n      I should name the methods GET, PUT, POST, DELETE\n      Instead of ITEM, FORCE, EXTEND and REMOVE that are the ones used by default in Eiffel\n      And that would complicate the *reuse* of eiffel libraries.\n    - BUT it coulds also alianate me from the Eiffel Community for breaking well established patterns of communication!\n  * STORAGE\n    + It is the word that MPWEiher uses, and this could lead to better collaboration between us.\n    + It would give continuity to his papers, making it easy to follow my papers as a continuation of his.\n    - It would continue Feynman's Course that in computing we name everything slightly wrong.\n      In this case is not the storage that is important, is the fact that is \"REST-like\"\n    + I wouldn't need to change the name of the Eiffel Verbs\n      since we are already naming the thing wrong interface (Storage instead of RESTlike)\n      ",
     "agarciafdz.20251026180820.1": "@language html\n<dl>\n<dt id=\"get\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/GET\"><code>GET</code></a></dt>\n<dd>\n<p>The <code>GET</code> method requests a representation of the specified resource.\nRequests using <code>GET</code> should only retrieve data and should not contain a request <a href=\"/en-US/docs/Glossary/HTTP_Content\">content</a>.</p>\n</dd>\n<dt id=\"head\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/HEAD\"><code>HEAD</code></a></dt>\n<dd>\n<p>The <code>HEAD</code> method asks for a response identical to a <code>GET</code> request, but without a response body.</p>\n</dd>\n<dt id=\"post\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/POST\"><code>POST</code></a></dt>\n<dd>\n<p>The <code>POST</code> method submits an entity to the specified resource, often causing a change in state or side effects on the server.</p>\n</dd>\n<dt id=\"put\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PUT\"><code>PUT</code></a></dt>\n<dd>\n<p>The <code>PUT</code> method replaces all current representations of the target resource with the request <a href=\"/en-US/docs/Glossary/HTTP_Content\">content</a>.</p>\n</dd>\n<dt id=\"delete\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/DELETE\"><code>DELETE</code></a></dt>\n<dd>\n<p>The <code>DELETE</code> method deletes the specified resource.</p>\n</dd>\n<dt id=\"connect\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/CONNECT\"><code>CONNECT</code></a></dt>\n<dd>\n<p>The <code>CONNECT</code> method establishes a tunnel to the server identified by the target resource.</p>\n</dd>\n<dt id=\"options\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/OPTIONS\"><code>OPTIONS</code></a></dt>\n<dd>\n<p>The <code>OPTIONS</code> method describes the communication options for the target resource.</p>\n</dd>\n<dt id=\"trace\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/TRACE\"><code>TRACE</code></a></dt>\n<dd>\n<p>The <code>TRACE</code> method performs a message loop-back test along the path to the target resource.</p>\n</dd>\n<dt id=\"patch\"><a href=\"/en-US/docs/Web/HTTP/Reference/Methods/PATCH\"><code>PATCH</code></a></dt>\n<dd>\n<p>The <code>PATCH</code> method applies partial modifications to a resource.</p>\n</dd>",
