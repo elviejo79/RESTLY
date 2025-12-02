@@ -1,17 +1,14 @@
 note
-	description: "Summary description for {GITHUB_PROXY}."
+	description: "Generic HTTP client for RESTful APIs with JSON"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
-class
-	HTTP_SCHEME[R]
+deferred class
+	HTTP_SCHEME [R -> {JSON_OBJECT} create make_from_string, make_empty end]
 
 inherit
-	SCHEME_CLIENT[R]
-
-create
-	make
+	HTTPICO_SCHEME_HANDLER [R]
 
 feature {NONE} -- Initialization
 
@@ -23,11 +20,18 @@ feature {NONE} -- Initialization
 
 feature -- Attributes
 
-	Valid_scheme: STRING_8 = "http"
-			-- This client handles http:// URLs
+	Valid_scheme: ARRAY[STRING_8]
+			-- This client handles http:// and https:// URLs
+		once
+			Result := << "http", "https" >>
+			Result.compare_objects
+		end
+
+	Max_redirects: INTEGER = 10
+			-- Maximum number of redirects to follow
 
 feature -- http_client attributes
-	proxy: HTTP_CLIENT_SESSION
+	proxy: 	HTTP_CLIENT_SESSION
 		local
 			http_client: DEFAULT_HTTP_CLIENT
 			context: HTTP_CLIENT_REQUEST_CONTEXT
@@ -38,81 +42,157 @@ feature -- http_client attributes
 			Result := http_client.new_session (base_uri.string)
 			Result.set_timeout (10)
 			Result.set_connect_timeout (30)
+			Result.set_debug_verbose(True)
 		end
 
 	context_proxy: HTTP_CLIENT_REQUEST_CONTEXT
 		once
 			create Result.make
 			Result.set_credentials_required (False)
-
-				-- Add headers to context
-				--Result.add_header ("Accept", "application/vnd.github.v3+json")
 			Result.add_header ("User-Agent", "Eiffel Repository Reporter")
 		end
-feature --http verbs
-	has_key (a_path: PATH_OR_STRING): BOOLEAN
-		local
-			response: HTTP_CLIENT_RESPONSE
-		do
-			response := proxy.head (a_path.out, context_proxy)
-			Result := 200 ~ response.status
+
+	context_with_json: HTTP_CLIENT_REQUEST_CONTEXT
+		once
+			Result := context_proxy.twin
+			Result.add_header ("Content-Type", "application/json")
 		end
 
-	item alias "[]" (a_path: PATH_OR_STRING): R
+feature -- http helper
+
+	ensure_trailing_slash (a_url: STRING_8): STRING_8
+			-- Ensure `a_url` ends with a trailing slash
+		do
+			if a_url.ends_with ("/") then
+				Result := a_url
+			else
+				Result := a_url + "/"
+			end
+		end
+
+	build_absolute_url (a_path: PATH_HTTPICO): STRING_8
+			-- Build absolute URL from base_uri and path, ensuring trailing slash
+		do
+			Result := ensure_trailing_slash (base_uri.string + a_path.out)
+		end
+
+	get_location_header (a_response: HTTP_CLIENT_RESPONSE): detachable STRING
+			-- Get Location header from response (case-insensitive)
+		do
+			if attached a_response.header ("location") as loc then
+				Result := loc
+			elseif attached a_response.header ("Location") as loc then
+				Result := loc
+			end
+		end
+
+	extract_id_from_response (a_response: HTTP_CLIENT_RESPONSE): detachable PATH_HTTPICO
+			-- Extract ID from response Location header or body
+			-- API-specific: implement in descendant classes
+		deferred
+		end
+
+get_following_redirects (a_path: PATH_HTTPICO; a_max_redirects: INTEGER): HTTP_CLIENT_RESPONSE
+    local
+        l_url: STRING_8
+        l_response: detachable HTTP_CLIENT_RESPONSE
+        redirects_remaining: INTEGER
+    do
+        from
+            l_url := ensure_trailing_slash (a_path.out)
+            redirects_remaining := a_max_redirects
+        variant
+            redirects_remaining
+        until
+            redirects_remaining = 0
+        loop
+            l_response := proxy.get (l_url, context_proxy)
+
+            if l_response.status = 200 then
+                redirects_remaining := 0
+            elseif l_response.status >= 300 and l_response.status < 400 then
+                if attached get_location_header (l_response) as l_location then
+                    l_url := l_location
+                    redirects_remaining := redirects_remaining - 1
+                else
+                    redirects_remaining := 0
+                end
+            else
+                redirects_remaining := 0
+            end
+        end
+        check attached l_response as r then
+            Result := r
+        end
+    end
+
+
+feature --http verbs
+has_key (a_path: PATH_HTTPICO): BOOLEAN
+    local
+        response: HTTP_CLIENT_RESPONSE
+    do
+        response := get_following_redirects (a_path, Max_redirects)
+        Result := response.status = 200
+    end
+
+item alias "[]" (a_path: PATH_HTTPICO): R
+    local
+        response: HTTP_CLIENT_RESPONSE
+        l_exception: POSTCONDITION_VIOLATION
+    do
+        create Result.make_empty
+        response := get_following_redirects (a_path, Max_redirects)
+        if response.status = 200 and then attached response.body as body then
+            create Result.make_from_string (body)
+        else
+            create l_exception
+        end
+    end
+
+	force (data: R; a_path: PATH_HTTPICO)
+			-- Update item at `a_path` with `data` using HTTP PUT
 		local
 			response: HTTP_CLIENT_RESPONSE
 			l_exception: POSTCONDITION_VIOLATION
+			l_url: STRING_8
 		do
-			create Result.make_empty
-			response := proxy.get (a_path.out, context_proxy)
-			if response.status = 200 and then attached response.body as body then
-				Result := body
-			else
+			l_url := build_absolute_url (a_path)
+			response := proxy.put (l_url, context_with_json, data.representation)
+
+			-- Follow redirect if needed
+			if response.status >= 300 and response.status < 400 then
+				if attached get_location_header (response) as loc then
+					response := proxy.put (loc, context_with_json, data.representation)
+				end
+			end
+
+			if response.status /= 200 then
+				create l_exception
+			end
+			last_inserted_key := a_path
+		end
+
+	remove (a_path: PATH_HTTPICO)
+		local
+			response: HTTP_CLIENT_RESPONSE
+			l_exception: POSTCONDITION_VIOLATION
+			l_url: STRING_8
+		do
+			l_url := build_absolute_url (a_path)
+			response := proxy.delete (l_url, context_proxy)
+			if not (response.status = 200 or response.status = 204) then
 				create l_exception
 			end
 		end
 
-	force (data: R; a_path: PATH_OR_STRING)
-		local
-			response: HTTP_CLIENT_RESPONSE
-			l_exception: POSTCONDITION_VIOLATION
-		do
-			response := proxy.post (a_path.out, context_proxy, data.out)
-			check response.status ~ 200 and then attached response.body as body then
---				Result := body
-			end
-		end
-
-      remove (a_path: PATH_OR_STRING)
-   		local
-			response: HTTP_CLIENT_RESPONSE
-			l_exception: POSTCONDITION_VIOLATION
-		do
-			response := proxy.delete (a_path.out, context_proxy)
-			if not (response.status ~ 200) then
-            create l_exception
-			end
-		end
-
 	collection_extend (data: R)
-		local
-      response: HTTP_CLIENT_RESPONSE
-         l_precondition: PRECONDITION_VIOLATION
-			l_postcondition: POSTCONDITION_VIOLATION
-		do
-			response := proxy.post ("", context_proxy, data.out)
-			if response.status < 400 then
-            -- it returned something ok, could be a 200 ok or a 301
-         -- redirect
-   elseif response.status < 500 then
-      create l_precondition
-   else
-      create l_postcondition
-
-			end
+			-- Equivalent to http POST
+			-- API-specific: implement in descendant classes
+		deferred
 		end
 
-	last_inserted_key: PATH_OR_STRING
+	last_inserted_key: PATH_HTTPICO
 		attribute
 			create Result.make_from_string ("")
 		end

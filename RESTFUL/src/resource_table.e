@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 class
-	RESOURCE_TABLE [R]
+	RESOURCE_TABLE [R -> attached ANY]
 
 inherit
 	REST_TABLE [R]
@@ -13,7 +13,7 @@ inherit
 			is_equal, copy
 		end
 
-	RESOURCE
+	HTTPICO_RESOURCE
 		redefine
 			make_with_url
 		end

@@ -8,7 +8,7 @@ class
 	URL_PATH
 
 inherit
-	PATH_OR_STRING
+	PATH_HTTPICO
       redefine
       make_from_separate
       end

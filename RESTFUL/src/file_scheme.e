@@ -3,7 +3,7 @@ class
 	FILE_SCHEME
 
 inherit
-	SCHEME_CLIENT [STRING]
+	HTTPICO_SCHEME_HANDLER [STRING]
 		undefine
 			has_item
 		redefine
@@ -38,8 +38,12 @@ feature -- Attributes
 	base_uri: FILE_URL
 			-- Redefine to be more specific type
 
-	Valid_scheme: STRING_8 = "file"
+	Valid_scheme: ARRAY[STRING_8]
 			-- This client handles file:// URLs
+		once
+			Result := << "file" >>
+			Result.compare_objects
+		end
 feature -- Queries aka HTTP safe verbs
 
 	can_connect (a_uri: FILE_URL): BOOLEAN
@@ -52,13 +56,13 @@ feature -- Queries aka HTTP safe verbs
 			Result := dir.exists
 		end
 
-	has_key (key: PATH_OR_STRING): BOOLEAN
+	has_key (key: PATH_HTTPICO): BOOLEAN
 			-- Does file exist?
 		do
 			Result := has_entry (key.name)
 		end
 
-	item alias "[]" (key: PATH_OR_STRING): STRING assign force
+	item alias "[]" (key: PATH_HTTPICO): STRING assign force
 			-- Equivalent to HTTP GET: get file contents.
 		local
 			f: PLAIN_TEXT_FILE
@@ -81,14 +85,14 @@ feature -- Commands aka HTTP unsafe verbs
 			-- Equivalent to HTTP POST.
 			-- Submits `data`; may change state or cause side effects.
 		local
-			l_key: PATH_OR_STRING
+			l_key: PATH_HTTPICO
 		do
 			l_key := new_post_key (data)
 			internal_write (l_key, data)
 			last_inserted_key_internal := l_key
 		end
 
-	force (data: STRING; key: PATH_OR_STRING)
+	force (data: STRING; key: PATH_HTTPICO)
 			-- Equivalent to HTTP PUT.
 			-- Replaces the resource's representation with the request content.
 			-- If `key` didn't exist it inserts it.
@@ -99,7 +103,7 @@ feature -- Commands aka HTTP unsafe verbs
 			data_stored_or_throw_507_insufficient_storage: item (key) /= Void
 		end
 
-	remove (key: PATH_OR_STRING)
+	remove (key: PATH_HTTPICO)
 			-- Equivalent to HTTP DELETE: remove specified resource.
 		local
 			f: PLAIN_TEXT_FILE
@@ -112,7 +116,7 @@ feature -- Commands aka HTTP unsafe verbs
 
 feature -- Helpers
 
-	last_inserted_key: PATH_OR_STRING
+	last_inserted_key: PATH_HTTPICO
 			-- Last key created/modified by POST or PUT.
 			-- No pure HTTP equivalent; needed for CQS in Eiffel.
 		do
@@ -126,7 +130,7 @@ feature -- Helpers
 			-- No HTTP equivalent; helper for Eiffel-level contracts.
 		local
 			k: PATH
-			k_conv: PATH_OR_STRING
+			k_conv: PATH_HTTPICO
 			v: STRING
 		do
 			across
@@ -150,10 +154,10 @@ feature {NONE} -- Implementation
 	root: FILE_URL
 			-- Base directory for generated files (POST/PUT).
 
-	last_inserted_key_internal: detachable PATH_OR_STRING
+	last_inserted_key_internal: detachable PATH_HTTPICO
 			-- Backing field for `last_inserted_key`.
 
-	new_post_key (data: STRING): PATH_OR_STRING
+	new_post_key (data: STRING): PATH_HTTPICO
 			-- Key under `root` for POST; name is SHA-256 of `data`.
 		local
 			digest: STRING
@@ -165,7 +169,7 @@ feature {NONE} -- Implementation
 
 		end
 
-	internal_write (key: PATH_OR_STRING; data: STRING)
+	internal_write (key: PATH_HTTPICO; data: STRING)
 			-- Write `data` into file identified by `key`.
 		local
 			f: PLAIN_TEXT_FILE

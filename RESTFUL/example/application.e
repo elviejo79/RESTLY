@@ -1,5 +1,5 @@
 note
-	description: "RESTFUL example application - demonstrates library usage"
+	description: "HTTPico example application - demonstrates library usage"
 	date: "$Date$"
 	revision: "$Revision$"
 
@@ -15,9 +15,9 @@ create
 feature {NONE} -- Initialization
 
 	make
-			-- Run application demonstrating RESTFUL library features.
+			-- Run application demonstrating HTTPico library features.
 		do
-			print ("=== RESTFUL Library Example Application ===%N%N")
+			print ("=== HTTPico Library Example Application ===%N%N")
 
 			-- Demonstrate REST_TABLE usage
 			demonstrate_rest_table
@@ -56,7 +56,7 @@ feature {NONE} -- Demonstrations
 			-- Demonstrate RESOURCE_TABLE functionality
 		local
 			table1, table2: RESOURCE_TABLE[STRING]
-			url1, url2: URL
+			url1, url2: URI_PICO
 		do
 			print ("2. Demonstrating RESOURCE_TABLE:%N")
 

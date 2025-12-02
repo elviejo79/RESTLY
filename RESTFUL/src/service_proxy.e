@@ -2,11 +2,11 @@ class
    SERVICE_PROXY[S -> JSON_OBJECT create make_from_separate end]
 
 inherit
-RESTLY[S]
+HTTPICO_VERBS[S]
 
 feature -- http vebrs
 
-has_key(key:PATH_OR_STRING):BOOLEAN
+has_key(key:PATH_HTTPICO):BOOLEAN
 
       do
       separate remote_api_service as remote do
@@ -14,7 +14,7 @@ has_key(key:PATH_OR_STRING):BOOLEAN
             end
       end
 
-item alias "[]" (a_key:PATH_OR_STRING):S
+item alias "[]" (a_key:PATH_HTTPICO):S
       do
       separate remote_api_service as remote do
          create Result.make_from_separate(remote.item(a_key))
@@ -28,21 +28,21 @@ collection_extend(data:S)
       end
       end
 
-force(data:S; key: PATH_OR_STRING)
+force(data:S; key: PATH_HTTPICO)
       do
       separate remote_api_service as remote do
          remote.force(data, key)
             end
       end
 
-remove(key: PATH_OR_STRING)
+remove(key: PATH_HTTPICO)
       do
       separate remote_api_service as remote do
          remote.remove(key)
       end
       end
 
-last_inserted_key: PATH_OR_STRING
+last_inserted_key: PATH_HTTPICO
       do
       separate remote_api_service as remote do
          create Result.make_from_separate(remote.last_inserted_key)

@@ -8,11 +8,11 @@ class
 	API_RESOURCE
 
 inherit
-	RESTLY [STRING]
+	HTTPICO_VERBS [STRING]
 		undefine
 			is_equal, copy
 		end
-	RESOURCE
+	HTTPICO_RESOURCE
 
 create
 	make_with_url
@@ -41,7 +41,7 @@ feature -- http_client attributes
 			Result.add_header ("User-Agent", "Eiffel Repository Reporter")
 		end
 feature --http verbs
-	has_key (a_path: PATH_OR_STRING): BOOLEAN
+	has_key (a_path: PATH_HTTPICO): BOOLEAN
 		local
 			response: HTTP_CLIENT_RESPONSE
 		do
@@ -49,7 +49,7 @@ feature --http verbs
 			Result := 200 ~ response.status
 		end
 
-	item alias "[]" (a_path: PATH_OR_STRING): STRING
+	item alias "[]" (a_path: PATH_HTTPICO): STRING
 		local
 			response: HTTP_CLIENT_RESPONSE
 			l_exception: POSTCONDITION_VIOLATION
@@ -63,7 +63,7 @@ feature --http verbs
 			end
 		end
 
-	force (data: STRING; a_path: PATH_OR_STRING)
+	force (data: STRING; a_path: PATH_HTTPICO)
 		local
 			response: HTTP_CLIENT_RESPONSE
 			l_exception: POSTCONDITION_VIOLATION
@@ -74,7 +74,7 @@ feature --http verbs
 			end
 		end
 
-	remove (a_path: PATH_OR_STRING)
+	remove (a_path: PATH_HTTPICO)
 		do
 				-- should throw an exception
 		end
@@ -84,7 +84,7 @@ feature --http verbs
 				-- should throw an exception
 		end
 
-	last_inserted_key: PATH_OR_STRING
+	last_inserted_key: PATH_HTTPICO
 		attribute
 			create Result.make_from_string ("")
 		end

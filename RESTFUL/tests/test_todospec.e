@@ -18,7 +18,7 @@ feature {NONE} -- Constants
 
 feature {NONE} -- Test Support
 
-	todoserver: HTTP_SCHEME [TODO_ITEM]
+	todoserver: TODOBACKEND_API [TODO_ITEM]
 		once
 			create Result.make (create {URI}.make_from_string (Todo_api_url))
 		end

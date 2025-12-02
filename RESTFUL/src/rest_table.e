@@ -5,17 +5,17 @@ note
 	revision: "$Revision$"
 
 class
-	REST_TABLE [R]
+	REST_TABLE [R -> attached ANY]
 
 inherit
-	HASH_TABLE [R, PATH_OR_STRING]
+	HASH_TABLE [R, PATH_HTTPICO]
 		rename
 			extend as hash_extend,
 			item as hash_item,
 			at as hash_at
 		end
 
-	RESTLY [R]
+	HTTPICO_VERBS [R]
 		undefine
 			is_equal, copy, has_item
 		end
@@ -23,19 +23,19 @@ create
 	make
 
 feature
-	at alias "@", item alias "[]" (key: PATH_OR_STRING): R assign force
+	at alias "@", item alias "[]" (key: PATH_HTTPICO): R assign force
 		do
 			check attached hash_item(key) as value then
 				Result := value
 			end
 		end
 
-	last_inserted_key: PATH_OR_STRING
+	last_inserted_key: PATH_HTTPICO
 		attribute
 			create Result.make_from_string ("")
 		end
 
-      extend(data:R; key: PATH_OR_STRING)
+      extend(data:R; key: PATH_HTTPICO)
       do
          check attached key as l_key then
             last_inserted_key := l_key

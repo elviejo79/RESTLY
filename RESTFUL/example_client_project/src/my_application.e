@@ -1,5 +1,5 @@
 note
-	description: "Example client application demonstrating how to use the RESTFUL library"
+	description: "Example client application demonstrating how to use the HTTPico library"
 	author: "Client Developer"
 	date: "$Date$"
 	revision: "$Revision$"
@@ -16,11 +16,11 @@ create
 feature {NONE} -- Initialization
 
 	make
-			-- Run application demonstrating RESTFUL library usage.
+			-- Run application demonstrating HTTPico library usage.
 		do
-			print ("=== My Application Using RESTFUL Library ===%N%N")
+			print ("=== My Application Using HTTPico Library ===%N%N")
 
-			-- Example 1: Using REST_TABLE from the RESTFUL library
+			-- Example 1: Using REST_TABLE from the HTTPico library
 			demonstrate_rest_table_usage
 
 			print ("%N")
@@ -34,12 +34,12 @@ feature {NONE} -- Initialization
 feature {NONE} -- Examples
 
 	demonstrate_rest_table_usage
-			-- Show how to use REST_TABLE from the RESTFUL library
+			-- Show how to use REST_TABLE from the HTTPico library
 		local
 			api_endpoints: REST_TABLE[STRING]
 			endpoint_path: URL_PATH
 		do
-			print ("1. Using REST_TABLE from RESTFUL library:%N")
+			print ("1. Using REST_TABLE from HTTPico library:%N")
 
 			-- Create a REST table to store API endpoint information
 			create api_endpoints.make (20)
@@ -67,12 +67,12 @@ feature {NONE} -- Examples
 		end
 
 	demonstrate_url_usage
-			-- Show how to use URL classes from the RESTFUL library
+			-- Show how to use URL classes from the HTTPico library
 		local
 			base_url: URL
 			api_url: URL
 		do
-			print ("2. Using URL classes from RESTFUL library:%N")
+			print ("2. Using URL classes from HTTPico library:%N")
 
 			-- Create URLs using the library's URL class
 			create base_url.make_from_string ("https://api.mycompany.com")
@@ -81,11 +81,11 @@ feature {NONE} -- Examples
 			print ("   Base URL: " + base_url.out + "%N")
 			print ("   API URL: " + api_url.out + "%N")
 
-			-- You could extend this to use other RESTFUL library features like:
+			-- You could extend this to use other HTTPico library features like:
 			-- - HTTP client operations
 			-- - JSON parsing
 			-- - Resource management
-			print ("   (This demonstrates basic URL handling from the RESTFUL library)%N")
+			print ("   (This demonstrates basic URL handling from the HTTPico library)%N")
 		end
 
 end

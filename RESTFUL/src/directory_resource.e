@@ -9,7 +9,7 @@ class
 
 inherit
 
-	RESOURCE
+	HTTPICO_RESOURCE
 		redefine
 			make_with_url
 		select

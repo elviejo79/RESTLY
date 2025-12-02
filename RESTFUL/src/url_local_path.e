@@ -8,7 +8,7 @@ class
 	URL_LOCAL_PATH
 
 inherit
-	URL
+	URI
 --	rename
 --		string_path as url_string_path
 	undefine

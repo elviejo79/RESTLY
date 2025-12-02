@@ -7,6 +7,7 @@ inherit
    EJSON_JSON_OBJECT
 create
     make,
+    make_empty,
     make_from_string,      -- handy local factory
     make_from_separate     -- your SCOOP import
 
