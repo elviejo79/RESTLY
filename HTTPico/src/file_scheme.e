@@ -75,7 +75,6 @@ feature -- Queries aka HTTP safe verbs
 			else
 				Result := ""
 			end
-
 			f.close
 		end
 

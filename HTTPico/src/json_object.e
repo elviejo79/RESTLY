@@ -5,6 +5,7 @@ class
 
 inherit
    EJSON_JSON_OBJECT
+
 create
     make,
     make_empty,

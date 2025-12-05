@@ -10,8 +10,14 @@ deferred class
 convert
    to_s:{S}
 
-feature
+feature -- Conversion
+
 	to_s:S
+		-- Convert to type S
+	deferred
+	end
+
+	make_from_s(a_s:S)
 	deferred
 	end
 

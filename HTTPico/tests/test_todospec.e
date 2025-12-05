@@ -9,34 +9,57 @@ class
 
 inherit
 	EQA_TEST_SET
+		redefine
+			on_prepare,
+			on_clean
+		end
 
 feature {NONE} -- Constants
 
-	Todo_api_url: STRING = "https://todo-api.fanoutapp.com/todos/default/items/"
-	Test_item_id: STRING = "2844/"
-	Nonexistent_item_id: STRING = "99999999/"
+	Nonexistent_item_id: STRING = "99999999"
+
+feature {NONE} -- Test lifecycle
+
+	test_item_key: detachable PATH_HTTPICO
+		-- Key of item created for testing
+
+	on_prepare
+			-- Create a test item for tests that need an existing item
+		do
+			todoserver.collection_extend (make_test_todo ("Test item for get/put tests"))
+			test_item_key := todoserver.last_inserted_key
+		end
+
+	on_clean
+			-- Clean up test item if it was created
+		do
+			if attached test_item_key as key then
+				if todoserver.has_key (key) then
+					todoserver.remove (key)
+				end
+			end
+		end
 
 feature {NONE} -- Test Support
 
-	todoserver: TODOBACKEND_API [TODO_ITEM]
+	todoserver: TODOBACKEND_API
 		once
-			create Result.make (create {URI}.make_from_string (Todo_api_url))
+			create Result.make_default
 		end
 
 	make_test_todo (text: STRING): TODO_ITEM
 		do
 			create Result.make
-			Result.put_string (text, "text")
+			Result.put_string (text, "title")
 		end
 
 feature -- Tests: Queries (safe HTTP verbs)
 
 	test_has_key_existing_item_returns_true
-		local
-			test_path: PATH_HTTPICO
 		do
-			create test_path.make_from_string (Test_item_id)
-			assert ("existing item should return true", todoserver.has_key (test_path))
+			check attached test_item_key as key then
+				assert ("existing item should return true", todoserver.has_key (key))
+			end
 		end
 
 	test_has_key_missing_item_returns_false
@@ -49,12 +72,12 @@ feature -- Tests: Queries (safe HTTP verbs)
 
 	test_get_existing_item_returns_todo
 		local
-			path: PATH_HTTPICO
 			retrieved: TODO_ITEM
 		do
-			create path.make_from_string (Test_item_id)
-			retrieved := todoserver [path]
-			assert ("retrieved item should not be void", retrieved /= Void)
+			check attached test_item_key as key then
+				retrieved := todoserver [key]
+				assert ("retrieved item should not be void", retrieved /= Void)
+			end
 		end
 
 feature -- Tests: Commands (unsafe HTTP verbs)
@@ -67,21 +90,20 @@ feature -- Tests: Commands (unsafe HTTP verbs)
 	test_put_modifies_existing_todo
 		local
 			todo_to_modify: TODO_ITEM
-			test_path: PATH_HTTPICO
 		do
-			create test_path.make_from_string (Test_item_id)
+			check attached test_item_key as key then
+				-- First, retrieve the full object
+				todo_to_modify := todoserver [key]
 
-			-- First, retrieve the full object
-			todo_to_modify := todoserver [test_path]
+				-- Modify the fields we want to change (remove and re-add to update)
+				todo_to_modify.remove ("title")
+				todo_to_modify.put_string ("Modified via force test", "title")
+				todo_to_modify.remove ("completed")
+				todo_to_modify.put_boolean (True, "completed")
 
-			-- Modify the fields we want to change (remove and re-add to update)
-			todo_to_modify.remove ("text")
-			todo_to_modify.put_string ("Modified via force test", "text")
-			todo_to_modify.remove ("completed")
-			todo_to_modify.put_boolean (True, "completed")
-
-			-- PUT the modified full object back
-			todoserver.force (todo_to_modify, test_path)
+				-- PUT the modified full object back
+				todoserver.force (todo_to_modify, key)
+			end
 		end
 
 --	test_remove_deletes_item

@@ -5,13 +5,31 @@ note
 	revision: "$Revision$"
 
 class
-	TODOBACKEND_API [R -> {JSON_OBJECT} create make_from_string, make_empty end]
+	TODOBACKEND_API
 
 inherit
-	HTTP_SCHEME [R]
+	HTTP_SCHEME [TODO_ITEM]
+	export {NONE}
+		make
+	redefine
+		force
+	end
 
 create
-	make
+   make,
+	make_default
+
+feature
+
+    make_default
+        local
+            todo_api_uri: URI
+        do
+            -- create todo_api_uri.make_from_string 
+        -- ("https://todo-api.fanoutapp.com/todos/default/items/")
+        create todo_api_uri.make_from_string ("http://localhost:3000/")
+        make (todo_api_uri)
+        end
 
 feature -- Todo-specific implementation
 
@@ -53,31 +71,79 @@ feature -- Todo-specific implementation
 			end
 		end
 
-	collection_extend (data: R)
+	collection_extend (data: TODO_ITEM)
 			-- Equivalent to http POST
 			-- Creates new todo item and extracts ID from response
 		local
 			response: HTTP_CLIENT_RESPONSE
-			l_precondition: PRECONDITION_VIOLATION
 			l_postcondition: POSTCONDITION_VIOLATION
 		do
 			response := proxy.post ("", context_with_json, data.representation)
+			io.put_string ("POST status: " + response.status.out + "%N")
+			if attached get_location_header (response) as loc then
+				io.put_string ("Location: " + loc + "%N")
+			else
+				io.put_string ("Location: none%N")
+			end
+			if attached response.body as b then
+				io.put_string ("Body: " + b + "%N")
+			else
+				io.put_string ("Body: none%N")
+			end
 			if response.status < 400 then
 				-- Success: extract ID from response
 				if attached extract_id_from_response (response) as id then
 					last_inserted_key := id
 				else
-					-- Set last_inserted_key to empty before raising exception
-					last_inserted_key := create {PATH_HTTPICO}.make_from_string ("")
+					-- Set last_inserted_key to Void before raising exception
+					last_inserted_key := Void
 					create l_postcondition
+					l_postcondition.raise
 				end
-			elseif response.status < 500 then
-				last_inserted_key := create {PATH_HTTPICO}.make_from_string ("")
-				create l_precondition
 			else
-				last_inserted_key := create {PATH_HTTPICO}.make_from_string ("")
+				-- Any error (4xx or 5xx): set to Void and raise postcondition
+				last_inserted_key := Void
 				create l_postcondition
+				l_postcondition.raise
 			end
+		end
+
+	force (data: TODO_ITEM; a_path: PATH_HTTPICO)
+			-- Update item at `a_path` with `data` using HTTP PATCH
+			-- Redefined to use PATCH instead of PUT for Todo Backend API
+		local
+			response: HTTP_CLIENT_RESPONSE
+			l_exception: POSTCONDITION_VIOLATION
+			l_url: STRING_8
+			retrieved: TODO_ITEM
+		do
+			l_url := build_absolute_url (a_path)
+			io.put_string ("%N=== DEBUG force ===%N")
+			io.put_string ("Sending data: " + data.representation + "%N")
+			response := proxy.patch (l_url, context_with_json, data.representation)
+
+			-- Follow redirect if needed
+			if response.status >= 300 and response.status < 400 then
+				if attached get_location_header (response) as loc then
+					response := proxy.patch (loc, context_with_json, data.representation)
+				end
+			end
+
+			if response.status /= 200 then
+				create l_exception
+			end
+
+			io.put_string ("Response status: " + response.status.out + "%N")
+			if attached response.body as body then
+				io.put_string ("Response body: " + body + "%N")
+			end
+
+			retrieved := item (a_path)
+			io.put_string ("Retrieved after PATCH: " + retrieved.representation + "%N")
+			io.put_string ("Are they equal? " + (data ~ retrieved).out + "%N")
+			io.put_string ("=== END DEBUG ===%N%N")
+
+			last_inserted_key := a_path
 		end
 
 end

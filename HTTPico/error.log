@@ -1,0 +1,104 @@
+Eiffel Compilation Manager
+Version 25.02.9.8732 - linux-x86-64
+
+Degree 6: Examining System
+Degree 5: Parsing Classes
+ISE Eiffel: Session aborted
+Exception tag: Interrupt
+
+ec: system execution failed.
+Following is the set of recorded exceptions:
+
+******************************** Thread exception *****************************
+In thread           Root thread            0x0 (thread id)
+*******************************************************************************
+-------------------------------------------------------------------------------
+Class / Object      Routine                Nature of exception           Effect
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make @2                Interrupt:                   
+<00007FA73A343548>  (From ARRAYED_LIST)    Operating system signal.      Fail
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make @2                                             
+<00007FA73A343548>  (From ARRAYED_LIST)    Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make @1                                             
+<00007FA73A343548>  (From CONSTRUCT_LIST)  Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make @1                                             
+<00007FA73A343548>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make_filled_with @1                                 
+<00007FA73A343548>  (From CONSTRUCT_LIST)  Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_LIST         make_filled_with @1                                 
+<00007FA73A343548>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+AST_ROUNDTRIP_COMPILER_LIGHT_FACTORY
+                    new_eiffel_list_feature_as @2
+<00007FA7384E3B38>  (From AST_FACTORY)     Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_PARSER       yy_do_action_71 @2                                  
+<00007FA739191BD8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_PARSER       yy_do_action_1_200 @72                              
+<00007FA739191BD8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_PARSER       yy_do_action @2                                     
+<00007FA739191BD8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EIFFEL_PARSER       parse @74                                           
+<00007FA739191BD8>  (From YY_PARSER_SKELETON)
+                                           Routine failure.              Rescue
+-------------------------------------------------------------------------------
+EIFFEL_PARSER       parse_class_from_file @23
+<00007FA739191BD8>  (From EIFFEL_PARSER_SKELETON)
+                                           Routine failure.              Rescue
+-------------------------------------------------------------------------------
+EIFFEL_CLASS_C      build_ast @26                                       
+<00007FA736C94628>                         Routine failure.              Rescue
+-------------------------------------------------------------------------------
+DEGREE_5            process_class @6                                    
+<00007FA7384E3788>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+DEGREE_5            execute @21                                         
+<00007FA7384E3788>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+SYSTEM_I            process_degree_5 @1                                 
+<00007FA7390F9D48>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+SYSTEM_I            do_recompilation @25                                
+<00007FA7390F9D48>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+SYSTEM_I            recompile @6                                        
+<00007FA7390F9D48>                         Routine failure.              Rescue
+-------------------------------------------------------------------------------
+WORKBENCH_I         recompile @23                                       
+<00007FA73901CFB8>                         Routine failure.              Rescue
+-------------------------------------------------------------------------------
+E_PROJECT           melt @7                                             
+<00007FA73901D868>                         Routine failure.              Rescue
+-------------------------------------------------------------------------------
+E_PROJECT           quick_melt @3                                       
+<00007FA73901D868>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EWB_QUICK_MELT      perform_compilation @1                              
+<00007FA73922CBB8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EWB_QUICK_MELT      compile @3                                          
+<00007FA73922CBB8>  (From EWB_COMP)        Routine failure.              Fail
+-------------------------------------------------------------------------------
+EWB_QUICK_MELT      execute @6                                          
+<00007FA73922CBB8>  (From EWB_COMP)        Routine failure.              Fail
+-------------------------------------------------------------------------------
+ES_BATCH            execute @45                                         
+<00007FA7390B4EE8>  (From ES)              Routine failure.              Rescue
+-------------------------------------------------------------------------------
+ES_BATCH            make @13                                            
+<00007FA7390B4EE8>  (From ES)              Routine failure.              Fail
+-------------------------------------------------------------------------------
+EB_KERNEL           make @5                                             
+<00007FA738F447E8>                         Routine failure.              Fail
+-------------------------------------------------------------------------------
+EB_KERNEL           root's creation                                     
+<00007FA738F447E8>                         Routine failure.              Exit
+-------------------------------------------------------------------------------

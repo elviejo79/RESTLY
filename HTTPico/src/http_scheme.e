@@ -9,6 +9,9 @@ deferred class
 
 inherit
 	HTTPICO_SCHEME_HANDLER [R]
+		redefine
+			can_connect
+		end
 
 feature {NONE} -- Initialization
 
@@ -29,6 +32,27 @@ feature -- Attributes
 
 	Max_redirects: INTEGER = 10
 			-- Maximum number of redirects to follow
+
+feature -- Status
+
+	can_connect (a_uri: URI): BOOLEAN
+			-- Check if server at `a_uri` is reachable
+		local
+			http_client: DEFAULT_HTTP_CLIENT
+			session: HTTP_CLIENT_SESSION
+			context: HTTP_CLIENT_REQUEST_CONTEXT
+			response: HTTP_CLIENT_RESPONSE
+		do
+			create http_client
+			session := http_client.new_session (a_uri.string)
+			session.set_timeout (5)
+			session.set_connect_timeout (5)
+			create context.make
+			response := session.get ("", context)
+			Result := response.status > 0
+		rescue
+			Result := False
+		end
 
 feature -- http_client attributes
 	proxy: 	HTTP_CLIENT_SESSION
@@ -60,20 +84,20 @@ feature -- http_client attributes
 
 feature -- http helper
 
-	ensure_trailing_slash (a_url: STRING_8): STRING_8
-			-- Ensure `a_url` ends with a trailing slash
-		do
-			if a_url.ends_with ("/") then
-				Result := a_url
-			else
-				Result := a_url + "/"
-			end
-		end
+	-- ensure_trailing_slash (a_url: STRING_8): STRING_8
+	-- 		-- Ensure `a_url` ends with a trailing slash
+	-- 	do
+	-- 		if a_url.ends_with ("/") then
+	-- 			Result := a_url
+	-- 		else
+	-- 			Result := a_url + "/"
+	-- 		end
+	-- 	end
 
 	build_absolute_url (a_path: PATH_HTTPICO): STRING_8
 			-- Build absolute URL from base_uri and path, ensuring trailing slash
 		do
-			Result := ensure_trailing_slash (base_uri.string + a_path.out)
+			Result := base_uri.string + a_path.out
 		end
 
 	get_location_header (a_response: HTTP_CLIENT_RESPONSE): detachable STRING
@@ -99,7 +123,7 @@ get_following_redirects (a_path: PATH_HTTPICO; a_max_redirects: INTEGER): HTTP_C
         redirects_remaining: INTEGER
     do
         from
-            l_url := ensure_trailing_slash (a_path.out)
+            l_url := a_path.out
             redirects_remaining := a_max_redirects
         variant
             redirects_remaining
@@ -156,8 +180,11 @@ item alias "[]" (a_path: PATH_HTTPICO): R
 			response: HTTP_CLIENT_RESPONSE
 			l_exception: POSTCONDITION_VIOLATION
 			l_url: STRING_8
+			retrieved: R
 		do
 			l_url := build_absolute_url (a_path)
+			io.put_string ("%N=== DEBUG force ===%N")
+			io.put_string ("Sending data: " + data.representation + "%N")
 			response := proxy.put (l_url, context_with_json, data.representation)
 
 			-- Follow redirect if needed
@@ -170,6 +197,17 @@ item alias "[]" (a_path: PATH_HTTPICO): R
 			if response.status /= 200 then
 				create l_exception
 			end
+
+			io.put_string ("Response status: " + response.status.out + "%N")
+			if attached response.body as body then
+				io.put_string ("Response body: " + body + "%N")
+			end
+
+			retrieved := item (a_path)
+			io.put_string ("Retrieved after PUT: " + retrieved.representation + "%N")
+			io.put_string ("Are they equal? " + (data ~ retrieved).out + "%N")
+			io.put_string ("=== END DEBUG ===%N%N")
+
 			last_inserted_key := a_path
 		end
 
@@ -192,9 +230,9 @@ item alias "[]" (a_path: PATH_HTTPICO): R
 		deferred
 		end
 
-	last_inserted_key: PATH_HTTPICO
+	last_inserted_key: detachable PATH_HTTPICO
 		attribute
-			create Result.make_from_string ("")
+			Result := Void
 		end
 
 end
