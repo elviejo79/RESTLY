@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<!-- 2025-11-28 vie 12:58 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTPym: Shrinking HTTP architecture into Eiffel (an AOP implementation)</title>
+<meta name="generator" content="Org mode">
+<meta name="author" content="Alejandro Garcia">
+<style type="text/css">
+ <!--/*--><![CDATA[/*><!--*/
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #ccc;
+    box-shadow: 3px 3px 3px #eee;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: visible;
+    padding-top: 1.2em;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    background-color: white;
+    top: -10px;
+    right: 10px;
+    padding: 3px;
+    border: 1px solid black;
+  }
+  pre.src:hover:before { display: inline;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { width: 90%; }
+  /*]]>*/-->
+</style>
+<link rel="stylesheet" href="https://unpkg.com/latex.css/style.min.css" />
+<script type="text/javascript">
+/*
+@licstart  The following is the entire license notice for the
+JavaScript code in this tag.
+
+Copyright (C) 2012-2020 Free Software Foundation, Inc.
+
+The JavaScript code in this tag is free software: you can
+redistribute it and/or modify it under the terms of the GNU
+General Public License (GNU GPL) as published by the Free Software
+Foundation, either version 3 of the License, or (at your option)
+any later version.  The code is distributed WITHOUT ANY WARRANTY;
+without even the implied warranty of MERCHANTABILITY or FITNESS
+FOR A PARTICULAR PURPOSE.  See the GNU GPL for more details.
+
+As additional permission under GNU GPL version 3 section 7, you
+may distribute non-source (e.g., minimized or compacted) forms of
+that code without the copy of the GNU GPL normally required by
+section 4, provided you include this license notice and a URL
+through which recipients can access the Corresponding Source.
+
+
+@licend  The above is the entire license notice
+for the JavaScript code in this tag.
+*/
+<!--/*--><![CDATA[/*><!--*/
+ function CodeHighlightOn(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(null != target) {
+     elem.cacheClassElem = elem.className;
+     elem.cacheClassTarget = target.className;
+     target.className = "code-highlighted";
+     elem.className   = "code-highlighted";
+   }
+ }
+ function CodeHighlightOff(elem, id)
+ {
+   var target = document.getElementById(id);
+   if(elem.cacheClassElem)
+     elem.className = elem.cacheClassElem;
+   if(elem.cacheClassTarget)
+     target.className = elem.cacheClassTarget;
+ }
+/*]]>*///-->
+</script>
+</head>
+<body>
+<div id="content">
+<header>
+<h1 class="title">HTTPym: Shrinking HTTP architecture into Eiffel (an AOP implementation)</h1>
+</header><nav id="table-of-contents">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents">
+<ul>
+<li><a href="#orgfc467b2">1. Abstract</a></li>
+<li><a href="#org95552e5">2. Introduction</a></li>
+<li><a href="#org2e8b60d">3. Motivating Examples</a>
+<ul>
+<li><a href="#org73006e4">3.1. Example TODOMVC</a>
+<ul>
+<li><a href="#orgdbeae28">3.1.1. How difficult should a client like TODOMVC be?</a></li>
+<li><a href="#orgcae68ed">3.1.2. How difficult a TODOBACKEND should be?</a></li>
+<li><a href="#org6331378">3.1.3. How can we make a local first TODOLIST?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#orgc795cf5">4. Background</a>
+<ul>
+<li><a href="#org71808e6">4.1. HTTP and the REST architectural style</a></li>
+<li><a href="#orgbce6717">4.2. Architecture-Oriented Programming and In-Process REST</a>
+<ul>
+<li><a href="#org991311e">4.2.1. Polymorphic identifiers</a></li>
+<li><a href="#orgad574b5">4.2.2. In-Process REST: a storage protocol</a></li>
+<li><a href="#org5fa5849">4.2.3. Storage combinators</a></li>
+</ul>
+</li>
+<li><a href="#orgc1370b2">4.3. Eiffel Programming Principles</a></li>
+<li><a href="#orge993541">4.4. HTTP concepts and Eiffel principles correspondence</a></li>
+</ul>
+</li>
+<li><a href="#org1566598">5. Implementation</a>
+<ul>
+<li><a href="#org1ab92e2">5.1. HTTP URIs become URI_PYM</a></li>
+<li><a href="#org67911a7">5.2. HTTP Request become HTTPYM_REQUEST_METHODS</a></li>
+<li><a href="#orgb0309d4">5.3. SCHEME_HANDLERS</a>
+<ul>
+<li><a href="#org8e3642f">5.3.1. Deferred SCHEME_HANDLER</a></li>
+<li><a href="#org3ed8047">5.3.2. How we handle different schemas?</a>
+<ul>
+<li><a href="#orgc25ecc8">5.3.2.1. How does an Env handler look?</a></li>
+<li><a href="#org7e3b8dd">5.3.2.2. How does a file:// handler look?</a></li>
+<li><a href="#orgf218de6">5.3.2.3. How does an http handler look?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#orgea755bb">5.4. HTTPETIT_RESOURCES</a></li>
+<li><a href="#orgbf7e052">5.5. Web DNS became Resource Name Server</a></li>
+</ul>
+</li>
+<li><a href="#org8176695">6. Evaluation</a></li>
+<li><a href="#org853db8b">7. Discussion</a>
+<ul>
+<li><a href="#orgeebb834">7.1. Limitations</a></li>
+<li><a href="#org4b2c27f">7.2. Future Work</a>
+<ul>
+<li><a href="#orgef1c66a">7.2.1. HTTPmicro: Communicating concurrent objects with HTTP</a></li>
+<li><a href="#org1305f4f">7.2.2. HTTPnano: Inter Process Communication (IPC) with HTTP</a>
+<ul>
+<li><a href="#orgd452d06">7.2.2.1. in the 3rd paper we will make the system Concurrent with SCOOP</a></li>
+</ul>
+</li>
+<li><a href="#orge8b94f7">7.2.3. HTTPmicro: Distributed systems</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#org76f4dc1">8. Related Work</a></li>
+<li><a href="#org825e39d">9. Conclusion</a></li>
+</ul>
+</div>
+</nav>
+
+
+<div id="outline-container-orgfc467b2" class="outline-2">
+<h2 id="orgfc467b2"><span class="section-number-2">1</span> Abstract</h2>
+<div class="outline-text-2" id="text-1">
+<p>
+The HTTP protocol has given the Web its scalability and composability properties.
+In Architecture Oriented Programming (AOP),
+Marcel P. Weiher had the insight that we could scale down the architecture of the web:
+Its fundamental mechanisms: URLs and HTTP methods,
+to provide uniform access across resources and a common interface to connect them.
+We present HTTPym, an Eiffel library that implements AOP based on Weiher’s ideas and the HTTP specification.
+</p>
+
+<p class="verse">
+HTTPym shrinks HTTP’s core architectural mechanisms:<br>
+URIs, uniform methods, and status codes into<br>
+composable classes for a single Eiffel program.<br>
+</p>
+
+<p>
+Eiffel is ideal to express AOP ideas,
+because of the principles such as Uniform Access Principle (UAP),
+Multiple Inheritance and Design by Contract (DbC).
+</p>
+
+<p>
+We describe the design of HTTPym.
+It's implementation and examples o its use.
+Including clients for <code>http://</code>, <code>file://</code>, and <code>env://</code> schemes.
+And compare the resulting Eiffel code with equivalent idioms in other programming languages.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org95552e5" class="outline-2">
+<h2 id="org95552e5"><span class="section-number-2">2</span> Introduction</h2>
+<div class="outline-text-2" id="text-2">
+<p>
+Modularity and composition  remain open problems.
+Ever since Parnas' classic paper on decomposition [cite:@ParnasDecomposition]
+through 90s with object-oriented programming an the 2010's with functional programing,
+and to this day with Jackson’s Concept-Oriented Design [cite:@Jackson2024],
+we are still striving for better modularity and composition.
+</p>
+
+<p>
+Following Parnas, we view modularity primarily as a question of how changes are localized:
+<i>when we change X, how many other parts must change with it?</i>
+Meyer [cite:@OOSC, pp.39&#x2013;65} refines this intuition by treating modularity as a property of a design method,
+measured against five criteria: decomposability, composability, understandability, continuity, and protection.
+</p>
+
+<p>
+In particular, modular composability means that the method encourages software elements that can be freely recombined to build new systems.
+</p>
+<p>
+Modularity and composition are opposing forces:
+modules want to be as independent as possible so that changing them doesn't affect the rest of the system,
+But compositions need components to be interdependent to have more powerful behaivours.
+</p>
+
+<p>
+However we have model of Modularity and Composability that works and is in use everyday by billions of users:
+the World Wide Web.
+On the Web, each <i>resource</i> (a web page, a PHP script or a printer) is independent from the others.
+Yet we can create new applications by combining them, and we can interpose many components without breaking the model.
+From the most basic interaction: A browser and a server, exchanging an about page.
+To a complex one, with local proxys, caches and load balancers.
+Every one of the components could change, and yet the system continues to function.
+</p>
+<p>
+Compare this to what happens with mainstream programming languages:
+</p>
+
+<ul class="org-ul">
+<li>Accessing heterogeneous resources (files, env vars, web APIs) is hard; every resource has its own mini-protocol.</li>
+<li>Composing heterogeneous components is a manual process and unique for each pair of components you want to integrate.</li>
+<li>Changing one component of a composition is very difficult, because each compostion is tightly coupled.</li>
+</ul>
+<p>
+Weiher’s Architecture Oriented Programming asks:
+What would happen if we shrink HTTP’s uniform interface to the level of a single process?
+An "In-Process REST" [cite:@Weiher2014] if you will.
+</p>
+
+<p>
+AOP brings into a single program the kind of composability that the Web already enjoys.
+By “shrinking” the Web’s architecture: URLs as polymorphic identifiers, and a small uniform interface of HTTP methods inside a process,
+he turns resources and stores into components that can be freely composed and recomposed.
+</p>
+<p>
+In this paper we implement HTTPym an AOP library for Eiffel.
+It uses Eiffel’s Uniform Access Principle, Design by Contract and Multiple Inheritance to realize Weiher’s in-process REST style [cite:WeiherInProcessRest] and Polymorphic Identifiers [cite:WeiherPolymorphicIdentfiers].
+</p>
+
+<p>
+Our contributions are:
+</p>
+
+<ul class="org-ul">
+<li>A design of an HTTP-inspired protocol in Eiffel (HTTPym).</li>
+<li>A library of scheme clients for env://, <a href="file://">file://</a>, <a href="http://">http://</a> based on URLs (Weiher's Polymorphic identifiers).</li>
+<li>A mapping from HTTP semantics to Eiffel’s Design by Contract (e.g. 404, 500, 501 as contract violations).</li>
+<li>A case study or examples showing uniform access.</li>
+</ul>
+
+<p>
+The rest of the paper is structured as follows:
+</p>
+
+<p>
+Section 2 presents motivating examples.
+Section 3 summarizes the necessary HTTP and AOP background.
+Section 4 presents the design of HTTPym.
+Section 5 its implementation.
+Section 6 presents a small evaluation based on a TODO example.
+Section 7 discusses lessons learned, limitations, and future work.
+Section 8 compares against related work.
+Section 9 concludes.
+</p>
+</div>
+</div>
+<div id="outline-container-org2e8b60d" class="outline-2">
+<h2 id="org2e8b60d"><span class="section-number-2">3</span> Motivating Examples</h2>
+<div class="outline-text-2" id="text-3">
+<p>
+Let's not bury the lead here.
+And show how HTTPym allows the composition of components that weren't made to be togother.
+</p>
+
+
+<p>
+SCHEME_HANDLERS  are the classes that know how to communicate to remote and local resources (aka services, processes) and intra services.
+</p>
+
+<p>
+Since they abstract the external world to expose it inside our program they are messy by definition.
+BUT the iterface they expose inside the program is clean and predictiable.
+</p>
+<p>
+SCHEME_HANDLERS  are the classes that know how to communicate to remote and local resources (aka services, processes) and intra services.
+</p>
+
+<p>
+Since they abstract the external world to expose it inside our program they are messy by definition.
+BUT the iterface they expose inside the program is clean and predictiable.
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">local</span>
+ <span style="color: #DFAF8F;">l_file</span>: FILE
+ <span style="color: #DFAF8F;">l_env</span>: ENV
+ <span style="color: #DFAF8F;">l_http</span>: HTTP
+ <span style="color: #DFAF8F;">l_schema</span>:SCHEMA_HANDLER
+<span style="color: #F0DFAF; font-weight: bold;">do</span>
+ <span style="color: #F0DFAF; font-weight: bold;">create</span> l_env
+ <span style="color: #F0DFAF; font-weight: bold;">create</span> l_file
+ <span style="color: #F0DFAF; font-weight: bold;">create</span> l_http
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+The way to use them is:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-Eiffel">print(l_env["hostname"])  -- lets get the name of the current computer executing the file.
+
+l_file["an_example_file.txt"] := "this is writing to  a new file" -- this synta
+
+content_of_file := l_http["http://www.example.com/about.html"] -- this is doing a get
+
+print(content_of_file)
+
+l_schema["file:my_current_file.txt"] -- this generate a file schema_handler and does the put
+
+</pre>
+</div>
+
+<p>
+Goning further, to read the contents of a website in a local server
+</p>
+
+
+<p>
+a website remotely we can use:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-Eiffel">http_client: SCHEME_CLIENT = "http://www.example.com/"
+print(http_client["/about"])
+</pre>
+</div>
+
+<p>
+Or perhaps we want te read a website in a local web server
+</p>
+
+<div class="org-src-container">
+<pre class="src src-Eiffel">http_client: SCHEME_CLIENT = "http://localhost/"
+print(http_client["/about"])
+
+</pre>
+</div>
+
+<p>
+The usability of URLs is more manifest when we use different schemas like "file" or "ftp".
+</p>
+
+
+<div class="org-src-container">
+<pre class="src src-Eiffel">file_reader : SCHEME_CLIENT = "file:///home/username/about.txt"
+</pre>
+</div>
+
+<p>
+Even environment variables with a pseudo-scheme `env`
+</p>
+
+
+<pre class="example">
+local_variabels : SCHEME_CLIENT = "env://"
+</pre>
+
+<p>
+It is important to know that each schema (http, file, env, etc.) require their own {SCHEMA_HANDLER} that understands each protocol, but exposes the communication through a uniform interface.
+</p>
+
+<p>
+The uniform interface is inspired by HTTP methods, and we go into a lot more detail and justification in our next paper.
+about the HTTPym library.
+</p>
+
+<p>
+For now suffice to say that all the SCHEME_CLIENTS expose the same interface, i.e. features.
+</p>
+</div>
+
+<div id="outline-container-org73006e4" class="outline-3">
+<h3 id="org73006e4"><span class="section-number-3">3.1</span> Example TODOMVC</h3>
+<div class="outline-text-3" id="text-3-1">
+<p>
+TODOMVC is an example todo-list.
+Ipmlemented in multiple frontend frameworks so that developers can compare their implementations.
+All the different versions of the frontend work with the same API Backend.
+</p>
+
+<p>
+@todo Insert a screenshot of todomvc.
+</p>
+
+<p>
+The complement is TODOBACKEND were multiple backend frameworks are developed to expose the same Web Api.
+So that different front ends can connect to i.
+</p>
+
+<p>
+Now we need to asks ourselves:
+</p>
+</div>
+
+
+
+
+
+<div id="outline-container-orgdbeae28" class="outline-4">
+<h4 id="orgdbeae28"><span class="section-number-4">3.1.1</span> How difficult should a client like TODOMVC be?</h4>
+</div>
+<div id="outline-container-orgcae68ed" class="outline-4">
+<h4 id="orgcae68ed"><span class="section-number-4">3.1.2</span> How difficult a TODOBACKEND should be?</h4>
+<div class="outline-text-4" id="text-3-1-2">
+<p>
+Now we asks ourselves the opposito question.
+</p>
+
+<p>
+How hard could it be to create a backend implementation of a TODO list?
+</p>
+
+<p>
+Well in HTTPYM is like this:
+</p>
+</div>
+</div>
+
+<div id="outline-container-org6331378" class="outline-4">
+<h4 id="org6331378"><span class="section-number-4">3.1.3</span> How can we make a local first TODOLIST?</h4>
+<div class="outline-text-4" id="text-3-1-3">
+<p>
+Now let's go beyond the traditional TODOMVC
+</p>
+
+<p>
+And reflect how could we create local todo-mvc
+that doesn't go to the internet everytimme
+we want to read the mvc.
+</p>
+
+<p>
+So that we want to cache the data locally.
+and keep our local and remote copies sync.
+</p>
+</div>
+</div>
+<div class="outline-text-3" id="text-3-1">
+<p>
+I don't know about you.
+But that looks pretty small to me.
+</p>
+
+<p>
+If you want to see how to achieve such brevity.
+Follow a long to learn about HTTPYM and Weihers StorageCombinators and how Eiffel makes it possible.
+</p>
+
+<p>
+Just preamble the same command line client in C# is
+</p>
+
+<p>
+@askchatgpt make a client in C# for the code
+</p>
+
+
+<p>
+And in Java like this.
+</p>
+
+
+<p>
+In Javascrip which is asymptotic because JSON
+is it's native datatype
+</p>
+
+<p>
+@askchatgpt make comparable client in javascript to connect to from the commandline
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgc795cf5" class="outline-2">
+<h2 id="orgc795cf5"><span class="section-number-2">4</span> Background</h2>
+<div class="outline-text-2" id="text-4">
+</div>
+<div id="outline-container-org71808e6" class="outline-3">
+<h3 id="org71808e6"><span class="section-number-3">4.1</span> HTTP and the REST architectural style</h3>
+<div class="outline-text-3" id="text-4-1">
+<p>
+HTTP is the application-level protocol of the World Wide Web,
+standardized by the IETF and W3C and refined over decades of browser and server practice [cite:@FieldingsThesis;@mozilla_http_overview].
+It defines how clients and servers exchange messages to manipulate <b>resources</b> identified by <b>Uniform Resource Identifiers</b> (URIs).
+</p>
+
+<p>
+For HTTPym we are not interested in every detail of HTTP,
+but in a small set of architectural ideas:
+</p>
+
+<dl class="org-dl">
+<dt><b>Resources and URIs</b></dt><dd>HTTP operates on abstract resources (documents, images, services, data collections…).
+Each resource is identified by a URI;
+the bytes sent over the wire (HTML, JSON, images) are <b>representations</b> of its state.</dd>
+<dt><b>Uniform methods</b></dt><dd>A small, fixed vocabulary of methods (e.g., <code>GET</code>, <code>HEAD</code>, <code>PUT</code>, <code>DELETE</code>, <code>POST</code>, <code>PATCH</code>)
+is used for all resources.
+Methods are classified as safe vs. unsafe and idempotent vs. non-idempotent,
+which constrains how clients may use them.</dd>
+<dt><b>Status codes as outcome vocabulary</b></dt><dd>Responses carry a status line (e.g., 200 OK, 404 Not Found, 500 Internal Server Error).
+Codes are grouped into families (1xx informational, 2xx success, 3xx redirection, 4xx client error, 5xx server error)
+and serve as a compact language of <b>outcomes</b> for the request.</dd>
+<dt><b>Intermediaries</b></dt><dd>Proxies, gateways, and caches can be placed between user agents and origin servers.
+They forward or transform messages while preserving the same method/URI/status vocabulary.</dd>
+</dl>
+
+<p>
+A simple HTTP interaction consists of a user agent (browser) sending a request (method, URI, headers, optional body) to an origin server,
+which replies with a status code, headers, and an optional body:
+</p>
+
+
+<figure id="orgc6f22dc">
+<object type="image/svg+xml" data="basic-web-interaction.svg" class="org-svg">
+Sorry, your browser does not support SVG.</object>
+
+<figcaption><span class="figure-number">Figure 1: </span>Simple HTTP interaction between user agent and origin server.</figcaption>
+</figure>
+
+<p>
+A key strength of HTTP is how easily components can be <b>composed</b>.
+Intermediaries such as reverse proxies, caches, gateways, and logging filters
+can be chained between client and server without changing the basic interaction model:
+each intermediary still receives a request and produces (or forwards)
+a response using the same uniform vocabulary.
+</p>
+
+<p>
+Because the protocol is message-based and the interface is uniform,
+these intermediaries can remain largely <b>transparent</b>:
+clients need not know how many or which components sit between them and the origin.
+yet concerns such as caching, logging, load balancing or access control can be inserted or rearranged without breaking the system.
+</p>
+
+
+<figure id="org7734add">
+<object type="image/svg+xml" data="complex-web-interaction.svg" class="org-svg">
+Sorry, your browser does not support SVG.</object>
+
+<figcaption><span class="figure-number">Figure 2: </span>HTTP interaction with intermediaries (cache and reverse proxy) inserted transparently.</figcaption>
+</figure>
+
+<p>
+Viewed this way, the HTTP specification reads like a catalogue of <b>contracts</b> between clients, servers, and intermediaries:
+which methods are allowed, under what preconditions, and how various outcomes are expressed as status codes and headers.
+HTTPym reuses this architectural vocabulary: URIs, methods, and status codes;
+but applies it <b>inside</b> a program rather than across the network.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgbce6717" class="outline-3">
+<h3 id="orgbce6717"><span class="section-number-3">4.2</span> Architecture-Oriented Programming and In-Process REST</h3>
+<div class="outline-text-3" id="text-4-2">
+<p>
+Alan Kay famously described Smalltalk objects as being
+</p>
+
+<blockquote>
+<p>
+“a bit like having thousands and thousands of computers all hooked together by a very fast network.” [cite:@Kayearlyhistory]
+</p>
+</blockquote>
+
+<p>
+At the time, such networks did not exist.
+Kay had to <b>imagine</b> what communication between thousands of computers might look like.
+Today we do have such a network, on a planetary scale, and it does not speak Smalltalk messages.
+It speaks HTTP.
+</p>
+
+<p>
+Marcel P. Weiher’s <b>Architecture-Oriented Programming</b> (AOP) starts from this observation:
+instead of inventing yet another object-message protocol and hoping it scales,
+we can “scale down” the architecture that already scales up,
+namely the Web’s HTTP/REST architectural style [cite:@WeiherInProcessRest].
+</p>
+
+<p>
+The idea is to take the core mechanisms of the Web:
+</p>
+
+<ul class="org-ul">
+<li>URIs as a uniform reference mechanism,</li>
+<li>HTTP methods as a uniform interface,</li>
+<li>and intermediaries (proxies, gateways, caches) as composable connectors,</li>
+</ul>
+
+<p>
+and apply them <b>inside</b> a single process.
+</p>
+
+<p>
+Weiher proposes three closely related concepts that we build on in HTTPym:
+</p>
+
+<dl class="org-dl">
+<dt>Polymorphic Identifiers</dt><dd>URI-like references used <b>inside</b> the program to name heterogeneous resources uniformly
+(variables, files, environment variables, remote services…).</dd>
+<dt>In-Process REST</dt><dd>A storage protocol with operations mirroring HTTP methods
+(get, put, merge, delete) defined on these references,
+but implemented as method calls instead of network messages.</dd>
+<dt>Storage Combinators</dt><dd>Composable “intermediary” stores (caches, loggers, switches, mappers, etc.)
+that sit between clients and base stores,
+analogous to HTTP proxies and gateways [cite:@WeiherStorageCombinators].</dd>
+</dl>
+
+<p>
+Together, these three elements shrink HTTP’s uniform interface into an in-process abstraction:
+URIs become polymorphic identifiers;
+HTTP methods become storage operations;
+proxies and gateways become storage combinators.
+</p>
+</div>
+
+<div id="outline-container-org991311e" class="outline-4">
+<h4 id="org991311e"><span class="section-number-4">4.2.1</span> Polymorphic identifiers</h4>
+<div class="outline-text-4" id="text-4-2-1">
+<p>
+In Objective-S, Weiher’s language for experimenting with these ideas, <b>polymorphic identifiers</b> are the in-process counterpart of URLs: a single notation for referring to values, fields, files, or remote resources [cite:WeiherPolymorphicIdentifiers]. They extend Eiffel’s Uniform Access Principle from “features of an object” to “resources of an entire program”.
+</p>
+
+<p>
+For example, the following are all valid polymorphic identifiers:
+</p>
+
+<pre class="example" id="orgdcbd91c">
+person
+name
+var:person/name
+var:person/{attribute}
+file://tmp/button.png
+http://www.example.com/button.png
+file:{env:HOME}/rfcs/{rfcName}
+</pre>
+
+<p>
+Some of these look like simple variable names (<code>person</code>, <code>name</code>); others look like URLs (<code>file://…</code>, <code>http://…</code>); others embed environment variables or parameters. The important point is that <b>all</b> of them denote resources through the <b>same</b> interface. Clients need not know in advance whether a reference points to a field, an in-memory table, a file on disk, or a remote HTTP resource.
+</p>
+
+<p>
+HTTPym adopts this idea for Eiffel: URIs (and URI-like strings) become polymorphic identifiers that can denote both external resources (e.g., <code>http://…</code>, <code>file://…</code>) and internal ones (e.g., <code>env://VAR</code> or in-program tables).
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgad574b5" class="outline-4">
+<h4 id="orgad574b5"><span class="section-number-4">4.2.2</span> In-Process REST: a storage protocol</h4>
+<div class="outline-text-4" id="text-4-2-2">
+<p>
+If polymorphic identifiers are the in-process counterpart of URIs, then an <b>in-process REST</b> protocol is the counterpart of HTTP methods and status codes. Instead of sending <code>GET</code> or <code>PUT</code> across the network, a client calls operations on a <b>store</b> object that accepts polymorphic identifiers as keys.
+</p>
+
+<p>
+In Objective-S this is expressed as a small protocol:
+</p>
+
+<div class="org-src-container">
+<label class="org-src-name"><span class="listing-number">Listing 2: </span>Storage protocol expressed in Objective-Smalltalk (after Weiher).</label><pre class="src src-objective-c" id="org8b4eb87">protocol Storage {
+  -at: ref;
+  -&lt;void&gt; at: ref put: object;
+  -&lt;void&gt; at: ref merge: object;
+  -&lt;void&gt; deleteAt: ref;
+}
+</pre>
+</div>
+
+<p>
+The <code>at:</code> operation retrieves the value associated with a reference (a <code>GET</code>). The <code>put:</code> operation overwrites state (a <code>PUT</code>); <code>merge:</code> refines or updates it (similar in spirit to <code>PATCH</code>); <code>deleteAt:</code> removes it (a <code>DELETE</code>). Implementations are free to back these operations with in-memory tables, files, databases, or remote calls.
+</p>
+
+<p>
+HTTPym mirrors this protocol in Eiffel: stores implement a small, HTTP-inspired interface for manipulating resources inside the program, using polymorphic identifiers as keys.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org5fa5849" class="outline-4">
+<h4 id="org5fa5849"><span class="section-number-4">4.2.3</span> Storage combinators</h4>
+<div class="outline-text-4" id="text-4-2-3">
+<p>
+On the Web, much of HTTP’s power comes from <b>intermediaries</b>: caches, reverse proxies, gateways, logging filters, authentication and compression layers that can be inserted in the request/response path without changing client or server code. Weiher’s storage combinators are the in-process analogue of these intermediaries [cite:@WeiherStorageCombinators].
+</p>
+
+<p>
+A <b>storage combinator</b> is a store that wraps another store (or several stores), adding cross-cutting behavior:
+</p>
+
+<ul class="org-ul">
+<li>a cache combinator may satisfy <code>get</code> from a local cache and only delegate misses to a slower underlying store;</li>
+<li>a logging combinator may record every access;</li>
+<li>a mapping combinator may transform keys or values;</li>
+<li>a switching combinator may route some references to one store and others to another.</li>
+</ul>
+
+<p>
+Because all stores implement the same small protocol, combinators can be freely composed, much like HTTP proxies and gateways. HTTPym adopts this approach directly: Eiffel classes implement a uniform store interface, and storage combinator classes (cache, logger, switch, etc.) wrap other stores, giving HTTP-like composability inside a single program.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orgc1370b2" class="outline-3">
+<h3 id="orgc1370b2"><span class="section-number-3">4.3</span> Eiffel Programming Principles</h3>
+<div class="outline-text-3" id="text-4-3">
+<p>
+Eiffel’s design is built around a small set of principles that make object-oriented software more modular, explicit, and verifiable [cite:@OOSC]. Among these, five are particularly relevant for HTTPym:
+</p>
+
+<dl class="org-dl">
+<dt>Design by Contract (DbC)</dt><dd><p>
+Model every interaction between software elements as a <b>contract</b> with preconditions, postconditions and invariants.
+Contracts make correctness assumptions explicit and executable.
+</p>
+
+<blockquote>
+<p>
+“…an explicit roster of mutual obligations and benefits, the contract.” [cite:@OOSC p. 331]
+</p>
+</blockquote>
+
+<p>
+In HTTPym we interpret HTTP methods and status codes as Eiffel contracts on resource access:
+a precondition violation corresponds to a 4xx client error;
+a broken postcondition corresponds to a 5xx server error.
+</p></dd>
+
+<dt>Command–Query Separation (CQS)</dt><dd><p>
+Every routine should be <b>either</b> a command (may change state, returns no result) <b>or</b> a query (returns a result, causes no abstract side effects).
+</p>
+
+<blockquote>
+<p>
+“Functions should not produce abstract side effects.” [cite:@OOSC p. 751]
+</p>
+</blockquote>
+
+<p>
+This aligns with HTTP’s distinction between safe and unsafe methods:
+in HTTPym, query-like operations correspond to safe, idempotent accessors,
+while state-changing operations correspond to commands.
+</p></dd>
+
+<dt>Uniform Access Principle (UAP)</dt><dd>Clients must see a <b>single, uniform</b> view of access to features of a class,
+whether they are implemented via stored attributes or computed functions.
+UAP allows implementations to change representation or computation strategies without impacting clients.
+HTTPym extends this spirit from “features of one object” to “resources of a program”:
+whether a resource lives in memory, in a file, or behind an HTTP call is hidden behind a uniform protocol.</dd>
+
+<dt>Open–Closed Principle (OCP)</dt><dd>Software elements should be <b>open for extension</b> but <b>closed for modification</b>.
+In Eiffel this is realized via inheritance, redeclaration, and dynamic binding.
+In HTTPym, OCP motivates an architecture where new stores and storage combinators can be added
+ e.g., new caches, loggers, or protocol adapters, without modifying existing clients.</dd>
+
+<dt>Systematic Naming Principle (SNP)</dt><dd>Libraries should use a consistent, systematic naming vocabulary for similar operations across different data structures [cite:@MeyerEiffelbase].
+EiffelBase uses names such as <code>item</code>, <code>put</code>, <code>extend</code> consistently across lists, stacks, queues, etc.
+This makes the library feel like one coherent design rather than a collection of unrelated pieces.
+HTTPym follows this example: all stores expose the same small set of operations,
+and scheme clients share a common naming scheme, echoing HTTP’s uniform interface.</dd>
+</dl>
+
+<p>
+These principles make Eiffel a natural host for an in-process REST architecture: contracts provide a home for HTTP’s pre/postcondition vocabulary; UAP and SNP support uniform access to heterogeneous resources; OCP and combinators make it easy to extend the architecture without breaking existing code.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orge993541" class="outline-3">
+<h3 id="orge993541"><span class="section-number-3">4.4</span> HTTP concepts and Eiffel principles correspondence</h3>
+<div class="outline-text-3" id="text-4-4">
+<p>
+HTTP and Eiffel are philosophically aligned: HTTP is a protocol designed around uniform interfaces, explicit outcomes, and composable intermediaries; Eiffel is a language designed around explicit contracts, uniform access, and systematic naming. HTTPym, implemented in Eiffel, is thus a natural way to “shrink” HTTP’s architectural mechanisms into a single program.
+</p>
+
+<p>
+Table <a href="#org381473c">1</a> summarizes this alignment.
+</p>
+
+<table id="org381473c">
+<caption class="t-above"><span class="table-number">Table 1:</span> Correspondence between Eiffel principles and HTTP architectural concepts.</caption>
+
+<colgroup>
+<col  class="org-left">
+
+<col  class="org-left">
+
+<col  class="org-left">
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Eiffel principle</th>
+<th scope="col" class="org-left">HTTP elements</th>
+<th scope="col" class="org-left">Correspondence / Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">DbC</td>
+<td class="org-left">Methods, status codes</td>
+<td class="org-left">Both provide a vocabulary for contracts and failures on operations.</td>
+</tr>
+
+<tr>
+<td class="org-left">CQS</td>
+<td class="org-left">Safe/unsafe, idempotent methods</td>
+<td class="org-left">Queries correspond to safe, idempotent methods; commands to state changes.</td>
+</tr>
+
+<tr>
+<td class="org-left">UAP</td>
+<td class="org-left">URIs and uniform interface</td>
+<td class="org-left">Both hide representation and location behind a uniform access mechanism.</td>
+</tr>
+
+<tr>
+<td class="org-left">OCP</td>
+<td class="org-left">Proxies, caches, middleware/intermediaries</td>
+<td class="org-left">Both architectures favor inserting new intermediaries without changing clients and servers.</td>
+</tr>
+
+<tr>
+<td class="org-left">SNP</td>
+<td class="org-left">Method names, status code families, URI structure</td>
+<td class="org-left">Coherent naming and classification make APIs and architectures easier to learn and compose.</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+In the rest of the paper we make this correspondence concrete: HTTPym defines Eiffel classes for polymorphic identifiers, stores, and storage combinators that bring HTTP’s architectural style into a statically typed, contract-based setting.
+</p>
+</div>
+</div>
+</div>
+
+
+
+<div id="outline-container-org1566598" class="outline-2">
+<h2 id="org1566598"><span class="section-number-2">5</span> Implementation</h2>
+<div class="outline-text-2" id="text-5">
+</div>
+<div id="outline-container-org1ab92e2" class="outline-3">
+<h3 id="org1ab92e2"><span class="section-number-3">5.1</span> HTTP URIs become URI_PYM</h3>
+<div class="outline-text-3" id="text-5-1">
+<p>
+To support polymorphic identifiers in Eiffel, we first need a solid representation of URLs/URIs <b>inside</b> the program. Fortunately we do not have to re-implement URL parsing from scratch: EiffelStudio already ships with a <code>URI</code> library that understands the standard components of a URI.
+</p>
+
+<p>
+For reference, a URI can be decomposed as follows:
+</p>
+
+<p>
+(modified from a parsing diagram by Steven Levithan and the WHATWG URL specification.)
+</p>
+
+<p>
+In HTTPym we reuse Eiffel’s <code>URI</code> class and extend it into <code>URI_PYM</code>. The goal of <code>URI_PYM</code> is <b><b>not</b></b> to change the syntax of URIs, but to make URIs <b>more convenient as polymorphic identifiers</b>:
+</p>
+
+<ul class="org-ul">
+<li>we add conversion routines to turn a <code>URI_PYM</code> into scheme-specific helper types (e.g., <code>FILE_URL</code>, <code>ENV_URL</code>, <code>HTTP_URL</code>);</li>
+<li>we provide queries that expose the path as a sequence of segments, which we later reuse as keys for stores;</li>
+<li>we keep the representation immutable, so that a URI safely identifies the same resource throughout its lifetime.</li>
+</ul>
+
+<p>
+The Eiffel implementation is a thin wrapper around <code>URI</code>; the interesting behavior comes later, when we plug <code>URI_PYM</code> into scheme handlers and stores.
+</p>
+
+<p>
+Here is the listing
+</p>
+
+<p>
+;; (Generated short view of class URI_PYM, omitted here.)
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-org67911a7" class="outline-3">
+<h3 id="org67911a7"><span class="section-number-3">5.2</span> HTTP Request become HTTPYM_REQUEST_METHODS</h3>
+<div class="outline-text-3" id="text-5-2">
+<p>
+Once URIs are available as <code>URI_PYM</code> objects, we need an in-process equivalent of HTTP methods. In Weiher’s work this is the <code>Storage</code> protocol; in HTTPym it is a deferred Eiffel class we call <code>RESTLY</code>, which provides the core “HTTP-like” operations for in-process REST.
+</p>
+
+<p>
+We deliberately design this interface to resemble both:
+</p>
+
+<ul class="org-ul">
+<li>the HTTP method vocabulary (GET, HEAD, PUT, POST, DELETE, …), and</li>
+<li>Eiffel’s <code>HASH_TABLE</code> protocol, so that stores feel as familiar as ordinary tables.</li>
+</ul>
+
+<p>
+The short view of <code>RESTLY</code> can be obtained with:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-bash">ec -config ./restful.cfg -short RESTLY
+</pre>
+</div>
+
+<p>
+Several points are worth noting:
+</p>
+
+<ul class="org-ul">
+<li>Weiher’s original interface is named <code>Storage</code> and expressed as an Objective-S protocol. In our Eiffel implementation we call the deferred class <code>RESTLY</code>, because EiffelBase already uses the names <code>STORAGE</code> and <code>STORE</code> for different purposes.</li>
+<li>The interface is <b><b>inspired</b></b> by HTTP methods, but follows the <b>shape</b> of a hash table: queries such as <code>has_item</code> and <code>item</code> correspond to safe, idempotent access (HEAD/GET), and commands such as <code>expand</code> and <code>force</code> correspond to state-changing operations (POST/PUT).</li>
+<li>This connection to <code>HASH_TABLE</code> is intentional and mirrors Weiher’s decision to align with the <code>NSDictionary</code> protocol in Objective-C: instead of inventing a new dictionary-like API, we reuse the vocabulary that Eiffel programmers already know.</li>
+</ul>
+
+<p>
+Conceptually, <code>RESTLY</code> offers:
+</p>
+
+<ul class="org-ul">
+<li>a family of <b>queries</b> that do not change state (GET/HEAD-like),</li>
+<li>a family of <b>commands</b> that change state (PUT/POST/PATCH/DELETE-like),</li>
+<li>and Eiffel contracts that make success and failure conditions explicit (preconditions and postconditions instead of raw status codes).</li>
+</ul>
+
+<p>
+This interface will be the common backbone shared by all scheme handlers and storage combinators.
+</p>
+
+<p>
+;; (Generated short view of class RESTLY, omitted here.)
+</p>
+
+<p>
+A <code>RESTLY_SCHEMA</code> is a subclass that tries to preserve HTTP semantics more strictly: it interprets safe vs. unsafe and idempotent vs. non-idempotent operations in a way that closely matches their HTTP counterparts. In the rest of this section, we always expose our in-process storage through this small, HTTP-inspired API.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgb0309d4" class="outline-3">
+<h3 id="orgb0309d4"><span class="section-number-3">5.3</span> SCHEME_HANDLERS</h3>
+<div class="outline-text-3" id="text-5-3">
+<p>
+In practice, URIs can use many schemes: <code>http</code>, <code>https</code>, <code>file</code>, <code>env</code>, <code>ftp</code>, and so on. For each scheme we need a component that understands how to <b>talk</b> to the corresponding origin: open files, read environment variables, issue HTTP requests, etc.
+</p>
+
+<p>
+A <code>SCHEME_HANDLER</code> is such a component: a class that knows how to communicate with a server (or origin) for a given scheme and that exposes the common <code>RESTLY</code> / HTTPym request interface.
+</p>
+
+<p>
+In HTTPym, a scheme handler has two important properties:
+</p>
+
+<ol class="org-ol">
+<li>It is always defined <b>with respect to</b> a base URL. This mirrors the browser notion of a “current origin”.</li>
+<li>It respects the common interface defined by <code>HTTPICO_REQUEST_METHODS</code> (our HTTP-like query/command protocol), so that other components can treat handlers uniformly.</li>
+</ol>
+</div>
+
+<div id="outline-container-org8e3642f" class="outline-4">
+<h4 id="org8e3642f"><span class="section-number-4">5.3.1</span> Deferred SCHEME_HANDLER</h4>
+<div class="outline-text-4" id="text-5-3-1">
+<p>
+We start from an abstract scheme handler that captures what all handlers have in common. Conceptually, a handler manages one or more schemes (e.g., <code>http</code> and <code>https</code> together) and can manufacture concrete handler objects for specific base URIs.
+</p>
+
+<p>
+A simplified version looks like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">deferred</span> <span style="color: #F0DFAF; font-weight: bold;">class</span> RAW_SCHEMA_HANDLER
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Supported schemes
+</span>
+  <span style="color: #DFAF8F;">my_schemas</span>: LIST [<span style="color: #7CB8BB;">STRING</span>]
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Schemes handled by this class (e.g., &lt;&lt;"http", "https"&gt;&gt;)
+</span>
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Factory
+</span>
+  for (<span style="color: #DFAF8F;">a_url</span>: URL): <span style="color: #F0DFAF; font-weight: bold;">like</span> <span style="color: #BFEBBF;">Current</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Return a handler instance suitable for `a_url`.
+</span>    <span style="color: #BFEBBF;">require</span>
+      <span style="color: #BFEBBF;">url_must_be_for_my_schema</span>: a_url.schema &#8712; my_schemas
+    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">In descendants: create Result and attach it to `a_url` as base.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> {<span style="color: #7CB8BB;">NONE</span>} <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Creation details
+</span>
+  <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">... hidden creation routines ...
+</span>
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+This class does not yet know <b>how</b> to talk to HTTP, files, or the environment; it only specifies the <b><b>contract</b></b>: given a URL whose scheme belongs to <code>my_schemas</code>, you can obtain a handler that will later support the HTTPym request methods for that URL.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org3ed8047" class="outline-4">
+<h4 id="org3ed8047"><span class="section-number-4">5.3.2</span> How we handle different schemas?</h4>
+<div class="outline-text-4" id="text-5-3-2">
+<p>
+Each concrete scheme handler faces the same tension:
+</p>
+
+<ul class="org-ul">
+<li>it is specific to a given scheme (or small set of schemes),</li>
+<li>but it must expose the <b><b>same</b></b> request interface so that higher-level components can remain generic.</li>
+</ul>
+
+<p>
+HTTP gives us a ready-made answer: its method vocabulary. We therefore define an abstract <code>SCHEMA_HANDLER</code> that:
+</p>
+
+<ul class="org-ul">
+<li>fixes the schema (or schemas) it is responsible for,</li>
+<li>stores a base path (origin) to which relative paths are resolved,</li>
+<li>and declares a set of HTTP-inspired queries and commands.</li>
+</ul>
+
+<p>
+In Eiffel this is a deferred class, parameterized by the representation type <code>R</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">deferred</span> <span style="color: #F0DFAF; font-weight: bold;">class</span> SCHEMA_HANDLER [R]
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Schema identification
+</span>
+  <span style="color: #DFAF8F;">schema</span>: IMMUTABLE_STRING
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Primary scheme handled by this class (e.g., "http")
+</span>
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Connection state
+</span>
+  <span style="color: #DFAF8F;">base_path</span>: URL
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Base URL for resolving relative paths.
+</span>
+  connect (<span style="color: #DFAF8F;">a_base_path</span>: URL)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Attach this handler to `a_base_path`.
+</span>    <span style="color: #BFEBBF;">require</span>
+      <span style="color: #BFEBBF;">same_schema</span>: a_base_path.schema ~ schema
+    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Descendants set `base_path := a_base_path`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired queries
+</span>
+  has_item (<span style="color: #DFAF8F;">key</span>: PATH): <span style="color: #7CB8BB;">BOOLEAN</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Equivalent of HTTP HEAD: does resource for `key` exist?
+</span>    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  item (<span style="color: #DFAF8F;">key</span>: PATH): R
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Equivalent of HTTP GET: obtain representation for `key`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired commands
+</span>
+  expand (<span style="color: #DFAF8F;">data</span>: R; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Equivalent of HTTP POST: add or extend resource at `key`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  force (<span style="color: #DFAF8F;">data</span>: R; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Equivalent of HTTP PUT: create or replace resource at `key`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">deferred</span>
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Additional operations (merge, delete, etc.) can be added as needed.
+</span>
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+Descendants of <code>SCHEMA_HANDLER</code> implement these operations in a scheme-specific way (e.g., using file I/O, environment variables, or HTTP client libraries), but clients always see the same small, HTTP-inspired protocol.
+</p>
+</div>
+
+<div id="outline-container-orgc25ecc8" class="outline-5">
+<h5 id="orgc25ecc8"><span class="section-number-5">5.3.2.1</span> How does an Env handler look?</h5>
+<div class="outline-text-5" id="text-5-3-2-1">
+<p>
+An <code>env://</code> handler treats the process environment as a simple key–value store. Keys correspond to variable names; values are strings returned by the operating system.
+</p>
+
+<p>
+Conceptually, an environment handler might look like this:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">class</span> ENV_HANDLER
+<span style="color: #F0DFAF; font-weight: bold;">inherit</span>
+  SCHEMA_HANDLER [<span style="color: #7CB8BB;">STRING</span>]
+    <span style="color: #F0DFAF; font-weight: bold;">redefine</span>
+      schema, has_item, item, expand, force
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Schema identification
+</span>
+  <span style="color: #BFEBBF;">schema</span>: IMMUTABLE_STRING = <span style="color: #CC9393;">"env"</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired queries
+</span>
+  has_item (<span style="color: #DFAF8F;">key</span>: PATH): <span style="color: #7CB8BB;">BOOLEAN</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Is there an environment variable with this name?
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #BFEBBF;">Result</span> := os_has_environment_variable (key.to_string_8)
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  item (<span style="color: #DFAF8F;">key</span>: PATH): <span style="color: #7CB8BB;">STRING</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Get the value of the environment variable.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #BFEBBF;">Result</span> := os_environment_variable (key.to_string_8)
+    <span style="color: #BFEBBF;">ensure</span>
+      <span style="color: #BFEBBF;">defined_implies_not_void</span>: has_item (key) <span style="color: #F0DFAF; font-weight: bold;">implies</span> <span style="color: #BFEBBF;">Result</span> /= <span style="color: #BFEBBF;">Void</span>
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired commands
+</span>
+  expand (<span style="color: #DFAF8F;">data</span>: <span style="color: #7CB8BB;">STRING</span>; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Set an environment variable (where the OS allows it).
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      os_set_environment_variable (key.to_string_8, data)
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  force (<span style="color: #DFAF8F;">data</span>: <span style="color: #7CB8BB;">STRING</span>; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Same as `expand` for this simple store.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      expand (data, key)
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+The details (which OS calls to use, how to represent <code>PATH</code>) are implementation-specific, but the key point is that <code>env://</code> URIs now participate in the same in-process REST protocol as HTTP and file resources.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org7e3b8dd" class="outline-5">
+<h5 id="org7e3b8dd"><span class="section-number-5">5.3.2.2</span> How does a <a href="file://">file://</a> handler look?</h5>
+<div class="outline-text-5" id="text-5-3-2-2">
+<p>
+A <code>file://</code> handler uses the local filesystem as its backing store. To keep the URI semantics explicit, we first introduce a <code>FILE_URL</code> type as a specialization of <code>URL</code>:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">class</span> FILE_URL
+    <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">A file URL is a URL whose scheme is "file".
+</span><span style="color: #F0DFAF; font-weight: bold;">inherit</span>
+  URL
+    <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Inherit parsing and access to components.
+</span>  <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">...
+</span>
+<span style="color: #BFEBBF;">invariant</span>
+  <span style="color: #BFEBBF;">schema_must_be_file</span>: schema ~ <span style="color: #CC9393;">"file"</span>
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+The handler then maps file URIs to actual file operations:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-eiffel"><span style="color: #F0DFAF; font-weight: bold;">class</span> FILE_HANDLER [R]
+<span style="color: #F0DFAF; font-weight: bold;">inherit</span>
+  SCHEMA_HANDLER [R]
+    <span style="color: #F0DFAF; font-weight: bold;">redefine</span>
+      schema, has_item, item, expand, force
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Schema identification
+</span>
+  <span style="color: #BFEBBF;">schema</span>: IMMUTABLE_STRING = <span style="color: #CC9393;">"file"</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired queries
+</span>
+  has_item (<span style="color: #DFAF8F;">key</span>: PATH): <span style="color: #7CB8BB;">BOOLEAN</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Does the file designated by `key` exist?
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #BFEBBF;">Result</span> := file_exists (to_file_url (key))
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  item (<span style="color: #DFAF8F;">key</span>: PATH): R
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Read the contents of the file designated by `key`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">local</span>
+      <span style="color: #DFAF8F;">f</span>: PLAIN_TEXT_FILE
+    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #F0DFAF; font-weight: bold;">create</span> f.make_open_read (to_file_url (key).as_string_8)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">In a concrete instantiation, `R` would typically be STRING or RAW_FILE.
+</span>      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">For simplicity we assume `R` can be built from the file contents.
+</span>      <span style="color: #BFEBBF;">Result</span> := read_representation (f)
+    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">HTTP-inspired commands
+</span>
+  expand (<span style="color: #DFAF8F;">data</span>: R; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Append or create a file (POST-like behavior).
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">...
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  force (<span style="color: #DFAF8F;">data</span>: R; <span style="color: #DFAF8F;">key</span>: PATH)
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Overwrite or create a file (PUT-like behavior).
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">...
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">feature</span> {<span style="color: #7CB8BB;">NONE</span>} <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Helper
+</span>
+  to_file_url (<span style="color: #DFAF8F;">key</span>: PATH): FILE_URL
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Build a FILE_URL from the handler's base path and `key`.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">...
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+  read_representation (<span style="color: #DFAF8F;">f</span>: PLAIN_TEXT_FILE): R
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">Construct a representation from file contents.
+</span>    <span style="color: #F0DFAF; font-weight: bold;">do</span>
+      <span style="color: #5F7F5F;">-- </span><span style="color: #7F9F7F;">...
+</span>    <span style="color: #F0DFAF; font-weight: bold;">end</span>
+
+<span style="color: #F0DFAF; font-weight: bold;">end</span>
+</pre>
+</div>
+
+<p>
+Again, the exact details are less important than the fact that the handler adheres to the same <code>SCHEMA_HANDLER</code> protocol.
+</p>
+</div>
+</div>
+
+<div id="outline-container-orgf218de6" class="outline-5">
+<h5 id="orgf218de6"><span class="section-number-5">5.3.2.3</span> How does an http handler look?</h5>
+<div class="outline-text-5" id="text-5-3-2-3">
+<p>
+An HTTP handler wraps an HTTP client library and delegates HTTPym operations to real HTTP requests. Given a base URL such as <code>http://api.github.com</code>, the handler can implement:
+</p>
+
+<ul class="org-ul">
+<li><code>has_item</code> with HTTP HEAD (or GET and mapping 404 to False),</li>
+<li><code>item</code> with HTTP GET,</li>
+<li><code>expand</code> with POST,</li>
+<li><code>force</code> with PUT or PATCH.</li>
+</ul>
+
+<p>
+The core idea is that <code>http://</code> URIs are not special: they are just another scheme handled through the same uniform interface, whether the underlying transport is a local file, an environment variable, or a networked HTTP service.
+</p>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-orgea755bb" class="outline-3">
+<h3 id="orgea755bb"><span class="section-number-3">5.4</span> HTTPETIT_RESOURCES</h3>
+<div class="outline-text-3" id="text-5-4">
+<p>
+A <b>resource</b> in HTTPym is an object that represents an <b><b>origin</b></b> that is unique within the system. For example, there is only one GitHub service on the public Internet, reachable at <code>https://api.github.com</code>. In the same spirit, there should be a single <code>GITHUB</code> resource object in the program.
+</p>
+
+<p>
+An HTTPETIT_RESOURCE (despite the name, now part of HTTPym) therefore combines:
+</p>
+
+<ul class="org-ul">
+<li>a canonical base URI (e.g., <code>https://api.github.com</code>),</li>
+<li>a suitable <code>SCHEME_HANDLER</code> (e.g., an HTTP handler),</li>
+<li>and possibly additional domain-specific behavior (e.g., GitHub-specific endpoints).</li>
+</ul>
+
+<p>
+Instead of scattering ad-hoc HTTP client instances throughout the codebase, we centralize access through resource objects. This makes reasoning about caching, rate limiting, and authentication much easier, and aligns with the idea that “anything that can be named can be a resource.”
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-orgbf7e052" class="outline-3">
+<h3 id="orgbf7e052"><span class="section-number-3">5.5</span> Web DNS became Resource Name Server</h3>
+<div class="outline-text-3" id="text-5-5">
+<p>
+On the Web, the Domain Name System (DNS) maps human-readable names to network addresses and helps ensure that “github.com” denotes the same origin for every client. In HTTPym we need a similar mechanism <b>inside</b> the program: a registry that maps resource names or URIs to the unique resource objects that represent them.
+</p>
+
+<p>
+We call this component the <code>RESOURCE_NAME_SERVER</code>. It follows a classic Registry pattern:
+</p>
+
+<ul class="org-ul">
+<li>it holds a mapping from resource identifiers (strings or URIs) to resource objects;</li>
+<li>it guarantees that each identifier is associated with <b><b>exactly one</b></b> resource instance;</li>
+<li>it returns existing instances on repeated lookups instead of creating new ones.</li>
+</ul>
+
+<p>
+The advantages are twofold:
+</p>
+
+<ul class="org-ul">
+<li><b><b>Uniqueness.</b></b> Every part of the program that talks to, say, the GitHub API, does so through the same <code>GITHUB</code> resource object and thus through the same underlying HTTP handler and configuration.</li>
+<li><b><b>Coordination.</b></b> Because access is funneled through shared resource objects, cross-cutting concerns such as caching, logging, authentication, or rate limiting can be implemented once (via storage combinators around the handler) and automatically benefit all callers.</li>
+</ul>
+
+<p>
+In other words, the RESOURCE_NAME_SERVER plays the role of an <b>in-process DNS</b> for HTTPym: it ensures that names (URIs) reliably identify the same in-process resources, completing the mapping from Web architecture to Eiffel implementation.
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org8176695" class="outline-2">
+<h2 id="org8176695"><span class="section-number-2">6</span> Evaluation</h2>
+<div class="outline-text-2" id="text-6">
+<p>
+Now let's compare the HTTPym enhanced method to connect to a todo-mvc sever VS plain eiffel.
+</p>
+
+<p>
+and also vs plain Java which is also a strongly typed language.
+</p>
+
+<p>
+and Plain Javascript (which is dynamic and should be the best implementation)
+</p>
+</div>
+</div>
+<div id="outline-container-org853db8b" class="outline-2">
+<h2 id="org853db8b"><span class="section-number-2">7</span> Discussion</h2>
+<div class="outline-text-2" id="text-7">
+<p>
+The analysis plus delta methodology says that when doinga retrospective we should ask ourselves what we did well and would do again (plus), and Delta is what did we wrong and would like to change next time.
+</p>
+
+<p>
+So our lessons learned are written in the same style.
+</p>
+</div>
+<div id="outline-container-org280798a" class="outline-3">
+<h3 id="org280798a">Inspired by HTTP but Implemented in your language</h3>
+<div class="outline-text-3" id="text-org280798a">
+<p>
+When developing a Storage Combinator Library, be inspired by HTTP’s architecture,
+but follow clowsely the interface of Dictionary or Hash_Table in your host language.
+This will give great benefits of interoperatibity.
+</p>
+</div>
+</div>
+<div id="outline-container-org422a9ae" class="outline-3">
+<h3 id="org422a9ae">state-less is natural but difficult to fake</h3>
+<div class="outline-text-3" id="text-org422a9ae">
+<p>
+The HTTP protocol is desigend to be stateles,
+But on the interenet there are both state and stateless
+services.
+</p>
+
+<p>
+For example a web-page, stateless.
+An authentication service? state-full
+a chat, state-full.
+A file in the local filesysetm, can be both Stateful if you leave the file open to perform serveral operations.
+Or stateless if each operation is unique.
+</p>
+
+<p>
+Since schema handlers are the frontier that divide our program,
+from the messyness of the real world.
+It is their job, to issolate as much as possible of that messyness.
+</p>
+
+<p>
+That is why we define an external API that reflects an HTTP-style protocol in a clean way.
+And then we let the schema handler fake that clean interface for us.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org7a59cda" class="outline-3">
+<h3 id="org7a59cda">Reuse through inheritance helps a lot</h3>
+<div class="outline-text-3" id="text-org7a59cda">
+<p>
+In this work we didn't need to implement
+</p>
+
+<p>
+URL, PATH or the ENV, HTTP and FTP SCHEME_HANDLERS since those libraries already existed.
+</p>
+
+<p>
+We only needed to inherit them, and then at the heir's make clear that the only way to interact with them was through the PICO_REQUEST_METHDS.
+</p>
+
+<p>
+We had to hide the other details of the implementation so that we were sure the clients could only have one way to interact with the SCHME_HANDLERs without the risk of breaking the interface
+</p>
+</div>
+</div>
+<div id="outline-container-org383b02f" class="outline-3">
+<h3 id="org383b02f">Weihers Fundamental Insight is brilliant.</h3>
+<div class="outline-text-3" id="text-org383b02f">
+<p>
+Weiher's Fundamental Insight is brillian and provides an avenue to explore more work.
+</p>
+
+<p>
+For example what would happen if we took insipiration from the design of git (or even better GitLess) and shrunk that to the level of multi-threaded program? Probably we would have a program that can handle race conditions.
+</p>
+
+<p>
+Or what if we took the design o Raft consensus mechanism and scale id down to the level of single program? Maybe we would come with a design that can work like Erlang's agents in an earier way.
+</p>
+</div>
+</div>
+<div id="outline-container-org1c036a7" class="outline-3">
+<h3 id="org1c036a7">Schema_handlers will be many, but resources should be unique</h3>
+<div class="outline-text-3" id="text-org1c036a7">
+<p>
+something important about URLs is that they represent unique sources information in all of the world.
+so in our programs we need to also reflect that uniqueness.
+</p>
+
+<p>
+BUT on the other hand, many objects can use the protocol to handle it.
+so that is why Schema handlers can have several instances.
+</p>
+
+<p>
+and resources will be unique organizd in Resource Name Server (RNS).
+Analogous to the Domain Name Server of the internet (DNS),
+is a service following the registry pattern,
+that given a url will return a new origin, or an existing one if it already exists.
+</p>
+</div>
+</div>
+<div class="outline-text-2" id="text-7">
+<p>
+In case this work inspires you to build your own StorageCombinators library for your lengague here are a few of the avenues we explored but finally decided not to pursue.
+</p>
+</div>
+<div id="outline-container-org487d889" class="outline-3">
+<h3 id="org487d889">Naming is really hard</h3>
+<div class="outline-text-3" id="text-org487d889">
+<p>
+As the famous aphorism goes:
+</p>
+
+<blockquote>
+<p>
+There are only two hard things in Computer Science: cache invalidation and naming things.
+&#x2013; Phil Karlton
+</p>
+</blockquote>
+
+<p>
+This library is no exception.
+</p>
+
+<p>
+At first I was using the same names as Weiher's original paper: Protocol, Store, StorageCombinator.
+</p>
+
+<p>
+However, that quickly when away Protocol is just the name that Objective-C gives to <i>Abstract</i> classes in Java to or <i>deffered classes</i> in Eiffel. Alhough Eiffel classes are more powerful since they can share features, and state with the heirs.
+</p>
+
+<p>
+also Store and Storage rapidly went away since there were already other classes in Eiffel with those names.
+</p>
+
+<p>
+Then I used the name HTTPym because it mean't <i>REST-like</i> library. But then I discovered there is a whole flamewar going about not naming things REST unless they implement the HATEOAS principle from Roy Fieldings Thesis.
+</p>
+
+<p>
+Since the work here is more similar to what the Richardson Maturity Model Level 2 describes.
+</p>
+
+<p>
+And not wannting to bring the flamewar or the <i>restfarians</i> ire with this library I decided to change the name once again.
+</p>
+
+<p>
+Since the library is more inspired by the HTTP spec than the actual REST thesis I tried by that side:
+</p>
+
+<p>
+Then came HTTPym, to mean HTTP-but-little. Pym because the "Pym Particle" is what allows Ant-man of the comics to shrink or grow big.
+</p>
+
+<p>
+but then again PYM_RESOURCE and URL_PYM did give much information.
+</p>
+
+
+<p>
+So HTTPico was born to mean: like HTTP-but-shrunk to the  level of program.
+</p>
+
+<p>
+The lesson here is:
+</p>
+
+<ol class="org-ol">
+<li>Follow the naming convention of your language.</li>
+<li>Don't invoke the ire of the restafarians</li>
+</ol>
+</div>
+</div>
+<div id="outline-container-orgd4ed17c" class="outline-3">
+<h3 id="orgd4ed17c">The fundamental data structure is really important.</h3>
+<div class="outline-text-3" id="text-orgd4ed17c">
+<p>
+Weiher's original work based his framework on the Dictionary class of Smalltalk.
+</p>
+
+<p>
+On HTTPico I based it on top of HASH_TABLE.
+</p>
+
+
+<p>
+Now I think a better starting point is hybrid datatype.
+</p>
+
+<p>
+That compbines a HASH_TABLE with a Prefix-tree (trie).
+This is a better match for the idea of path and filesystem.
+to create services that are the combination of multiple resources.
+</p>
+
+<p>
+So if your programming language already has a PrefixTree (Trie) data structure start with that one.
+</p>
+</div>
+</div>
+<div id="outline-container-org7771c74" class="outline-3">
+<h3 id="org7771c74">Maybe Resoure Name Server is not Necessary in Eiffel</h3>
+<div class="outline-text-3" id="text-org7771c74">
+<p>
+Eiffel has a very nice mechanism to create Singletons.
+With <code>ONCE</code> features and <code>Frozen classes</code>.
+</p>
+
+<p>
+So when implementing the Resoure Name Registry another possibility was to implement every resource as a singleton,
+based on the URL that creates it.
+</p>
+
+<p>
+But Singleton's are per Class not per Object Instance.
+And since here he only thing that changes between instances is the <code>base_url</code> that would mean that we will need a class for each singleton we want to create.
+</p>
+
+<p>
+Not wanting to create many classes we went for the Resoure Uri Registry. So that we only work with one instance, per resource.
+Which better mimics the web, when in your browser you type <a href="http://www.eiffel.dev">http://www.eiffel.dev</a>, the mental model is that there is only one computer in the sky that gives us that content.
+Even if it is only
+</p>
+</div>
+</div>
+<div id="outline-container-orgeebb834" class="outline-3">
+<h3 id="orgeebb834"><span class="section-number-3">7.1</span> Limitations</h3>
+<div class="outline-text-3" id="text-7-1">
+<dl class="org-dl">
+<dt>We don't do content negotiation</dt><dd>Everything composition is strongly typed.
+So that means that we loos part of the flexbility of HTTP</dd>
+<dt>No Authentication (yet)</dt><dd>Many SCHEMA_HANDLERs require the capability to do authentication.
+Stil not work.</dd>
+
+<dt>This version is single threaded</dt><dd>So it is not actually concurrent, so it doesn't handle the case when single resource might be modified concurrently.</dd>
+
+<dt>(no term)</dt><dd>Eiffel's type contrained generecity can only with AND relationships not OR which forces akward constructios like:</dd>
+</dl>
+</div>
+</div>
+
+<div id="outline-container-org4b2c27f" class="outline-3">
+<h3 id="org4b2c27f"><span class="section-number-3">7.2</span> Future Work</h3>
+<div class="outline-text-3" id="text-7-2">
+<p>
+This work has many avenues of future work.
+Of course there is the deep version.
+</p>
+
+<p>
+Having more: SCHEME_HANDLERS, Creating more Combinators (Proxys)
+</p>
+
+<p>
+Or we can model another domain, in this work we modeled HTTP but we could also model GIT.
+</p>
+
+<p>
+But before all of that we will continue to improve HTTPico in the concurrency dimmension.
+</p>
+
+<p>
+From Single Threaded with HTTPic to Multithreaded with HTTPnano and Finally to Distributed with HTTPmicro(services)
+</p>
+</div>
+<div id="outline-container-orgef1c66a" class="outline-4">
+<h4 id="orgef1c66a"><span class="section-number-4">7.2.1</span> HTTPmicro: Communicating concurrent objects with HTTP</h4>
+<div class="outline-text-4" id="text-7-2-1">
+<p>
+Now that we have a scaled-down version of HTTP that works
+at the level of single program and objects.
+</p>
+
+<p>
+Comes then next question:
+</p>
+
+<p>
+Can we make HTTPico scale up, to the level of multiple processors?
+</p>
+
+<p>
+Eiffel implements SCOOP (Simple Concurrent Object Oriented Protocol) and HTTP is already a distributed protocol.
+</p>
+
+<p>
+So could we make a version of HTTPico so that clients and servers behave more like independent machines on the internet web?
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1305f4f" class="outline-4">
+<h4 id="org1305f4f"><span class="section-number-4">7.2.2</span> HTTPnano: Inter Process Communication (IPC) with HTTP</h4>
+<div class="outline-text-4" id="text-7-2-2">
+<p>
+Assuming we make HTTPICO on SCOOP a reality the next logical step is to scale it up once more.
+</p>
+
+<p>
+Now to other programs, running in the same machine with IPC (Inter Process Communication as it is known in Unix).
+Once this happn HTTPico will be able to create
+</p>
+</div>
+<div id="outline-container-orgd452d06" class="outline-5">
+<h5 id="orgd452d06"><span class="section-number-5">7.2.2.1</span> in the 3rd paper we will make the system Concurrent with SCOOP</h5>
+<div class="outline-text-5" id="text-7-2-2-1">
+<p>
+in the 3rd paper of the series we will make the system concurrent.
+because again if we have an object that represents GitHub.
+our system cannot wait and block for github to answer our questions.
+it must continue to execute.
+</p>
+
+<p>
+But con SCOOP we can have a GITHUB object that is <b>separate</b> in another procesor.
+so our system can continue to perform other  tasks.
+</p>
+
+<p>
+URLs are an effective and universal why to address information on the internet.
+</p>
+
+<p>
+With Polymorphic Identifiers, Weiher had the insight:
+They can also be used inside programs to refer to resources,
+that live in the same process as the program  or in the same computer.
+</p>
+
+<p>
+The insight has two parts: first each schema (aka protocol) requires a SCHEMA_CLIENT that knows how to communicate using that protocol.
+And second all SCHEMA_CLIENTS should expose the same interface. In particular one inspired by HTTP-like Web APIs with methods GET, PUT, POST, DELETE operating on collections.
+</p>
+
+<p>
+Eiffel with it's extensive support for Design by Contract is ideal to express the specificiation that the SCHEMA_CLIENTS should fulfill and with extensive Base library, we can reuse the components, just making sure they follow the Polymorphic Identfiers.
+</p>
+
+<p>
+Following this constraints: URLs plus a RESTLy interface simplify access to resources across the whole program.
+</p>
+
+<p>
+We show this by having 3 SCHEMA_CLIENT implementations: Environment Variables (env://), Http client (<a href="http://">http://</a>) and a filesystem (<a href="file://">file://</a>)
+</p>
+
+<p>
+And we show the reusability of Eiffel since our three examples are mostly reuse of components already present in the Eiffel base library, just by making sure they follow the URLs and RESTLy constraints.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-orge8b94f7" class="outline-4">
+<h4 id="orge8b94f7"><span class="section-number-4">7.2.3</span> HTTPmicro: Distributed systems</h4>
+<div class="outline-text-4" id="text-7-2-3">
+<p>
+Once HTTPnano works,
+</p>
+
+<p>
+The next level is to scale it once again!
+to communicate other services around the network.
+creating with this Microservices.
+</p>
+</div>
+</div>
+
+<div class="outline-text-3" id="text-7-2">
+<p>
+With this line of work, we will try to do the opposite can we scale it up again?
+</p>
+
+<p>
+If so, I think this would have validated how powerful this´ approach is.
+</p>
+</div>
+</div>
+</div>
+<div id="outline-container-org76f4dc1" class="outline-2">
+<h2 id="org76f4dc1"><span class="section-number-2">8</span> Related Work</h2>
+<div class="outline-text-2" id="text-8">
+<p>
+HTTPym is directly inspired by Marcel P. Weiher’s work on
+Architecture-Oriented Programming (AOP), Polymorphic Identifiers, In-Process REST and Storage Combinators [cite:@WeiherPolymorphicIdentifiers;@WeiherStorageCombinators;@WeiherInProcessRest].
+In Objective-Smalltalk, Weiher shows how to scale the Web’s architecture down into a single process:
+URIs become polymorphic identifiers;
+HTTP’s uniform interface becomes a small storage protocol;
+and HTTP intermediaries (proxies, gateways, caches) inspire composable “storage combinators”.
+</p>
+
+<p>
+That work demonstrates the feasibility and expressiveness of in-process REST,
+but it is developed in a dynamic, untyped, Smalltalk-like setting with relatively lightweight contracts.
+</p>
+</div>
+<div id="outline-container-org7317af3" class="outline-3">
+<h3 id="org7317af3">Differences with Weihers AOP</h3>
+<div class="outline-text-3" id="text-org7317af3">
+<p>
+Weiher's storage combinator has over 14 years of development, his library of
+</p>
+</div>
+</div>
+<div id="outline-container-orgc6b4841" class="outline-3">
+<h3 id="orgc6b4841">Statically typed Stores</h3>
+<div class="outline-text-3" id="text-orgc6b4841">
+<p>
+HTTPym takes these ideas into a <b><b>statically typed, contract-based</b></b> environment.
+</p>
+
+<p>
+We keep Weiher’s core insight—shrinking HTTP’s uniform interface into a program,
+but we reify it in Eiffel, mapping HTTP methods and status codes to Eiffel’s Design by Contract,
+and using multiple inheritance and constrained genericity to type-check compositions of schemes and intermediaries.
+In contrast to Objective-Smalltalk, where the storage protocol follows Objective-C’s `NSDictionary` “by convention”,
+HTTPym embeds the protocol in Eiffel’s type system and contract mechanism, making the expectations of clients and suppliers explicit and machine-checked.
+</p>
+</div>
+</div>
+<div id="outline-container-org15e1c5d" class="outline-3">
+<h3 id="org15e1c5d">Statically typed Storage Combinators</h3>
+<div class="outline-text-3" id="text-org15e1c5d">
+<p>
+Weiher himself had identified "strongly typing as an avenue for future work" but he thought that given the variety of resources exposed
+Probably it would require a bespoke type system to work.
+</p>
+
+<p>
+Weiher himself view strongly typed as a venue for future work [cite:@WeiherStorageCombinators].
+</p>
+
+<p>
+However Weiher, thought that:
+</p>
+
+<blockquote>
+<p>
+Maybe no strong type system is flexible enough,
+since Storage Combintors represent such varied data.
+</p>
+</blockquote>
+
+<p>
+And <i>he was right</i> but in Eiffel Types not only have Inheritance Constraints, they have MULTIPLE_INHERITANCE so we were able to specify types as the composition of multipe types.
+</p>
+
+<p>
+Also Eiffel doesn't have casting, it has CONVERSION which made the process of converting unrelated types <i>possible</i>.
+</p>
+
+<p>
+And with constrained generecity we were able to show that it is only possible to create compositions that were the typpes are coherent.
+</p>
+
+<p>
+So it is very difficult to create a composition that is invalid.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-org8ffc801" class="outline-3">
+<h3 id="org8ffc801">Objective-S is more user friendly</h3>
+<div class="outline-text-3" id="text-org8ffc801">
+<p>
+Objective-S is Weiher's programmnin language that implements this techniques directly in the language.
+</p>
+
+<p>
+That is very superior to HTTPym, in the sense that it is a library as opposed to language instruction.
+</p>
+
+<p>
+So it reallies heavily on the programer knowing how to use the library.
+</p>
+</div>
+</div>
+
+<div id="outline-container-org60501bb" class="outline-3">
+<h3 id="org60501bb">Storage Combinator library is more diverse and mature</h3>
+<div class="outline-text-3" id="text-org60501bb">
+<p>
+Weiher's storage combinator library is very mature.
+The ideas have been refined for over 15 years.
+And he has a very wide and deep library of Combinators ready to use.
+</p>
+
+<p>
+In contrast HTTPym is young and shallow.
+Currently we only have 3 SCHEME_HANDLERS
+1 combinator Cache
+And that's it.
+</p>
+
+<p>
+Even in our next paper we will continue this tendce because of the focus on making a concurrent library.
+</p>
+</div>
+</div>
+<div id="outline-container-org0706da7" class="outline-3">
+<h3 id="org0706da7">HTTP and REST-inspired abstractions in programming languages</h3>
+<div class="outline-text-3" id="text-org0706da7">
+<p>
+Mainstream languages provide HTTP client libraries and “REST frameworks” that expose HTTP verbs at the API level (e.g., `get`, `post`, `put`)
+and often model resources as routes or controller methods.
+These libraries treat HTTP primarily as an <b><b>I/O protocol</b></b> for talking to remote web servers.
+They don't extend the HTTP model to local or in-process resources such as files, environment variables, configuration stores, or internal dictionaries, which continue to use their own ad-hoc APIs.
+Composition of such components is usually done manually: each new combination requires bespoke glue code.
+</p>
+
+<p>
+HTTPym is different in two ways.
+First, it treats HTTP’s architectural elements—URIs, methods, status codes—not just as I/O details, but as <b><b>first-class design abstractions</b></b> <b>inside</b> a program.
+Second, it applies that architectural pattern uniformly to heterogeneous in-process resources: `env://`, `<a href="file://">file://</a>`, and `<a href="http://">http://</a>` all expose the same HTTPym protocol.
+This is closer to Weiher’s AOP vision than to traditional HTTP client libraries,
+and it deliberately aims at in-process modularity and composability rather than only at building web services.
+</p>
+
+<p>
+To the best of our knowledge, apart from Weiher's Objective-Smalltalk there is no other languge that implemnts (Polymorphic identfiers, StorageCombinators and Uniform Verbs)
+</p>
+</div>
+</div>
+
+<div id="outline-container-org1dd0969" class="outline-3">
+<h3 id="org1dd0969">Uniform resource access, URI abstractions, and Eiffel libraries</h3>
+<div class="outline-text-3" id="text-org1dd0969">
+<p>
+There is also a long history of uniform resource access mechanisms, such as virtual file systems and “everything is a file” interfaces,
+that expose heterogeneous resources behind a common API.
+These systems typically generalize the POSIX file API (paths, `open`, `read`, `write`) rather than HTTP’s uniform interface,
+and they operate at the operating-system or filesystem level rather than at the level of in-process architectural constructs.
+They offer uniform naming and access, but without the HTTP-style distinction between safe/unsafe or idempotent methods,
+or the explicit contract outcomes (status codes) that HTTP provides.
+</p>
+
+<p>
+Within Eiffel, existing web frameworks and libraries (such as EiffelWeb / EWF, and URI and HTTP client classes in EiffelBase)
+provide support for building web servers and clients,
+and already include reusable abstractions for URLs and paths.
+HTTPym builds on these foundations: it reuses existing URI and filesystem classes,
+but constrains and composes them through a REST-like in-process protocol (the HTTPym request methods),
+typed scheme handlers, and combinators.
+</p>
+
+<p>
+There is no previous Eiffel library that integrates HTTP’s architectural pattern, Eiffel’s Design by Contract, and Weiher’s AOP ideas into a single, coherent in-process framework for accessing heterogeneous resources.
+</p>
+</div>
+</div>
+</div>
+
+<div id="outline-container-org825e39d" class="outline-2">
+<h2 id="org825e39d"><span class="section-number-2">9</span> Conclusion</h2>
+<div class="outline-text-2" id="text-9">
+<p>
+Weiher's insight about shrinking big systems that work is a powerful one.
+</p>
+
+<p>
+It allows composition of intermedirieas (storagecombinators) in an interesting way.
+</p>
+
+<p>
+Eiffel principles making this HTTP architecture easy to implement.
+</p>
+
+<p>
+And we hae also solved Weiher's future work about using a typed representation to make sure that the compositions of objcets are valid. This was possible due to Eiffel's constrained Genericity and Convert mechanism that is NOT like casting of other languages.
+</p>
+</div>
+</div>
+</div>
+<div id="postamble" class="status">
+<p class="date">Date: &lt;17 November 2025&gt;</p>
+<p class="author">Author: Alejandro Garcia</p>
+<p class="date">Created: 2025-11-28 vie 12:58</p>
+</div>
+</body>
+</html>

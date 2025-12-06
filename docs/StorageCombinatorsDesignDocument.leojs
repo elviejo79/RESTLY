@@ -143,7 +143,7 @@
                       "children": [
                         {
                           "gnx": "agarciafdz.20251117143143.1",
-                          "vh": "@auto-org ./tmp/draft-httpym.org"
+                          "vh": "@auto-org ./exports-from-leo/draft-httpym.org"
                         }
                       ]
                     },

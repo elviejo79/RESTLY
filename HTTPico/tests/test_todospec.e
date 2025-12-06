@@ -20,7 +20,7 @@ feature {NONE} -- Constants
 
 feature {NONE} -- Test lifecycle
 
-	test_item_key: detachable PATH_HTTPICO
+	test_item_key: detachable PATH_PICO
 		-- Key of item created for testing
 
 	on_prepare
@@ -64,7 +64,7 @@ feature -- Tests: Queries (safe HTTP verbs)
 
 	test_has_key_missing_item_returns_false
 		local
-			test_path: PATH_HTTPICO
+			test_path: PATH_PICO
 		do
 			create test_path.make_from_string (Nonexistent_item_id)
 			assert ("nonexistent item should return false", not todoserver.has_key (test_path))

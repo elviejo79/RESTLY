@@ -8,7 +8,7 @@ deferred class
 	HTTP_SCHEME [R -> {JSON_OBJECT} create make_from_string, make_empty end]
 
 inherit
-	HTTPICO_SCHEME_HANDLER [R]
+	PICO_SCHEME_HANDLER [R]
 		redefine
 			can_connect
 		end
@@ -94,7 +94,7 @@ feature -- http helper
 	-- 		end
 	-- 	end
 
-	build_absolute_url (a_path: PATH_HTTPICO): STRING_8
+	build_absolute_url (a_path: PATH_PICO): STRING_8
 			-- Build absolute URL from base_uri and path, ensuring trailing slash
 		do
 			Result := base_uri.string + a_path.out
@@ -110,13 +110,13 @@ feature -- http helper
 			end
 		end
 
-	extract_id_from_response (a_response: HTTP_CLIENT_RESPONSE): detachable PATH_HTTPICO
+	extract_id_from_response (a_response: HTTP_CLIENT_RESPONSE): detachable PATH_PICO
 			-- Extract ID from response Location header or body
 			-- API-specific: implement in descendant classes
 		deferred
 		end
 
-get_following_redirects (a_path: PATH_HTTPICO; a_max_redirects: INTEGER): HTTP_CLIENT_RESPONSE
+get_following_redirects (a_path: PATH_PICO; a_max_redirects: INTEGER): HTTP_CLIENT_RESPONSE
     local
         l_url: STRING_8
         l_response: detachable HTTP_CLIENT_RESPONSE
@@ -152,7 +152,7 @@ get_following_redirects (a_path: PATH_HTTPICO; a_max_redirects: INTEGER): HTTP_C
 
 
 feature --http verbs
-has_key (a_path: PATH_HTTPICO): BOOLEAN
+has_key (a_path: PATH_PICO): BOOLEAN
     local
         response: HTTP_CLIENT_RESPONSE
     do
@@ -160,7 +160,7 @@ has_key (a_path: PATH_HTTPICO): BOOLEAN
         Result := response.status = 200
     end
 
-item alias "[]" (a_path: PATH_HTTPICO): R
+item alias "[]" (a_path: PATH_PICO): R
     local
         response: HTTP_CLIENT_RESPONSE
         l_exception: POSTCONDITION_VIOLATION
@@ -174,7 +174,7 @@ item alias "[]" (a_path: PATH_HTTPICO): R
         end
     end
 
-	force (data: R; a_path: PATH_HTTPICO)
+	force (data: R; a_path: PATH_PICO)
 			-- Update item at `a_path` with `data` using HTTP PUT
 		local
 			response: HTTP_CLIENT_RESPONSE
@@ -211,7 +211,7 @@ item alias "[]" (a_path: PATH_HTTPICO): R
 			last_inserted_key := a_path
 		end
 
-	remove (a_path: PATH_HTTPICO)
+	remove (a_path: PATH_PICO)
 		local
 			response: HTTP_CLIENT_RESPONSE
 			l_exception: POSTCONDITION_VIOLATION
@@ -230,7 +230,7 @@ item alias "[]" (a_path: PATH_HTTPICO): R
 		deferred
 		end
 
-	last_inserted_key: detachable PATH_HTTPICO
+	last_inserted_key: detachable PATH_PICO
 		attribute
 			Result := Void
 		end

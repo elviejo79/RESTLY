@@ -8,53 +8,33 @@ class
 	STRING_CONVERTIBLE
 
 inherit
-	CONVERTIBLE_TO[STRING]
-		redefine
-			out
-		end
+	STRING
+        rename
+            make as make_string,
+            make_empty as make_empty_string
+        end
+    CONVERTIBLE_TO [STRING]
+        undefine
+            is_equal, copy, out
+        end
 
 create
-	make,
-	make_from_string,
-	make_from_s
+    make_from_s,
+    make_from_string,
+    make_empty_string,
+    make_string
 
-feature {NONE} -- Initialization
+convert
+    make_from_s ({STRING})
 
-	make (a_string: STRING)
-			-- Initialize with a string
-		do
-			value := a_string
-		ensure
-			value_set: value = a_string
-		end
+feature
+    to_s: STRING
+        do
+            create Result.make_from_string (Current)
+        end
 
-	make_from_string (a_string: STRING)
-			-- Alias for make
-		do
-			make (a_string)
-		end
-
-	make_from_s (a_string: STRING)
-			-- CONVERTIBLE_TO implementation
-		do
-			make (a_string)
-		end
-
-feature -- Access
-
-	value: STRING
-			-- The wrapped string value
-
-	to_s: STRING
-			-- Convert to STRING (identity conversion)
-		do
-			Result := value
-		end
-
-	out: STRING
-			-- String representation
-		do
-			Result := value
-		end
-
+    make_from_s(a_s: STRING)
+        do
+            make_from_string (a_s)
+        end
 end

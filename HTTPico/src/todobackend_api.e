@@ -33,7 +33,7 @@ feature
 
 feature -- Todo-specific implementation
 
-	extract_id_from_response (a_response: HTTP_CLIENT_RESPONSE): detachable PATH_HTTPICO
+	extract_id_from_response (a_response: HTTP_CLIENT_RESPONSE): detachable PATH_PICO
 			-- Extract ID from response Location header or body
 			-- Todo API specific: looks for "items/" path and "id" field
 		local
@@ -51,13 +51,13 @@ feature -- Todo-specific implementation
 				if loc.starts_with ("http://") or loc.starts_with ("https://") then
 					-- Location is a full URL, extract just the ID with trailing slash
 					if loc.has_substring ("items/") then
-						Result := create {PATH_HTTPICO}.make_from_string (loc.substring (loc.substring_index ("items/", 1) + 6, loc.count))
+						Result := create {PATH_PICO}.make_from_string (loc.substring (loc.substring_index ("items/", 1) + 6, loc.count))
 					else
 						-- Fallback: extract everything after the domain
-						Result := create {PATH_HTTPICO}.make_from_string (loc.substring (loc.substring_index ("/", 1) + 2, loc.count))
+						Result := create {PATH_PICO}.make_from_string (loc.substring (loc.substring_index ("/", 1) + 2, loc.count))
 					end
 				else
-					Result := create {PATH_HTTPICO}.make_from_string (loc)
+					Result := create {PATH_PICO}.make_from_string (loc)
 				end
 			elseif attached a_response.body as body then
 				-- Location header not useful, extract ID from response body JSON
@@ -65,7 +65,7 @@ feature -- Todo-specific implementation
 				if body.has_substring ("{") then
 					create json_response.make_from_string (body.substring (body.substring_index ("{", 1), body.count))
 					if attached {JSON_STRING} json_response.item ("id") as id_value then
-						Result := create {PATH_HTTPICO}.make_from_string (id_value.unescaped_string_8 + "/")
+						Result := create {PATH_PICO}.make_from_string (id_value.unescaped_string_8 + "/")
 					end
 				end
 			end
@@ -108,7 +108,7 @@ feature -- Todo-specific implementation
 			end
 		end
 
-	force (data: TODO_ITEM; a_path: PATH_HTTPICO)
+	force (data: TODO_ITEM; a_path: PATH_PICO)
 			-- Update item at `a_path` with `data` using HTTP PATCH
 			-- Redefined to use PATCH instead of PUT for Todo Backend API
 		local

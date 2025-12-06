@@ -35,7 +35,7 @@ feature {NONE} -- Demonstrations
 	demonstrate_rest_table
 			-- Demonstrate REST_TABLE functionality
 		local
-			table: REST_TABLE[STRING]
+			table: PICO_TABLE[STRING]
 		do
 			print ("1. Demonstrating REST_TABLE:%N")
 

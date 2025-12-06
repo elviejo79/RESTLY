@@ -13,14 +13,14 @@ note
 	revision: "$Revision$"
 
 deferred class
-	INTERMEDIARY [R -> attached ANY, S -> attached ANY]
+	INTERMEDIARY [R -> CONVERTIBLE_TO[S], S -> attached ANY]
 
 inherit
-	HTTPICO_VERBS [R]
+	PICO_REQUEST_METHODS [R]
 
 feature {NONE} -- Initialization
 
-	make (a_front: HTTPICO_VERBS[R]; a_back: HTTPICO_VERBS[S])
+	make (a_front: PICO_REQUEST_METHODS[R]; a_back: PICO_REQUEST_METHODS[S])
 			-- Initialize intermediary with source and destination
 		do
 			frontend := a_front
@@ -32,10 +32,10 @@ feature {NONE} -- Initialization
 
 feature -- Access
 
-	frontend: HTTPICO_VERBS[R]
+	frontend: PICO_REQUEST_METHODS[R]
 			-- The front-facing storage (e.g., cache, local copy)
 
-	backend: HTTPICO_VERBS[S]
+	backend: PICO_REQUEST_METHODS[S]
 			-- The backing storage (e.g., remote API, database)
 
 end

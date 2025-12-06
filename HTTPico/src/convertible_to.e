@@ -8,7 +8,8 @@ deferred class
 	CONVERTIBLE_TO[S -> attached ANY]
 
 convert
-   to_s:{S}
+to_s:{S}
+
 
 feature -- Conversion
 

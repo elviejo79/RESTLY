@@ -8,7 +8,7 @@ class
 	ENV_SCHEME
 
 inherit
-	HTTPICO_SCHEME_HANDLER [STRING]
+	PICO_SCHEME_HANDLER [STRING]
 		undefine
 			has_item
 		end
@@ -42,12 +42,12 @@ feature -- Attributes
 			-- This client handles env:// URLs
 feature -- Queries aka Http safe verbs
 
-	has_key (key: PATH_HTTPICO): BOOLEAN
+	has_key (key: PATH_PICO): BOOLEAN
 		do
 			Result := attached env_item (key.name)
 		end
 
-	item alias "[]" (key: PATH_HTTPICO): STRING assign force
+	item alias "[]" (key: PATH_PICO): STRING assign force
 		do
 			check attached env_item (key.name) as l_item then
 				Result := l_item
@@ -56,7 +56,7 @@ feature -- Queries aka Http safe verbs
 
 feature -- Commands aka Http unsafe verbs
 
-	force (data: STRING; key: PATH_HTTPICO)
+	force (data: STRING; key: PATH_PICO)
 			-- Equivalent to http PUT
 			-- Replaces the resource's representation with the request content.
 			-- if key didn't exist it stil inserts it
@@ -82,7 +82,7 @@ feature {NONE}
 			command_not_valid_for_env_variables: false
 		end
 
-	remove (key: PATH_HTTPICO)
+	remove (key: PATH_PICO)
 			-- Not supported for environment variables
 		do
 		ensure then
@@ -90,7 +90,7 @@ feature {NONE}
 		end
 
 feature -- helpers
-	last_inserted_key: detachable PATH_HTTPICO
+	last_inserted_key: detachable PATH_PICO
 			-- There is NO equivalent for this in http protocol.
 			-- but is necessary to keep the Command / Query Separation principle in Eiffel
 

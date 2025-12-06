@@ -8,12 +8,12 @@ class
 	RESOURCE_TABLE [R -> attached ANY]
 
 inherit
-	REST_TABLE [R]
+	PICO_TABLE [R]
 		undefine
 			is_equal, copy
 		end
 
-	HTTPICO_RESOURCE
+	PICO_RESOURCE
 		redefine
 			make_with_url
 		end

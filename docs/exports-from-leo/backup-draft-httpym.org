@@ -1,0 +1,1452 @@
+#+TITLE: HTTPym: Shrinking HTTP architecture into Eiffel (an AOP implementation)
+#+AUTHOR: Alejandro Garcia
+#+DATE: <17 November 2025>
+#+LANGUAGE: en
+#+bibliography: references.bib
+#+OPTIONS: toc:nil num:t H:3 ^:{}
+#+OPTIONS: html5-fancy:t
+#+HTML_DOCTYPE: html5
+#+HTML_MATHJAX: yes
+#+MACRO: impnote <<imp$1-destination>> [[imp$1-origin][↩ back to text]]
+#+MACRO: impmark <<imp$1-origin>>^{[[imp$1-destination][Important:$1]]}
+
+
+* Abstract
+
+The HTTP protocol has given the Web its scalability and composability properties.
+In Architecture Oriented Programming (AOP),
+Marcel P. Weiher had the insight that we could scale down the architecture of the web:
+Its fundamental mechanisms: URLs and HTTP methods,
+to provide uniform access across resources and a common interface to connect them.
+We present HTTPym, an Eiffel library that implements AOP based on Weiher’s ideas and the HTTP specification.
+
+#+NAME: HTTPym_one_sentence_summary
+#+BEGIN_VERSE
+HTTPym shrinks HTTP’s core architectural mechanisms:
+URIs, uniform methods, and status codes into
+composable classes for a single Eiffel program.
+#+END_VERSE
+
+Eiffel is ideal to express AOP ideas,
+because of the principles such as Uniform Access Principle (UAP),
+Multiple Inheritance and Design by Contract (DbC).
+
+We describe the design of HTTPym.
+It's implementation and examples o its use.
+Including clients for =http://=, =file://=, and =env://= schemes.
+And compare the resulting Eiffel code with equivalent idioms in other programming languages.
+
+* Introduction
+
+** Problem and context  :ignore:
+
+Modularity and composition  remain open problems.
+Ever since Parnas' classic paper on decomposition [cite:@ParnasDecomposition]
+through 90s with object-oriented programming an the 2010's with functional programing,
+and to this day with Jackson’s Concept-Oriented Design [cite:@Jackson2024],
+we are still striving for better modularity and composition.
+
+Following Parnas, we view modularity primarily as a question of how changes are localized:
+/when we change X, how many other parts must change with it?/
+Meyer [cite:@OOSC, pp.39--65} refines this intuition by treating modularity as a property of a design method,
+measured against five criteria: decomposability, composability, understandability, continuity, and protection.
+
+In particular, modular composability means that the method encourages software elements that can be freely recombined to build new systems.
+
+** The Web as a working model :ignore:
+
+Modularity and composition are opposing forces:
+modules want to be as independent as possible so that changing them doesn't affect the rest of the system,
+But compositions need components to be interdependent to have more powerful behaivours.
+
+However we have model of Modularity and Composability that works and is in use everyday by billions of users:
+the World Wide Web.
+On the Web, each /resource/ (a web page, a PHP script or a printer) is independent from the others.
+Yet we can create new applications by combining them, and we can interpose many components without breaking the model.
+From the most basic interaction: A browser and a server, exchanging an about page.
+To a complex one, with local proxys, caches and load balancers.
+Every one of the components could change, and yet the system continues to function.
+
+** The gap in mainstream programming languages :ignore:
+
+Compare this to what happens with mainstream programming languages:
+
++ Accessing heterogeneous resources (files, env vars, web APIs) is hard; every resource has its own mini-protocol.
++ Composing heterogeneous components is a manual process and unique for each pair of components you want to integrate.
++ Changing one component of a composition is very difficult, because each compostion is tightly coupled.
+
+** Weiher’s Architecture-Oriented Programming :ignore:
+
+Weiher’s Architecture Oriented Programming asks:
+What would happen if we shrink HTTP’s uniform interface to the level of a single process?
+An "In-Process REST" [cite:@Weiher2014] if you will.
+
+AOP brings into a single program the kind of composability that the Web already enjoys.
+By “shrinking” the Web’s architecture—URLs as polymorphic identifiers, and a small uniform interface of HTTP methods inside a process,
+he turns resources and stores into components that can be freely composed and recomposed.
+
+** Contributions and structure of the paper :ignore:
+
+In this paper we implement HTTPym an AOP library for Eiffel.
+It uses Eiffel’s Uniform Access Principle, Design by Contract and Multiple Inheritance to realize Weiher’s in-process REST style [cite:WeiherInProcessRest] and Polymorphic Identifiers [cite:WeiherPolymorphicIdentfiers].
+
+Our contributions are:
+
++ A design of an HTTP-inspired protocol in Eiffel (HTTPym).
++ A library of scheme clients for env://, file://, http:// based on URLs (Weiher's Polymorphic identifiers).
++ A mapping from HTTP semantics to Eiffel’s Design by Contract (e.g. 404, 500, 501 as contract violations).
++ A case study or examples showing uniform access.
+
+The rest of the paper is structured as follows:
+
+Section 2 summarizes HTTP and AOP.
+Section 3 explains why Eiffel is a good fit.
+Section 4 presents the design of HTTPym.
+Section 5 describes the implementation and examples.
+Section 6 discusses related work.
+Section 7 concludes and outlines future work.
+
+
+
+
+* Background
+
+** Everyday HTTP in the Web :ignore:
+
+HTTP is the protocol of the World Wide Web.
+Its semantics were shaped by early Web architectural work [cite:FieldingsThesis] and HTTP standardization [cite:mozilla_http_overview] .
+
+You are using HTTP every time you use the web.
+When your Browser requests a website like http://google.com/
+is actually issuing an `http get` request for the resource that lives in: `/`
+located in the `google.com` server.
+
+When you fill a web form, your browser issues an:
+`http post` action to the resource that lives in the webserver.
+
+
+** HTTP specification summary
+
+HTTP is standardized through the Internet standards process and maintained by a broad Web community
+(IETF/W3C and browser/server implementers).
+The specification distills decades of experience about how to build scalable hypermedia systems, and gives
+software developers a shared vocabulary for interoperable components.
+
+HTTP is a client-server {{{impmark(1)}}}  protocol[fn:1] used to fetch resources such as HTML, images, scripts, and media between browsers (clients), and web servers.
+
+Clients and servers exchange discrete messages (requests and responses).
+
+{{{impnote(1)}}} this is note about important
+
+*** Resource
+
+#+BEGIN_QUOTE
+Any information that can be named can be a resource[fn:2]:
+a document or image, a temporal service (e.g. "today's weather in Los Angeles"),
+a collection of other resources,
+a non-virtual object (e.g. a person), and so on.
+In other words, any concept that might be the target of an author's hypertext reference must fit within the definition of a resource.
+A resource is a conceptual mapping to a set of entities,
+not the entity that corresponds to the mapping at any particular point in time.
+-- Roy Fielding [cite:Fieldingsthesis chapter 5]
+#+END_QUOTE
+
+*** Representation
+
+#+BEGIN_QUOTE
+REST components perform actions on a resource by using a representation to capture the current or intended state of that resource and transferring that representation between components[fn:3].
+-- Roy fielding [cite:Fieldingsthesis chapter 5]
+#+END_QUOTE
+
+*** Uniform Resource Identifiers (URIs)
+
+URIs are the standard way to identify resources on the Internet[fn:4].
+They are usually divided into Uniform Resource Locators (URLs) and Uniform Resource Names (URNs).
+
+
+
+Every time you have typed an address like http://www.google.com or https://www.eiffel.org in your web browser you have used a URL.
+
+
+URLs provide the *location* for a resource[fn:5].
+
+And URNs[fn:6] are a little more hidden but still plenty of use.
+For example if in a website you clicked an email and it opened your email program.
+you used a URN of the form: mailto:name@example.com
+
+Or perhaps in your phone, you were visiting the web page of a business and you clicked a link and it automatically made a call.
+
+**** Examples of URIs
+
++ https://a.b.site.co.uk:80/path/to/my.img.jpg?q=x&q=#hash :: a URL as the ones you would see in your browser
++ ftp://user:pass@site.com/~user/file.txt :: Using the FTP scheme and protocol get file.txt
++ //protocol-relative.url/🖤 :: Doesn't provide scheme information, but has unicode as part of the address
++ ssh://myid@192.168.1.101 :: Using the SSH scheme connect with the user myid to the ip: 192.168.1.101
++ https://[db8:85a3::7334]:80?q=x
++ https://[db8:85a3::7334%en1]/ipv6-zone-identifier
++ git://localhost:123
++ file:///path/file
++ file://host/path/file
++ ../path/to/file.html?q=x
++ example.com/file.html
++ mailto:me@my.com?subject=Hey&body=Sign%20me%20up!
++ urn:isbn:0451450523
++ tel:+1-800-555-0123
++ http:\\\///site.com:0/web-protocol-edge-cases
++ non-web-protocol:\\\///site.com:0/
++ http:query-edge-cases??q=a&&?q&q=&=be
+
+taken from: [cite:@ParseUriDemo]
+
+*** Components of HTTP-based systems
+At the HTTP layer, in its most basic form a client called a user-agent (often a browser, but also tools or robots) sends requests, and a server called the origin, processes them and sends back responses.
+
+There could be various intermediaries called proxies[fn:7] that act as gateways or caches, while lower-level network devices (routers, modems, etc.) are mostly invisible at the HTTP layer thanks to the Web’s layered design.
+
+**** plantuml:basic-web-interaction                               :ignore:
+#+NAME: fig:basic-web-interaction
+#+CAPTION: Basic web interaction
+#+BEGIN_SRC plantuml :file basic-web-interaction.svg :results file :exports results
+@startuml
+
+box "Local Computer" #LightBlue
+participant Browser
+end box
+control Internet
+box "Remote Server" #LightBlue
+participant Web_Server
+end box
+
+Browser -> Internet : get index.html
+Internet -> Web_Server : get index.html
+@enduml
+#+END_SRC
+
+
+**** Client: the user-agent
+The user-agent operates on behalf of the user, most commonly as a browser, but it can also be debugging or automation tools[fn:8].
+To display a page, the browser first fetches the main HTML,
+then parses it and issues additional HTTP requests for scripts, styles, and media, possibly fetching more later via scripts;
+links in the page let the user trigger further navigation, which the browser translates into new requests and rendered responses.
+
+**** The Web server
+On the other side, the server provides documents or generates them on demand, possibly using multiple cooperating components like caches, databases, or application servers [fn:9].
+What appears as a single server may actually be several machines sharing traffic (load balancing).
+
+**** plant:complex-web-interaction                                :ignore:
+
+#+NAME: fig:complex-web-interaction
+#+CAPTION: Composed web interaction
+#+BEGIN_SRC plantuml :file complex-web-interaction.svg :results file :exports results
+@startuml
+
+box "Local Computer" #LightBlue
+participant Browser
+database Cache
+end box
+control Internet
+box "Remote Server" #LightBlue
+queue Load_Balancer
+participant Web_Server
+end box
+
+
+
+Browser -> Cache : get index.html
+Cache -> Internet : get index.html
+Internet -> Load_Balancer : get index.html
+Load_Balancer -> Web_Server : get index.html
+@enduml
+#+END_SRC
+
+#+RESULTS: fig:complex-web-interaction
+[[file:complex-web-interaction.svg]]
+
+**** Proxies
+Proxies are application-level intermediaries that relay HTTP messages between clients and servers, either transparently or by modifying them[fn:10].
+They can handle caching, filtering (security or parental controls), load balancing, authentication, or logging.
+
+*** HTTP messages
+The components share messages between them. There are two types of messages: **requests** and **responses**. Each with a specific format and fields.
+
+**** Requests
+A request includes an HTTP method (like `GET`, `POST`, `HEAD`, or `OPTIONS`) that indicates the desired action, the path [fn:11] to the target resource (URL minus parts implied by context), and the HTTP version. It may also carry headers with additional metadata and, for some methods, a body containing data such as form submissions or JSON payloads.
+
+***** Request methods
+The following table summarizes the main HTTP request methods and whether they are safe or idempotent[fn:12] .
+
+| Method  | Definition                                                                                                     | Safe                     | Idempotent                                                           |
+|---------+----------------------------------------------------------------------------------------------------------------+--------------------------+----------------------------------------------------------------------|
+|         |                                                                                                                | Is a read-only operation | Intended effect of a single request is the same as multiple requests |
+| GET     | Requests a representation of the specified resource; should only retrieve data and not contain a request body. | Yes                      | Yes                                                                  |
+| HEAD    | Asks for a response identical to a GET request, but without a response body.                                   | Yes                      | Yes                                                                  |
+| OPTIONS | Describes the communication options for the target resource.                                                   | Yes                      | Yes                                                                  |
+| TRACE   | Performs a message loop-back test along the path to the target resource.                                       | Yes                      | Yes                                                                  |
+| PUT     | Replaces all current representations of the target resource with the request content.                          | No                       | Yes                                                                  |
+| DELETE  | Deletes the specified resource.                                                                                | No                       | Yes                                                                  |
+| POST    | Submits an entity to the specified resource, often causing a change in state or side effects on the server.    | No                       | No                                                                   |
+| PATCH   | Applies partial modifications to a resource.                                                                   | No                       | No                                                                   |
+| CONNECT | Establishes a tunnel to the server identified by the target resource.                                          | No                       | No                                                                   |
+
+
+**** Responses
+A response specifies the HTTP version, a status code (e.g., `200`, `404`, `500`) with a short status message explaining the outcome, and headers similar to those in requests. Optionally, it includes a body holding the requested resource or error representation.
+
+***** Response status codes
+HTTP response status codes indicate the outcome of a specific HTTP request[fn:13].
+
+Responses are grouped in five classes:
+
++ 100s informational
++ 200s Ok (successful)
++ 300s redirections
++ 400s client errors
++ 500s server errors
+
+Status codes can be interpreted as contract outcomes between client and server.
+
+Probably all of us have experienced a /404 Page not found/ which is the most common client error.
+And there is of course the /500 Internal Server error/ which is the most common server error.
+
+There are other examples such as:
+
+****** Client errors :ignore:
+
++ 400 Bad Request :: The server will not process the request due to something perceived to be a client error.
++ 403 Forbidden :: The client doesn't have access rights to the content.
++ 412 Precondition Failed :: In conditional requests, the client has indicated preconditions in its headers which the server does not meet.
+
+
+****** Server errors :ignore:
+
+And for server errors:
+
++ 500 Internal Server Error :: The server has encountered a situation it does not know how to handle. This error is generic, indicating that the server cannot find a more appropriate 5xx status code to respond with.
++ 501 Not Implemented :: The request method is not supported by the server and cannot be handled. The only methods that servers are required to support (and therefore that must not return this code) are `GET` and `HEAD` methods.
++ 507 Insufficient Storage :: The method could not be performed on the resource because the server is unable to store the representation.
+
+*** Summary: why HTTP matters for this work :ignore:
+
+The HTTP specification is a carefully written document that distills hundreds of person-years of experience about Web-scale hypermedia systems.
+We use HTTP as reusable architectural knowledge in this work: URIs for naming, uniform methods for interaction, and status codes for contract outcomes.
+HTTP defines a uniform, message-based way for clients to interact with resources, using a small vocabulary of methods and status codes. Its layered design allows multiple proxies and intermediaries to be composed invisibly between client and server, so that the overall behavior remains predictable even when the underlying path becomes more complex.
+
+** Architecture-Oriented Programming and In-process REST
+
+*** From objects and messages to Web-scale HTTP communication :ignore:
+
+Alan Kay together with Dan Ignalls created Smalltalk, one of famous OOP languages.
+Kay has said that objects in Smalltalk:
+
+"Objects in Smallatlk,
+are a bit like having thousands and thousands of computers
+all hooked together by a very fast network." [cite:@Kayearlyhistory]
+
+Marcel P. Weiher (who inspired this work) makes the following observation,
+
+#+BEGIN_QUOTE
+When Alan came up with his version of objects, there were no networks with thousands of computers.
+And so Alan could not actually look at how they communicated, he had to imagine it...
+
+Today, we do have a large network of computers, with not just thousands but billions of nodes.
+And **they communicate via HTTP using the REST architectural style**, not via distributed objects and messages.
+-- Marcel P. Weiher
+#+END_QUOTE
+
+
+
+Then comes Weiher's insight:
+
+#+BEGIN_QUOTE
+I think this is absolutely brilliant:
+in order to get something that will scale up,
+you simply start with something large and then scale it down!.
+
+...
+
+So maybe if we took that communication model [REST over HTTP] and scaled it down,
+we might be able to do even better than objects and messages,
+which already did pretty brilliantly.
+Hence In-Process REST, Polymorphic Identifiers and Storage Combinators.
+and yes, the results look pretty good so far!
+#+END_QUOTE
+
+(This is essentially the Web’s HTTP uniform interface, scaled down in-process.)
+
+Weiher proposes three closely related concepts that we build on later:
+
++ Polymorphic Identifiers (inspired by URIs/URLs)
++ In-Process REST (inspired by HTTP’s uniform methods)
++ Storage Combinators (inspired by HTTP intermediaries: proxies, gateways, and caches).
+
+
+*** URLs as polymorphic identifiers
+The same way a URL locates resources on the internet a polymorphic identifier finds resources in your program.
+At least it does in =Objective-S= the language created by Weiher
+
+Polymorphic Identifiers are an extension of the Uniform Access Principle (UAP) of Eiffel.
+But instead of just applying to only features of a class applied to all the resources a program needs:
+Variables, Files, environment variables, etc.
+
+#+ NAME: Listing:ValidPolymorphicIdentifiersInObjectiveSmalltalk
+#+ CAPTION: Valid Polymorphic Identifiers[fn:14] taken from: [cite:WeiherPolymorphicIdentifiers]
+#+BEGIN_SRC
+person
+2 name
+3 var:person/name
+4 var:person/{attribute}
+5 file://tmp/button.png
+6 http://www.example.com/button.png
+7 file:{env:HOME}/rfcs/{rfcName}
+#+END_SRC
+
+*** Storage protocol inspiration (Objective‑S)
+Inspired by HTTP’s uniform methods, Weiher proposed a minimal, uniform interface that =Dictionary= like objects inside a program should answer.
+
+In Objective‑S [cite:ObjectiveSmalltalk`] (built on Objective‑C),
+a `Dictionary` already behaved in the desired, uniform way[fn:15],
+so the storage protocol mirrors that vocabulary while being conceptually aligned with HTTP’s uniform interface.
+
+The interface is modeled as methods of an object, rather than network messages[fn:16]:
+
+#+ NAME: lst:store-protocol
+#+ CAPTION: Storage protocol expressed in Objective‑Smalltalk
+#+BEGIN_SRC objective-c
+1 protocol Storage {
+2 -at:ref.
+3 -<void>at:ref put:object.
+4 -<void>at:ref merge:object
+5 -<void>deleteAt:ref;
+6 }
+#+END_SRC
+
+* Eiffel and HTTP: Why Eiffel is a good fit
+** Eiffel Principles
+*** Design by Contract (DbC)
+
+Model every interaction between software elements as a *contract* between a client and a supplier, expressed via *preconditions, postconditions, and invariants*. Contracts make correctness assumptions explicit and executable.
+
+#+BEGIN_QUOTE
+“…an explicit roster of mutual obligation and benefits, the contract.”
+#+END_QUOTE
+
+[cite:@OOSC p. 331]
+
+*** Command–Query Separation (CQS)
+
+Every routine should be *either* a command (change state, no result) *or* a query (return a result, no observable side effects), never both. This restores referential transparency for queries and makes reasoning and testing much simpler.
+
+
+#+BEGIN_QUOTE
+“Functions should not produce abstract side effects.”
+#+END_QUOTE
+
+[cite:@OOSC p. 751]
+
+*** Uniform Access Principle (UAP)
+
+Clients must see a *single, uniform notation* for services, regardless of whether the result comes from a stored attribute or a computed function. This lets you change representation or computation strategies freely without impacting clients.
+
+#+BEGIN_QUOTE
+“All services offered by a module should be available through a uniform notation.”
+#+END_QUOTE
+
+[cite:@OOSC p. 57]
+
+
+*** Open/Closed Principle (OCP)
+
+Software entities (classes, modules, etc.) should be *stable for clients* but still *extensible*. You get new behavior by *extension* (new subclasses, new combinations) rather than by modifying existing, trusted code, which reduces regression risk.
+
+#+BEGIN_QUOTE
+“A software artifact should be open for extension but closed for modification.”
+#+END_QUOTE
+
+[cite:@OOSC p. 57]
+
+*** Systematic Naming Principle
+Across a library, *similar operations should have the same names and argument conventions*.
+Don’t invent a tiny private “dialect” for each class (=push=/=pop= here, =insert=/=remove= there).
+If the underlying operation is the same.
+Uniform, consistent naming across containers and components beats locally “clever” names and makes the whole library feel like one coherent design.
+
+This is what leads, for example, to using =item= / =put= / =extend= consistently across lists, stacks, queues, etc.,
+instead of giving every structure its own idiosyncratic vocabulary.
+
+#+BEGIN_QUOTE
+“If they use different conventions, they aren’t part of a single design.”
+#+END_QUOTE
+
+[cite:@MeyerEiffelbase]
+
+
+
+** Correspondence with HTTP
+
+
+
+*** Design by Contract (DbC) vs HTTP Methods and Status Codes
+
+**** Eiffel
+
+ Interactions are modeled as *contracts* between client and supplier, with preconditions, postconditions, and invariants. When a contract is violated, we get an appropriate exception that clarifies whether the client is at fault or the supplier.
+
+**** HTTP
+
+ * Each HTTP method (GET, POST, PUT, DELETE, etc.) has a specified contract.
+
+   * **Preconditions**: when it is valid to invoke (resource existence, auth, headers like `If-Match`, valid payload, etc.).
+   * **Postconditions**: what the server must guarantee (e.g., PUT replaces a representation, DELETE removes it, GET does not change state).
+
+ * When the contract is violated, we get an appropriate status code:
+
+   * a 4xx -> client broke a precondition (e.g., 400, 404, 412).
+   * a 5xx -> server failed to uphold its obligations, like a post-condition violation in DbC.
+
+ * Codes like **412 Precondition Failed** are almost literal preconditions that did not hold.
+
+**** Summary link
+HTTP contracts are written in the official specification. When one of the parties does not fulfill their side of the contract, they get an appropriate message clarifying which side is at fault.
+
+*** Command–Query Separation (CQS) vs HTTP Safe and Unsafe Methods
+
+**** Eiffel
+
+A routine is either a **command** (changes state, no result) or a **query** (returns a result, no observable side effects).
+
+**** HTTP
+
+ * Explicit distinction between safe and unsafe methods:
+
+   * **Safe methods** (`GET`, `HEAD`, `OPTIONS`, `TRACE`) behave like **queries**:
+
+     * They are specified as *read-only* (no state changes on the server).
+   * **Unsafe methods** (`POST`, `PUT`, `DELETE`, `PATCH`, `CONNECT`) behave like **commands**:
+
+     * Their purpose is to change server state or connections.
+ * **Idempotency** refines the command side:
+
+   * `PUT` and `DELETE` are idempotent (repeating them doesn’t change the outcome after the first time).
+   * `POST` is non-idempotent.
+
+****Summary link: HTTP’s safe/unsafe and idempotent/non-idempotent distinctions are a protocol-level incarnation of CQS.
+
+*** Uniform Access Principle (UAP) vs HTTP URIs and methods
+
+**** Eiffel
+
+ * Clients must use a **single, uniform notation** for services, regardless of whether they are implemented as attributes or computed functions.
+
+**** HTTP
+
+ * A **URI/URL** is a uniform *handle* for "whatever is behind it": static file, database row, computed view, aggregation of services, etc.
+ * The client always uses the same notation, e.g.: `GET /resource/42 HTTP/1.1`,
+  without knowing whether `/resource/42` is served from disk, database, cache, or another service.
+ * HTTP’s uniform interface (methods, status codes, headers) ensures that all resources are accessed and manipulated with the same small vocabulary.
+
+**** Summary link: Just as UAP hides attribute vs. function behind the same call syntax, HTTP hides storage vs. computation vs. aggregation behind URIs and a uniform message format.
+
+*** Open/Closed Principle (OCP) vs HTTP Proxies
+
+**** Eiffel
+
+ * Classes should be **open for extension**, but **closed for modification**.
+ * Extension is mostly done by inheritance, thus extending the functionality of a class that already existed without modifying it.
+ * This is one of the enablers of reuse.
+
+**** HTTP
+
+ * A middleware component, such as a router or reverse proxy in front of a web server, can provide encryption or authentication. So we can extend a web server with new functionality without modifying the original server.
+ * It is also common and desirable for a new resource to live at the same URI as the one it replaces. For example, a page like [http://example.com/about](http://example.com/about) might first be served by a static HTML page, but later be served by a PHP page.
+
+**** Summary link: Just as the Open/Closed Principle lets us extend the functionality of classes, proxies and middleware add functionality to an HTTP resource.
+
+*** Systematic / Uniform Naming Principle vs HTTP methods
+
+**** Eiffel
+
+ * Across a library, **similar operations use the same names and argument conventions**.
+ * Avoid per-class micro dialects (e.g., `push`/`pop` here, `insert`/`remove` there) when the underlying operation is the same.
+ * So instead we use systematic naming such as `item`, `put`, `remove`, `before`, `after` that are standardized across the whole container hierarchy of classes.
+
+**** HTTP
+
+ * Very small, **globally shared vocabulary**:
+
+   * Methods: `GET`, `HEAD`, `POST`, `PUT`, `DELETE`, `PATCH`, etc., with consistent semantics across all resources.
+   * Status codes: grouped by first digit (2xx success, 4xx client error, 5xx server error), with systematic naming patterns (e.g., 404 Not Found, 403 Forbidden, 400 Bad Request).
+ * **URI structure** is consistent:
+
+   * Scheme, authority, path, query, fragment: same overall pattern for `http://`, `https://`, `ftp://`, `mailto:`, `tel:`, etc.
+   * Within a single API, good practice mirrors Eiffel’s principle by using consistent path and parameter naming patterns.
+
+**** Summary link: HTTP’s power comes from a single, uniform naming and classification scheme for methods, codes, and resource identifiers, mirroring Eiffel’s systematic naming principle.
+
+** Overall View
+
+ - Design by Contract :: method semantics and status codes act as explicit, machine-readable contracts.
+ - Command–Query Separation :: safe vs. unsafe, idempotent vs. non-idempotent methods.
+ - Uniform Access Principle :: URIs and a uniform message interface hide representation vs. computation.
+ - Open/Closed Principle :: stable core semantics, extensibility via new resources, media types, headers, and intermediaries.
+ - Systematic Naming Principle :: small, consistent global vocabulary for methods, codes, and URI forms.
+
+From this perspective, HTTP and Eiffel are philosophically aligned: HTTP is a protocol that embodies many of the same design values that Eiffel promotes at the language and library level. RESTLY, implemented in Eiffel, is thus a natural way to "shrink" the architecture of the Web into in-program architectural mechanisms, grounded in the same underlying principles.
+
+*** HTTP elements vs Eiffel principles :ignore:
+
+| HTTP element                          | DbC                                                                                                                                                                                               | CQS                                                                                                    | UAP                                                                                                                                                                | OCP                                                                                                                                          | SNP                                                                                                                                                                      |
+|---------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------------------------------------------------------------------+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Methods and status codes              | HTTP contracts are written in the official specification. When one of the parties does not fulfill their side of the contract, they get an appropriate message clarifying which side is at fault. |                                                                                                        |                                                                                                                                                                    |                                                                                                                                              |                                                                                                                                                                          |
+| Safe/unsafe and idempotent methods    |                                                                                                                                                                                                   | HTTP’s safe/unsafe and idempotent/non-idempotent distinctions are a protocol-level incarnation of CQS. |                                                                                                                                                                    |                                                                                                                                              |                                                                                                                                                                          |
+| URIs and uniform interface            |                                                                                                                                                                                                   |                                                                                                        | Just as UAP hides attribute vs. function behind the same call syntax, HTTP hides storage vs. computation vs. aggregation behind URIs and a uniform message format. |                                                                                                                                              |                                                                                                                                                                          |
+| Proxies and middleware/intermediaries |                                                                                                                                                                                                   |                                                                                                        |                                                                                                                                                                    | Just as the Open/Closed Principle lets us extend the functionality of classes, proxies and middleware add functionality to an HTTP resource. |                                                                                                                                                                          |
+| Methods, status codes, URI structure  |                                                                                                                                                                                                   |                                                                                                        |                                                                                                                                                                    |                                                                                                                                              | HTTP’s power comes from a single, uniform naming and classification scheme for methods, codes, and resource identifiers, mirroring Eiffel’s systematic naming principle. |
+
+
+* Design of HTTPym
+** Goal
+Our goal for HTTPym is to implementa library tha shrinks the mechanisms of the HTTP Protocol at the level of in-process.
+
+** Design Guidelines and Decisions
+
+#+COLUMNS: %ITEM(fn:#) %Observation(Observation) %Guideline(Design Guideline) %Eiffel(Applicable Eiffel Concepts)
+#+BEGIN: columnview :id "dg-records" :skip-empty-rows t :hlines 1
+| fn:#  | Observation                                                    | Design Guideline                                                                                                                        | Applicable Eiffel Concepts                                                       |
+|-------+----------------------------------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------------+----------------------------------------------------------------------------------|
+| fn:1  | Check the link                                                 | Design Guideline (DG): separate components in two parts a serer that provides and customer.                                             |                                                                                  |
+| fn:2  | Check the link                                                 | DAnything that can be named can be a Resource.                                                                                          |                                                                                  |
+| fn:3  | HTTP uses representations (JSON/XML) to change resource state. | Components don't manipulate resources but Representations of the Resource. Components send and Receive Representations.obs 1            | Representations or Internal State must be able to /Convert/ between  each other. |
+| fn:4  | Check the link                                                 | Use URIs and URLs to identify all resources in your program.                                                                            |                                                                                  |
+| fn:5  | Check the link                                                 | URLs show the location of a thing (resource)                                                                                            |                                                                                  |
+| fn:6  | Check the link                                                 | URNs don't show location (or use '://' ) they are more similar to a typed variable.                                                     |                                                                                  |
+| fn:7  | Check the link                                                 | Intermediares are called proxies.                                                                                                       |                                                                                  |
+| fn:8  | Check the link                                                 | Clients are called user-agents.                                                                                                         |                                                                                  |
+| fn:9  | Check the link                                                 | Servers can assemble respones using mulitlple components. But that is transparent for the client.                                       |                                                                                  |
+| fn:10 | Check the link                                                 | Intermediares forward requests between clients and servers. Can be transparent (don't change the request) or active and modify it.      |                                                                                  |
+| fn:11 | Check the link                                                 | A request includes the http method (verb) and the Path of the resource.                                                                 |                                                                                  |
+| fn:12 | Check the link                                                 | Request methods are known by every resource and maybe safe and idempotent.                                                              |                                                                                  |
+| fn:13 | Check the link                                                 | Response codes anwser if there were client errors or server errors.                                                                     |                                                                                  |
+| fn:14 | Check the link                                                 | URLs (aka Polymorphic Identfiers) can be composed to create another. Like a URL for a local variable being used to construct a web url. |                                                                                  |
+| fn:15 | Check the link                                                 | The interface of the 'Dictionary` data structure can be used as the uniform interface for all compontents.                              |                                                                                  |
+| fn:16 | Check the link                                                 | WHat in http are nework messages, we model them as features of an object.                                                               |                                                                                  |
+#+END:
+
+
+** Design Guidelines Records                                      :noexport:
+:PROPERTIES:
+:ID:       dg-records
+:END:
+
+*** fn:1
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Always consider your compontent will be a Server or Client for another component.
+:Eiffel:
+:Decision: RESOURCES must have a name in the from of a URL or URI
+:END:
+
+*** fn:2
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: DAnything that can be named can be a Resource.
+:Eiffel:
+:END:
+
+*** fn:3
+:PROPERTIES:
+:Observation: HTTP uses representations (JSON/XML) to change resource state.
+:Guideline: Components don't manipulate resources but Representations of the Resource. Components send and Receive Representations.
+:Eiffel: In Eiffel convertability among classe is done with =convert= feature.
+:DECISION: Representations can be any kind but on the web they are serilized strings like JSON or XML.
+:END:
+
+
+*** fn:4
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Use URIs and URLs to identify all resources in your program.
+:Eiffel: It already has a URL and a PATH class, We will try to reusue those.
+:END:
+
+*** fn:5
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: URLs show the location of a thing (resource)
+:Eiffel: Will need to be able to open the Resource, being created by a URL
+:END:
+
+*** fn:6
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: URNs don't show location (or use '://' ) they are more similar to a typed variable.
+:Eiffel: There is no URN class in Eiffel, they are look more similar to SCHEME than to a URL.
+:END:
+
+*** fn:7
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: This concepts are synonims: Intermediaries [cite:@FieldingsThesis], Proxys [cite:@mozilla_http_overview], Storage Combintaros [cite:@WeiherStorageCombinators].
+:Eiffel: We will call them PYM_PROXY
+:Decision: PYM_PROXY[R -> CONVERTIBLE_WITH[S],S] --
+:END:
+
+*** fn:8
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Clients are called user-agents.
+:Eiffel:
+:END:
+
+*** fn:9
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Servers can assemble respones using mulitlple components. But that is transparent for the client.
+:Eiffel: Apply the UAP at the level of classe not only features.
+:END:
+
+*** fn:10
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Intermediares forward requests between clients and servers. Can be transparent (don't change the request) or active and modify it.
+:Eiffel: Weiher calls this StorageCombinators and there many types: Caches, Switchers, Physical Storage, etc.
+:END:
+
+*** fn:11
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: A request includes the http method (verb) and the Path of the resource.
+:Eiffel: In order to have a uniform interface, will create HTTPYM_REQUEST_METHODS class, that all components tha
+:END:
+
+*** fn:12
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Request methods are known by every resource and maybe safe and idempotent.
+:Eiffel:  HTTPYM_REQUEST_METHODS must respect the Command Query Separation principle and check with post-conditions that features of safety and idempotency are respected.
+:END:
+
+*** fn:13
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: Response codes anwser if there were client errors or server errors.
+:Eiffel: Respect Design by Contract in order to validate the outputs of the HTTPYM_REQUEST_METHODS, and proberly let the Errors propagate. I.e. Clients shold get pre-condition errors.
+:END:
+
+*** fn:14
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: URLs (aka Polymorphic Identfiers) can be composed to create another. Like a URL for a local variable being used to construct a web url.
+:Eiffel: Make sure that PYM_URLs and PYM_PATHs can be interpolated with other PYM_URLs
+:END:
+
+*** fn:15
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: The interface of the =Dictionary= data structure can be used as the uniform interface for all compontents.
+:Eiffel: In Eiffel the closest thing to a =Dictionary= is a HASH_TABLE or a STRING_TABLE, and his a very rich protocol
+:END:
+
+*** fn:16
+:PROPERTIES:
+:Observation: Check the link
+:Guideline: What in http are network messages, we model them as features of an object.
+:Eiffel: The MINI_HTTP_VERBS interface should at least implement the verbs of the http spec, our it's equivalents in the HASH_TABLE interface.
+:END:
+
+
+
+
+* Benefits of HTTPym
+What will be the benefits of RESTLY
+
+For example to read the contents of a website remotely we can use:
+
+```Eiffel
+http_client: SCHEME_CLIENT = "http://www.example.com/about"
+```
+
+Or perhaps we want te read a website in a local web server
+
+```Eiffel
+http_client: SCHEME_CLIENT = "http://localhost/about"
+```
+
+The usability of URLs is more manifest when we use different schemas like "file" or "ftp".
+
+
+```Eiffel
+file_reader : SCHEME_CLIENT = "file:///home/username/about.txt"
+```
+
+Even environment variables with a pseudo-scheme `env`
+
+
+```
+local_variabels : SCHEME_CLIENT = "env://"
+```
+
+It is important to know that each schema (http, file, env, etc.) require their own {SCHEMA_HANDLER} that understands each protocol, but exposes the communication through a uniform interface.
+
+The uniform interface is inspired by HTTP methods, and we go into a lot more detail and justification in our next paper.
+about the RESTLY library.
+
+For now suffice to say that all the SCHEME_CLIENTS expose the same interface, i.e. features.
+
+* Development
+
+** How do we parse a URL?
+So in order to implement in Porgram URLs first wee need to be able to process URLs
+
+*** What do we want?
+In order te use URLs in our programs
+we simply want to be able te say:
+
+```
+    my_file:FILE_URL = "file:///home/my_user/my_file.txt"
+```
+
+which translates into: my_file variable of type FILE_URL assign the string the url with file scheme "file:///home...."
+
+and have that actually create an object of type FILE_URL that has separated the parts of the URL as in the diagram before.
+
+An equivalent creating would be something like:
+
+``` Eiffel
+    my_file := create {FILE_URL}.make_from_string("file:///home/my_user/my_file.txt")
+```
+
+Of course if we are sending an invalid file url it should throw an error
+
+``` EIffel
+  wrong_file_uri : FILE_URL = "http://this-is-not-file-uri/although/it/is/valid/http/uri"
+```
+
+*** the short view ouf the URL class
+in this chapter we can read the short view of the URL class.
+the short view explains the external view of the class given it's preconditions and post conditions.
+which is the prefered way to document libraries in eiffel.
+
+Fortunately for us. Eiffel Studio has a library called URI that has all the URL elements we need.
+So it's just a matter of appending it to our project.
+
+
+
+#+BEGIN_SRC bash :results output verbatim :exports results
+
+ec -config ../../RESTFUL/restful.ecf -short URL_PATH 2>&1 | tail +6
+
+
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+note
+    description: "Summary description for {URL_PATH}."
+    author: ""
+    date: "$Date$"
+    revision: "$Revision$"
+
+class interface
+    URL_PATH
+
+create
+    make_from_string,
+    make_from_separate
+
+convert
+    make_from_string ({STRING_8}),
+    out: {READABLE_STRING_GENERAL}
+
+feature
+
+    make_from_separate (a_path: separate PATH)
+            -- Initialize from separate `a_path`.
+
+end -- class URL_PATH
+
+#+end_example
+
+**** and a FILE_URL also exists
+
+**** and an ENV_URL also
+
+** Translating HTTP semantics to Eiffel
+
+Now that we can parse URIs, our next step in the implementation of the HTTP-like API is to present a uniform interface,
+given by the HTTP methods.
+
+
+* Design of HTTPym
+** STORE protocol becomes HTTPym methods
+In Eiffel the previous interface looks like this.
+It is made on purpose from the definiton of a HASH_TABLE.
+
+```ssh
+ec -config ./restful.cfg -short RESTLY
+```
+
+There are several things to notice.
+
++ The deferred class (inJava abstract) (inObjective-S protocol) that Weiher's work called Store here is called RESTLY.
+  This because, Eiffel already had an Storage, and an Store.
+
++ It is inspired by HTTP methods, but it follows the HASH_TABLE protocol more closely. Weiher did the same with the original Store in Objective-S, he followed the Dict protocol from Objective-C.
+
+this leads to the first design principle of StorageCombinators.
+
+#+BEGIN_VERSE
+
+When developing a Storage Combinator Library, be inspired by HTTP’s architecture,
+but follow clowsely the interface of Dictionary or Hash_Table in your host language.
+This will give great benefits of interoperatibity.
+#+END_VERSE
+
+
+** Generat the Short view
+Command to generate the short view of the restly class:
+
+```bash
+$ ec -config ./restful.ecf -short RESTLY 2>&1 | sed -n '/note/,$p' | tee ./for_paper/restly_short_form.e
+```
+
+*** @edit /home/agarciafdz/daily/2510oct21/RESTFUL/for_paper/restly_short_form.e
+note
+    description: "[
+            {RESTLY}.
+            A Design by Contract interpretation of HTTP methods.
+
+            * [R]epresenation. For example JSON, XHTML or anything actually
+
+            Used as the common interface for all the components that are Storage Combinators.
+    ]"
+    author: "Alejandro Garcia"
+    date: "$Date$"
+    revision: "$Revision$"
+
+deferred class interface
+    RESTLY [R, U -> URL ]
+
+feature -- Commands aka HTTP unsafe methods
+
+    collection_extend (data: R)
+            -- equivalent to http POST
+            -- Submits data; may change state or cause side effects
+        require
+            when_appending_data_should_not_stored: not has_item (data)
+        ensure
+            data_stored_or_throw_510_not_extended: attached item (last_inserted_key)
+
+    force (data: R; key: URL_PATH)
+            -- Equivalent to http PUT
+            -- Replaces the resource's representation with the request content.
+            -- if key didn't exist it still inserts it
+        ensure then
+            data_stored_or_throw_507_insufficient_storage: attached item (key)
+
+    remove (key: URL_PATH)
+            -- Equivalent to http DELETE
+            -- Removes the specified resource.
+        ensure
+            truly_eliminated_or_throw_500_internal_server_error: not has_key (key)
+
+feature -- Queries aka HTTP safe methods
+
+    has_key (key: URL_PATH): BOOLEAN
+            -- Equivalent to http HEAD
+            -- Same as GET but without a response body
+
+    item alias "[]" (key: URL_PATH): R assign force
+            -- Equivalent to http GET
+            -- Requests a resource representation; retrieves data only.
+        require else
+            requested_a_known_key_or_throw_404_not_found: has_key (key)
+        ensure
+            must_return_item_or_throw_500_internal_server_error: Result /= Void
+
+feature -- helpers
+
+    has_item (data: R): BOOLEAN
+
+    last_inserted_key: URL_PATH
+            -- There is NO equivalent for this in http protocol.
+            -- but is necessary to keep the Command / Query Separation principle in Eiffel
+
+end -- class RESTLY
+
+** Three levels: a RAW_SCHEMA_HANDLER, HTTPYM_SCHEME and PREFIXED_SCHEMA
+
+*** A RAW_SCHEMA_HANDLER
+A RAW_SCHEMA_HANDLER
+
+is simply a schema handler is an object that can handle a schema like http, file, env, etc...
+And that accepts as addressing mechanism URL.
+
+**** RAW_SCHEMA_HANDLER
+deferred class RAW_SCHEMA_HANDLER
+
+feature
+ my_schemas:LIST[STRING]=<<"http">>
+
+feature --factory
+  for(a_url:URL):like Current
+  require
+    the_url_must_be_for_my_schema: a_url.schema in my_schemas
+  do
+    create Result.make  -- I'm not sure if it this
+  end
+
+feature{NONE} -- creation
+
+end
+
+*** RESTLY_SCHEMA
+a RESTLY_SCHEMA is one that tries to keep the HTTP semantics.
+in order to do that the API we use is:
+
+**** @edit /home/agarciafdz/daily/2510oct21/RESTFUL/for_paper/restly_short_form.e
+note
+    description: "[
+            {RESTLY}.
+            A Design by Contract interpretation of HTTP methods.
+
+            * [R]epresenation. For example JSON, XHTML or anything actually
+
+            Used as the common interface for all the components that are Storage Combinators.
+    ]"
+    author: "Alejandro Garcia"
+    date: "$Date$"
+    revision: "$Revision$"
+
+deferred class interface
+    RESTLY [R, U -> URL ]
+
+feature -- Commands aka HTTP unsafe methods
+
+    collection_extend (data: R)
+            -- equivalent to http POST
+            -- Submits data; may change state or cause side effects
+        require
+            when_appending_data_should_not_stored: not has_item (data)
+        ensure
+            data_stored_or_throw_510_not_extended: attached item (last_inserted_key)
+
+    force (data: R; key: URL_PATH)
+            -- Equivalent to http PUT
+            -- Replaces the resource's representation with the request content.
+            -- if key didn't exist it still inserts it
+        ensure then
+            data_stored_or_throw_507_insufficient_storage: attached item (key)
+
+    remove (key: URL_PATH)
+            -- Equivalent to http DELETE
+            -- Removes the specified resource.
+        ensure
+            truly_eliminated_or_throw_500_internal_server_error: not has_key (key)
+
+feature -- Queries aka HTTP safe methods
+
+    has_key (key: URL_PATH): BOOLEAN
+            -- Equivalent to http HEAD
+            -- Same as GET but without a response body
+
+    item alias "[]" (key: URL_PATH): R assign force
+            -- Equivalent to http GET
+            -- Requests a resource representation; retrieves data only.
+        require else
+            requested_a_known_key_or_throw_404_not_found: has_key (key)
+        ensure
+            must_return_item_or_throw_500_internal_server_error: Result /= Void
+
+feature -- helpers
+
+    has_item (data: R): BOOLEAN
+
+    last_inserted_key: URL_PATH
+            -- There is NO equivalent for this in http protocol.
+            -- but is necessary to keep the Command / Query Separation principle in Eiffel
+
+end -- class RESTLY
+
+**** deferred class RESTLY
+deferred class RESTLY_SCHEMA_HANDLER[R]
+inherits
+  RESTLY[R,URL]
+end
+
+** How we handle different schemas?
+Schema_handlers have an interesting challenge since they are specific for each schema.
+but at the same time they have to expose a common interface that can be reused by other components.
+
+Fortunately for us HTTP methods provide a common interface that has been very successful.
+so
+
+deferred class SCHEMA_HANDLER
+
+feature
+  Schema:IMMUTABLE_STRING = "http"
+
+feature
+  base_path = "http://www.exapmple.com/content/"
+
+feature --schema specific state management
+  connect(a_base_path:URL)
+  deferred
+    base_path := a_base_path
+  end
+
+feature -- HTTP methods inspired Queries
+
+  has_item(key:PATH):BOOLEAN
+   -- Equivalent of http head
+  deferred
+  end
+
+  item(data:R, key:PATH):R
+    -- Equivalent of http get
+  deferred
+  end
+
+feature -- HTTP methods inspired commands
+
+  expand(data:R, key:PATH)
+    -- equivalent of http post
+  deferred
+  end
+
+  force(data: key:PATH)
+  -- equivalent of http put
+  deferred
+  end
+
+
+end
+
+*** How does an Env handler look?
+
+*** How does a file:// handler look?
+
+class FILE_URL
+  -- A file Url is like any URL but that the schema is file:
+inhertis URL
+invariant
+  schema_must_be_of_my_type: schema ~ "file:"
+end class
+
+
+
+class FILE_HANDLER[R]
+inherits
+  RESTLY_SCHEMA_HANDLER[R]
+
+feature
+  item(a_url:FILE_URL):R
+  do
+    f:=open_file_for_reading(a_url)
+    Result := f.read_contents
+  end
+
+  has_key(a_url:FILE_URL):BOOLEAN
+  do
+    Result := file_exists(a_url)
+  end
+
+
+### How does an http handler look?
+
+## Examples of Schema Handlers
+Since a schema handler must act as stateless.
+I wonder if the URL must be on every requests?
+that way we know it is not doing a lot!!
+
+
+#+BEGIN_SRC eiffel
+local
+ l_file: FILE
+ l_env: ENV
+ l_http: HTTP
+ l_schema:SCHEMA_HANDLER
+do
+ create l_env
+ create l_file
+ create l_http
+end
+#+END_SRC
+
+The way to use them is:
+
+```Eiffel
+print(l_env["hostname"])  -- lets get the name of the current computer executing the file.
+
+l_file["an_example_file.txt"] := "this is writing to  a new file" -- this synta
+
+content_of_file := l_http["http://www.example.com/about.html"] -- this is doing a get
+
+print(content_of_file)
+
+l_schema["file:my_current_file.txt"] -- this generate a file schema_handler and does the put
+
+```
+
+What we get are components capable of comunicating with remote and local and intra services.
+Using the exact same syntax.
+
+## an Origin
+An ORIGIN is a RESTLY_SCHEMA that is prefixed to always work with the same schema and domain.
+so that it is easier to work.
+
+It is also an application of the prefix Storage Combinator
+
+### a PREFIX storage Combinator
+deferred class RESTLY_PREFIX
+
+a_path can be transformed from a PATH to URL if there is a base_url to which we can prepend
+
+#### Using traditional composition
+using traditional composition is the best approach since it is the most reusable.
+AND
+it pushes the messynes of the real world further to the frontier.
+
+##### deferred class PrefixCombinator
+```Eiffel
+deferred class RESTLY_PREFIX[S -> RESTLY[R,B -> [URL,PATH]]; P -> APPENDABLE_TO[B]]
+  -- [S]torage where this requests will be forwarded to.
+  -- [R]epresentation that storage knows how to handle.
+  -- [B]ase path or base url that storage know how to search
+  -- [P]ath we are going to handle here.
+
+inherits
+  RESTLY[R,P] -- This is the EXTERNAL API how it should look to customeres
+
+creation
+  make
+
+feature -- Creating
+  make(a_base_path:B, a_storage:S)
+  do
+    base := a_base_path
+    storage := a_storage
+  end
+
+
+feature -- Hooks
+
+   base:B
+   storage: S
+
+feature
+  item(a_path:P)
+  do
+    Result := schema[base.append(a_path)]
+  end
+
+  has_key(a_path:P)
+  do
+    schema.has_key(base.append(a_path))
+  end
+end
+```
+
+##### for example:
+
+###### FILE_ORIGIN
+class FILE_ORIGIN[R]
+
+inhperits
+  PREFIX_COMBINATOR [RESTLY[R,PATH], FILE_URL]
+
+create
+  make
+
+feature
+  make(base_url:FILE_URL)
+  local
+    tmp:RESTLY[R,PATH]
+  do
+    create tmp
+    parent_make(base_url,tmp)
+  end
+end
+
+####### file_handler_prefix
+local
+  env: ENV_HANDLER
+  home_dir := FILE_ORIGIN[STRING]
+
+do
+create env
+
+create home_dir.make("file://" + env["home_directory"])
+¨
+home_dir["my_first_file.txt"] := "this is a single line file"
+
+###### HTTP_ORIGIN
+class HTTP_ORIGIN[R]
+
+inhperits
+  PREFIX_COMBINATOR [RESTLY[R,PATH], HTTP_URL]
+
+create
+  make
+
+feature
+  make(base_url:HTTPi_URL)
+  local
+    tmp:RESTLY[R,PATH]
+  do
+    create tmp
+    parent_make(base_url,tmp)
+  end
+end
+
+####### class HTTP_URL
+class HTTP_URL
+-- an HTTP URL is URL whre the schema is warranted to be http
+inherits
+ URL
+invariant
+ schema_is_warrented_to_be_http : schema ~ "http"
+end
+
+####### for example
+local
+  github := HTTP_ORIGIN[JSON]
+do
+create env
+
+create github.make("http://www.github.com/")
+¨
+print (github["/user/elviejo79/repos"] )
+
+github["/user/elviejo79/repos"] := {JSON}.make("{}")
+
+###### ENV_ORIGIN
+class ENV_ORIGIN[STRING]
+  -- Env is just the same as the environment variable.
+  -- there is only one env, the one the current program is running in.
+
+inhperits
+  RESTLY[STRING,PATH]
+
+create
+  make
+
+## What did we achieve? comparision
+Now for the sake of comparision let's look at some implementations of other programming languages and how they
+handle access to remote and diverse resources.
+
+### find in roseta code problems that I can compare
+
+## What did you learn?
+
+### state-less is natural but difficult to fake
+The HTTP protocol is desigend to be stateles,
+But on the interenet there are both state and stateless
+services.
+
+For example a web-page, stateless.
+An authentication service? state-full
+a chat, state-full.
+A file in the local filesysetm, can be both Stateful if you leave the file open to perform serveral operations.
+Or stateless if each operation is unique.
+
+Since schema handlers are the frontier that divide our program,
+from the messyness of the real world.
+It is their job, to issolate as much as possible of that messyness.
+
+That is why we define an external API that reflects an HTTP-style protocol in a clean way.
+And then we let the schema handler fake that clean interface for us.
+
+### Schema_handlers will be many, but resources will be unique
+something important about URLs is that they represent unique sources information in all of the world.
+so in our programs we need to also reflect that uniqueness.
+
+BUT on the other hand, many objects can use the protocol to handle it.
+so that is why Schema handlers can have several instances.
+
+and resources will be unique organizd in Resource Name Server (RNS).
+Analogous to the Domain Name Server of the internet (DNS),
+is a service following the registry pattern,
+that given a url will return a new origin, or an existing one if it already exists.
+
+# What would you like to improve? what else do you need to do?
+
+## in the next Paper
+We will talk in more detail about RESTLY and RESTLY_TABLES (aka Dictionaries).
+Create StorageCombinators that are operators that given a couple RESTLY sources,
+create a third one that has the combined behaivours of the source ones.
+
+### in the next Paper we will create RESTLY_RESOURCES
+A resource is simply an origin that is unique to the system.
+meaning there is only one GITHUB objecct in the whole system.
+because there is only one GITHUB on the internet.
+
+### we will also discuss other Storage Combintars like
+Logging
+Cache
+Pipe
+
+## in the 3rd paper we will make the system Concurrent with SCOOP
+in the 3rd paper of the series we will make the system concurrent.
+because again if we have an object that represents GitHub.
+our system cannot wait and block for github to answer our questions.
+it must continue to execute.
+
+But con SCOOP we can have a GITHUB object that is *separate* in another procesor.
+so our system can continue to perform other  tasks.
+
+# What is the thing people should remember from this?
+URLs are an effective and universal why to address information on the internet.
+
+With Polymorphic Identifiers, Weiher had the insight:
+They can also be used inside programs to refer to resources,
+that live in the same process as the program  or in the same computer.
+
+The insight has two parts: first each schema (aka protocol) requires a SCHEMA_CLIENT that knows how to communicate using that protocol.
+And second all SCHEMA_CLIENTS should expose the same interface. In particular one inspired by HTTP-like Web APIs with methods GET, PUT, POST, DELETE operating on collections.
+
+Eiffel with it's extensive support for Design by Contract is ideal to express the specificiation that the SCHEMA_CLIENTS should fulfill and with extensive Base library, we can reuse the components, just making sure they follow the Polymorphic Identfiers.
+
+Following this constraints: URLs plus a RESTLy interface simplify access to resources across the whole program.
+
+We show this by having 3 SCHEMA_CLIENT implementations: Environment Variables (env://), Http client (http://) and a filesystem (file://)
+
+And we show the reusability of Eiffel since our three examples are mostly reuse of components already present in the Eiffel base library, just by making sure they follow the URLs and RESTLy constraints.
+
+## What is an scheme_client?
+An SCHEME_CLIENT is an object that knows
+how-to communicate to a server (domain part of the URL) using the specified protocol.
+Weiher called this concept 'schema handler'.
+
+* Footnotes
+
+[fn:1] Design Guideline: There will be two kinds components Client and Servers.
+
+[fn:2] DG: Anything that can be named can be a Resource.
+
+[fn:3] DG: Components don't manipulate resources but Representations of the Resource. Components send and Receive Representations.
+
+[fn:4] DG: Use URIs and URLs to identify all resources in your program.
+
+[fn:5] DG: URLs show the location of a thing (resource)
+
+[fn:6] DG: URNs don't show location (or use '://' ) they are more similar to a typed variable.
+
+[fn:7] DG: Intermediares are called proxies.
+
+[fn:8] DG: Clients are called user-agents.
+
+[fn:9] DG: Servers can assemble Respones using mulitlple components. But that is transparent for the Client.
+
+[fn:10] DG: Intermediares forward requests between clients and servers. Can be transparent (don't change the request) or active and modify it.
+
+[fn:11] DG: A request includes the http method (verb) and the Path of the resource.
+
+[fn:12] DG: Request methods are known by every resource and maybe safe and idempotent.
+
+[fn:13] DG: Response codes anwser if there were client errors or server errors.
+
+[fn:14] DG: URLs (aka Polymorphic Identfiers) can be composed to create another. Like a URL for a local variable being used to construct a web url.
+
+[fn:15] DG: The interface of the 'Dictionary` data structure can be used as the uniform interface for all compontents.
+
+[fn:16] DG: WHat in http are nework messages, we model them as features of an object.

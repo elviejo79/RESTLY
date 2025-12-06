@@ -17,7 +17,7 @@ feature {NONE}
 	end
 
 feature -- mappers
-fromStore(stored_value: WEAK_REFERENCE[HTTPICO_RESOURCE]):HTTPICO_RESOURCE
+fromStore(stored_value: WEAK_REFERENCE[PICO_RESOURCE]):PICO_RESOURCE
 require
 	not_collected: attached stored_value.item
 do
@@ -26,7 +26,7 @@ do
 	end
 end
 
-toStore(a_representation:HTTPICO_RESOURCE):WEAK_REFERENCE[HTTPICO_RESOURCE]
+toStore(a_representation:PICO_RESOURCE):WEAK_REFERENCE[PICO_RESOURCE]
 do
 	create Result
 	Result.put (a_representation)
@@ -38,25 +38,25 @@ feature -- rest verbs
 		Result := store.has (key.string)
 	end
 
-	item alias "[]"(key:URI):attached HTTPICO_RESOURCE
+	item alias "[]"(key:URI):attached PICO_RESOURCE
 	do
 		check attached store.item(key.string) as l_weak_ref then
 			Result := fromStore(l_weak_ref)
 		end
 	end
 
-	post(a_resource:HTTPICO_RESOURCE)
+	post(a_resource:PICO_RESOURCE)
 	do
 		put(a_resource, a_resource.address)
 	end
 
-	put(a_resource:HTTPICO_RESOURCE; key:URI)
+	put(a_resource:PICO_RESOURCE; key:URI)
 	do
 		store.put (toStore(a_resource), key.string)
 	end
 
 feature -- static registry
-	register(a_resource:HTTPICO_RESOURCE)
+	register(a_resource:PICO_RESOURCE)
 	local
 		dns:DNS
 	do
@@ -67,7 +67,7 @@ feature -- static registry
 	end
 feature {NONE}
 	--internal storage
-	store : HASH_TABLE[WEAK_REFERENCE[HTTPICO_RESOURCE],STRING]
+	store : HASH_TABLE[WEAK_REFERENCE[PICO_RESOURCE],STRING]
 	attribute
 		create Result.make(10)
 	end

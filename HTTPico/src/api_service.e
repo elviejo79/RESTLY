@@ -11,7 +11,7 @@ make
       create storage.make(10)
 		end
 
-    
+
 feature --http verbs
 has_key(s_key : separate URL_PATH):BOOLEAN
       local
@@ -30,7 +30,7 @@ item (s_key : separate URL_PATH):S
       separate s_key as key do
         create l_key.make_from_separate(key)
          Result := storage.item(l_key)
-         end 
+         end
       end
 
 extend(s_data:separate S)
@@ -80,16 +80,16 @@ trace(s_key: separate URL_PATH): detachable S
 
 last_inserted_key: URL_PATH
       do
-      
+
       Result := storage.last_inserted_key
       end
 
 count: INTEGER_32
       do
-      
+
       Result := storage.count
       end
 
 feature {NONE}
-storage: REST_TABLE[S]
+storage: PICO_TABLE[S]
 end

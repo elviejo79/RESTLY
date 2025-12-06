@@ -9,14 +9,14 @@ class
 
 inherit
 
-	HTTPICO_RESOURCE
+	PICO_RESOURCE
 		redefine
 			make_with_url
 		select
 			is_equal,
 			copy
 		end
-	FILE_SCHEME
+	FILE_SCHEME[STRING]
 	    rename
 	    	make as file_scheme_make,
 	    	is_equal as file_scheme_is_equal,

@@ -27,7 +27,7 @@ feature {NONE} -- Initialization
 
 feature {NONE} -- Fields
 
-	storage: HTTPICO_VERBS[JSON_OBJECT]
+	storage: PICO_REQUEST_METHODS[JSON_OBJECT]
 
 	id_parameter_name: STRING
 		attribute

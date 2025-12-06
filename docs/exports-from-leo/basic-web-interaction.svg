@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="198px" preserveAspectRatio="none" style="width:388px;height:198px;" version="1.1" viewBox="0 0 388 198" width="388px" zoomAndPan="magnify"><defs><filter height="300%" id="fw0el6gj656yq" width="300%" x="-1" y="-1"><feGaussianBlur result="blurOut" stdDeviation="2.0"/><feColorMatrix in="blurOut" result="blurOut2" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .4 0"/><feOffset dx="4.0" dy="4.0" in="blurOut2" result="blurOut3"/><feBlend in="SourceGraphic" in2="blurOut3" mode="normal"/></filter></defs><g><rect fill="#ADD8E6" height="183.9922" style="stroke: #A80036; stroke-width: 1.0;" width="122" x="4" y="4"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="116" x="7" y="16.0669">Local Computer</text><rect fill="#ADD8E6" height="183.9922" style="stroke: #A80036; stroke-width: 1.0;" width="115" x="262.5" y="4"/><text fill="#000000" font-family="sans-serif" font-size="13" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="109" x="265.5" y="16.0669">Remote Server</text><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 5.0,5.0;" x1="64.5" x2="64.5" y1="58.4297" y2="136.6953"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 5.0,5.0;" x1="200.5" x2="200.5" y1="58.4297" y2="136.6953"/><line style="stroke: #A80036; stroke-width: 1.0; stroke-dasharray: 5.0,5.0;" x1="320" x2="320" y1="58.4297" y2="136.6953"/><rect fill="#FEFECE" filter="url(#fw0el6gj656yq)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="71" x="27.5" y="23.1328"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="57" x="34.5" y="43.1279">Browser</text><rect fill="#FEFECE" filter="url(#fw0el6gj656yq)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="71" x="27.5" y="135.6953"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="57" x="34.5" y="155.6904">Browser</text><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="54" x="170.5" y="55.1279">Internet</text><ellipse cx="200.5" cy="26.1328" fill="#FEFECE" filter="url(#fw0el6gj656yq)" rx="12" ry="12" style="stroke: #A80036; stroke-width: 2.0;"/><polygon fill="#A80036" points="196.5,14.1328,202.5,9.1328,200.5,14.1328,202.5,19.1328,196.5,14.1328" style="stroke: #A80036; stroke-width: 1.0;"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="54" x="170.5" y="148.6904">Internet</text><ellipse cx="200.5" cy="167.9922" fill="#FEFECE" filter="url(#fw0el6gj656yq)" rx="12" ry="12" style="stroke: #A80036; stroke-width: 2.0;"/><polygon fill="#A80036" points="196.5,155.9922,202.5,150.9922,200.5,155.9922,202.5,160.9922,196.5,155.9922" style="stroke: #A80036; stroke-width: 1.0;"/><rect fill="#FEFECE" filter="url(#fw0el6gj656yq)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="96" x="270" y="23.1328"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="82" x="277" y="43.1279">Web_Server</text><rect fill="#FEFECE" filter="url(#fw0el6gj656yq)" height="30.2969" style="stroke: #A80036; stroke-width: 1.5;" width="96" x="270" y="135.6953"/><text fill="#000000" font-family="sans-serif" font-size="14" lengthAdjust="spacingAndGlyphs" textLength="82" x="277" y="155.6904">Web_Server</text><polygon fill="#A80036" points="188.5,85.5625,198.5,89.5625,188.5,93.5625,192.5,89.5625" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="65" x2="194.5" y1="89.5625" y2="89.5625"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="92" x="72" y="84.4966">get index.html</text><polygon fill="#A80036" points="308,114.6953,318,118.6953,308,122.6953,312,118.6953" style="stroke: #A80036; stroke-width: 1.0;"/><line style="stroke: #A80036; stroke-width: 1.0;" x1="200.5" x2="314" y1="118.6953" y2="118.6953"/><text fill="#000000" font-family="sans-serif" font-size="13" lengthAdjust="spacingAndGlyphs" textLength="92" x="207.5" y="113.6294">get index.html</text><!--MD5=[cc826a1203fa0387bfcdc3ad7e488868]
+@startuml
+
+box "Local Computer" #LightBlue
+participant Browser
+end box
+control Internet
+box "Remote Server" #LightBlue
+participant Web_Server
+end box
+
+Browser -> Internet : get index.html
+Internet -> Web_Server : get index.html
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 04:22:07 CST 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 11.0.25+9-post-Ubuntu-1ubuntu122.04
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: US
+--></g></svg>

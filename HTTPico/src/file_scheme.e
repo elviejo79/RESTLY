@@ -1,9 +1,9 @@
 
 class
-	FILE_SCHEME
+	FILE_SCHEME[R -> STRING create make_from_string end]
 
 inherit
-	HTTPICO_SCHEME_HANDLER [STRING]
+	PICO_SCHEME_HANDLER [R]
 		undefine
 			has_item
 		redefine
@@ -56,13 +56,13 @@ feature -- Queries aka HTTP safe verbs
 			Result := dir.exists
 		end
 
-	has_key (key: PATH_HTTPICO): BOOLEAN
+	has_key (key: PATH_PICO): BOOLEAN
 			-- Does file exist?
 		do
 			Result := has_entry (key.name)
 		end
 
-	item alias "[]" (key: PATH_HTTPICO): STRING assign force
+	item alias "[]" (key: PATH_PICO): R assign force
 			-- Equivalent to HTTP GET: get file contents.
 		local
 			f: PLAIN_TEXT_FILE
@@ -71,27 +71,27 @@ feature -- Queries aka HTTP safe verbs
 			f.open_read
 			if f.count > 0  then
 			  	f.read_stream (f.count)
-				Result := f.last_string.twin
+				create Result.make_from_string(f.last_string.twin)
 			else
-				Result := ""
+				create Result.make_from_string("")
 			end
 			f.close
 		end
 
 feature -- Commands aka HTTP unsafe verbs
 
-	collection_extend (data: STRING)
+	collection_extend (data: R)
 			-- Equivalent to HTTP POST.
 			-- Submits `data`; may change state or cause side effects.
 		local
-			l_key: PATH_HTTPICO
+			l_key: PATH_PICO
 		do
 			l_key := new_post_key (data)
 			internal_write (l_key, data)
 			last_inserted_key_internal := l_key
 		end
 
-	force (data: STRING; key: PATH_HTTPICO)
+	force (data: R; key: PATH_PICO)
 			-- Equivalent to HTTP PUT.
 			-- Replaces the resource's representation with the request content.
 			-- If `key` didn't exist it inserts it.
@@ -102,7 +102,7 @@ feature -- Commands aka HTTP unsafe verbs
 			data_stored_or_throw_507_insufficient_storage: item (key) /= Void
 		end
 
-	remove (key: PATH_HTTPICO)
+	remove (key: PATH_PICO)
 			-- Equivalent to HTTP DELETE: remove specified resource.
 		local
 			f: PLAIN_TEXT_FILE
@@ -115,7 +115,7 @@ feature -- Commands aka HTTP unsafe verbs
 
 feature -- Helpers
 
-	last_inserted_key: PATH_HTTPICO
+	last_inserted_key: PATH_PICO
 			-- Last key created/modified by POST or PUT.
 			-- No pure HTTP equivalent; needed for CQS in Eiffel.
 		do
@@ -124,13 +124,13 @@ feature -- Helpers
 			end
 		end
 
-	has_item (data: STRING): BOOLEAN
+	has_item (data: R): BOOLEAN
 			-- Does any file in `root` directory have contents equal to `data`?
 			-- No HTTP equivalent; helper for Eiffel-level contracts.
 		local
 			k: PATH
-			k_conv: PATH_HTTPICO
-			v: STRING
+			k_conv: PATH_PICO
+			v: R
 		do
 			across
 				keys as c
@@ -153,10 +153,10 @@ feature {NONE} -- Implementation
 	root: FILE_URL
 			-- Base directory for generated files (POST/PUT).
 
-	last_inserted_key_internal: detachable PATH_HTTPICO
+	last_inserted_key_internal: detachable PATH_PICO
 			-- Backing field for `last_inserted_key`.
 
-	new_post_key (data: STRING): PATH_HTTPICO
+	new_post_key (data: R): PATH_PICO
 			-- Key under `root` for POST; name is SHA-256 of `data`.
 		local
 			digest: STRING
@@ -168,7 +168,7 @@ feature {NONE} -- Implementation
 
 		end
 
-	internal_write (key: PATH_HTTPICO; data: STRING)
+	internal_write (key: PATH_PICO; data: STRING)
 			-- Write `data` into file identified by `key`.
 		local
 			f: PLAIN_TEXT_FILE
