@@ -5,3 +5,5 @@ tests/temp/
 *~
 *.scm
 *#
+# Ignored by gitless cli
+HTTPico/EIFDATA
