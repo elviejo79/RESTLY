@@ -16,7 +16,7 @@ inherit
 			is_equal,
 			copy
 		end
-	FILE_SCHEME[STRING]
+	PICO_FILE_CLIENT[STRING]
 	    rename
 	    	make as file_scheme_make,
 	    	is_equal as file_scheme_is_equal,

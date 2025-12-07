@@ -174,10 +174,6 @@ The uniform interface is inspired by HTTP methods, and we go into a lot more det
 about the HTTPico library.
 
 For now suffice to say that all the SCHEME_CLIENTS expose the same interface, i.e. features.
-<<<<<<< variant A
->>>>>>> variant B
-
-======= end
 ** Example TODOMVC
 TODOMVC is an example todo-list.
 Ipmlemented in multiple frontend frameworks so that developers can compare their implementations.

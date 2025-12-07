@@ -34,9 +34,9 @@ feature {NONE} -- Initialization
 
 feature -- Attributes
 
-	Valid_scheme: ARRAY[STRING_8]
+	Valid_scheme: ARRAY [STRING_8]
 		once
-			Result := << "env" >>
+			Result := <<"env">>
 			Result.compare_objects
 		end
 			-- This client handles env:// URLs

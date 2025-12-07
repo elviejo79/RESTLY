@@ -20,10 +20,10 @@ feature {NONE} -- Test Infrastructure
 	cache: PICO_CACHE [STRING_CONVERTIBLE, STRING]
 			-- Shared cache instance for tests
 
-	cache_storage: FILE_SCHEME[STRING]
+	cache_storage: PICO_FILE_CLIENT[STRING]
 			-- Frontend cache storage
 
-	server: FILE_SCHEME[STRING_CONVERTIBLE]
+	server: PICO_FILE_CLIENT[STRING_CONVERTIBLE]
 			-- Backend server storage
 
 	test_keys: LINKED_LIST [PATH_PICO]
@@ -188,7 +188,7 @@ feature -- PICO_CACHE Tests
 			-- Test PICO_CACHE with TODO_ITEM: FILE_SCHEME frontend + TODOBACKEND_API backend
 		local
 			cached_backend: PICO_CACHE [TODO_ITEM, STRING]
-			file_frontend: FILE_SCHEME[STRING]
+			file_frontend: PICO_FILE_CLIENT[STRING]
 			http_backend: TODOBACKEND_API
 			test_todo, modified_cache_todo: TODO_ITEM
 			test_key: PATH_PICO

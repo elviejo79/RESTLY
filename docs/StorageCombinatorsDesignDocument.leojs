@@ -8,6 +8,16 @@
       "vh": "Implementing Storage Combinators in Eiffel",
       "children": [
         {
+          "gnx": "agarciafdz.20251206144122.1",
+          "vh": "@chapter HTTPico Planning",
+          "children": [
+            {
+              "gnx": "agarciafdz.20251206144129.1",
+              "vh": "@auto-org ./exports-from-leo/pico_server_wishlist.org"
+            }
+          ]
+        },
+        {
           "gnx": "agarciafdz.20251024145644.1",
           "vh": "random thoughts",
           "children": [

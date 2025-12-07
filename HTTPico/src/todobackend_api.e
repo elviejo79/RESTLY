@@ -8,7 +8,7 @@ class
 	TODOBACKEND_API
 
 inherit
-	HTTP_SCHEME [TODO_ITEM]
+	PICO_HTTP_CLIENT [TODO_ITEM]
 	export {NONE}
 		make
 	redefine
