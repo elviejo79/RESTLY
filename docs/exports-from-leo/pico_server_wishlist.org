@@ -1,0 +1,322 @@
+#+TITLE: PICO_HTTP_SERVER – Specification for Coding Agent
+#+LANGUAGE: en
+
+PICO_HTTP_SERVER[Representation, Storage]
+is an INTERMEDIARY that is the dual of PICO_HTTP_CLIENT.
+
+Whereas PICO_HTTP_CLIENT acts as a client to things on the internet through the HTTP protocol,
+PICO_HTTP_SERVER acts as a server that exposes an internal resource to the internet.
+
+* Characteristics of PICO_HTTP_SERVER
+
+- PICO_HTTP_SERVER inherits the properties of an EiffelWebFramework (EWF) Router and a Resource.
+- It also behaves like PICO_COMBINATOR[Representation, Storage].
+
+Where:
+
+- =Representation= can be JSON, XML, HTML, etc.
+- =Storage= is a type that implements PICO_REQUEST_METHODS[Storage] (a HASH_TABLE-like store of items).
+
+Example:
+
+- =PICO_HTTP_SERVER[JSON, TODO_ITEM]=
+  is a server that accepts JSON documents and stores them in memory
+  as a collection of TODO_ITEMs.
+
+* Routing behavior
+
+PICO_HTTP_SERVER is mounted as an EWF *prefix router*. Everything after the prefix
+is treated as the resource path inside the Storage.
+
+If we mount the server on the prefix =/todos= at port 8080:
+
+- Base URL: =http://localhost:8080/todos=
+
+The following HTTP endpoints MUST be implemented:
+
+1. GET /todos
+
+   - Return a JSON array of all TODO items.
+   - Example shape:
+
+     #+BEGIN_SRC json
+     [
+       { "id": 1, "modified_date": "...", "title": "first todo",  "order": 1, "completed": false },
+       { "id": 2, "modified_date": "...", "title": "second todo", "order": 2, "completed": false }
+     ]
+     #+END_SRC
+
+2. GET /todos/{id}
+
+   - Return a single TODO item as JSON.
+   - If the item with that id does not exist, return HTTP 404 Not Found.
+
+   Example:
+
+   #+BEGIN_SRC json
+   { "id": 1, "modified_date": "...", "title": "first todo", "order": 1, "completed": false }
+   #+END_SRC
+
+3. POST /todos
+
+   - Request body: JSON with at least =title= (and optionally =order= or other client-controlled fields).
+   - The server MUST:
+     - Create a new TODO item in Storage.
+     - Assign a new =id=.
+     - Set server-controlled fields such as =modified_date= and =completed=false= by default.
+   - Response:
+     - HTTP 201 Created.
+     - Body: the full TODO object, including server-generated fields.
+
+4. PATCH /todos/{id}
+
+   - Request body: partial JSON representation; only fields present in the body are updated.
+   - The server MUST:
+     - Load the existing item from Storage.
+     - Apply the partial update.
+     - Persist the modified item.
+   - Response:
+     - HTTP 200 OK.
+     - Body: the updated TODO object as JSON.
+   - If the item does not exist, return HTTP 404 Not Found.
+
+5. DELETE /todos/{id}
+
+   - The server MUST:
+     - Remove the TODO item from Storage (if present).
+   - Response:
+     - On success: HTTP 204 No Content (or 200 OK with a small confirmation payload).
+   - After deletion:
+     - A subsequent GET /todos/{id} MUST return HTTP 404 Not Found.
+
+* Nushell acceptance tests
+
+The following Nushell commands illustrate the expected behavior.
+The coding agent SHOULD make them pass against the implemented server.
+
+** POST to create a new todo
+
+#+BEGIN_SRC nushell
+# Create a third todo
+http post http://localhost:8080/todos '{ "title": "third todo", "order": 3 }'
+# Expected response (shape)
+# {
+#   "id": 3,
+#   "modified_date": "...",
+#   "title": "third todo",
+#   "order": 3,
+#   "completed": false
+# }
+#+END_SRC
+
+** GET the newly created todo
+
+#+BEGIN_SRC nushell
+http get http://localhost:8080/todos/3
+# Expected: same JSON object as returned by POST
+#+END_SRC
+
+** PATCH to update completion status
+
+#+BEGIN_SRC nushell
+http patch http://localhost:8080/todos/3 '{ "completed": true }'
+http get http://localhost:8080/todos/3
+# Expected: "completed": true
+#+END_SRC
+
+** DELETE the todo
+
+#+BEGIN_SRC nushell
+http delete http://localhost:8080/todos/3
+http get http://localhost:8080/todos/3
+# Expected: HTTP 404 Not Found
+#+END_SRC
+
+
+* PICO_HTTP_SERVER Implementation Plan (Final)
+:PROPERTIES:
+:CUSTOM_ID: pico_http_server-implementation-plan-final
+:END:
+** Architecture Overview
+:PROPERTIES:
+:CUSTOM_ID: architecture-overview
+:END:
+
++ Handler Layer:: =PICO_HTTP_SERVER[R -> {JSON_OBJECT} create make_from_string, make_empty end]=
+
++ Inherits:: =WSF_URI_TEMPLATE_RESPONSE_HANDLER= (same pattern as
+HTTPICO_EWF_HANDLER)
+
++ Storage :: PICO_REQUEST_METHODS[R]= (generic over resource type)
+
++ Mounting Pattern :: Uses =map_uri_template("/todos{/id}", handler, methods)= in execution layer
+
+** Key Implementation Details
+:PROPERTIES:
+:CUSTOM_ID: key-implementation-details
+:END:
+*** 1. URI Template Routing Pattern
+:PROPERTIES:
+:CUSTOM_ID: uri-template-routing-pattern-from-restly-pattern
+:END:
+*Application Setup* (in execution class):
+
+#+begin_src eiffel
+setup_router
+  local
+    my_todos: PICO_TABLE[TODO_ITEM]
+    todo_server: PICO_HTTP_SERVER[TODO_ITEM]
+  do
+    create my_todos.make(10)
+    create todo_server.make(my_todos)
+
+    map_uri_template("/todos{/id}",
+      todo_server,
+      todo_server.allowed_methods)
+  end
+#+end_src
+
+*URI Template Semantics*: - =/todos{/id}= makes the ={/id}= parameter
+*optional* - =/todos= → no path parameter (collection operations) -
+=/todos/123= → path parameter "id" = "123" (single-item operations)
+
+*Handler Extraction* (from HTTPICO_EWF_HANDLER): - Extract ID via
+=req.path_parameter("id")= - Support WSF_TABLE (multi-segment) and
+WSF_STRING (single segment) - Convert to PATH_PICO for storage
+operations
+
+*** 2. HTTP Method Routing (extend existing pattern)
+:PROPERTIES:
+:CUSTOM_ID: http-method-routing-extend-existing-pattern
+:END:
+#+begin_src eiffel
+response(req): WSF_RESPONSE_MESSAGE
+  if attached requested_path(req) as path then
+    -- Single resource operations
+    if req.is_get_request_method then
+      Result := if_exists_execute(path, agent item(req, ?))
+    elseif req.is_patch_request_method then  -- NEW
+      Result := if_exists_execute(path, agent patch(req, ?))
+    elseif req.is_delete_request_method then
+      Result := if_exists_execute(path, agent remove(req, ?))
+    end
+  else
+    -- Collection operations
+    if req.is_get_request_method then  -- NEW
+      Result := list_all(req)
+    elseif req.is_post_request_method then
+      Result := collection_extend(req)
+    end
+  end
+#+end_src
+
+*** 3. New Features vs HTTPICO_EWF_HANDLER
+:PROPERTIES:
+:CUSTOM_ID: new-features-vs-httpico_ewf_handler
+:END:
+*Add PATCH support*: - Parse partial JSON from request body - Merge with
+existing item - Call =storage.force(merged_item, path)= - Return 200 OK
+with updated object
+
+*Add GET collection* (uncomment/implement list_all): - Iterate over
+storage - Build JSON array of all items - Return 200 OK with array
+
+*Modify POST for auto-ID assignment*: - Call
+=storage.collection_extend(data)= - Use =storage.last_inserted_key= for
+Location header - Server assigns ID (not from "name" field) - Return 201
+Created with full object + Location
+
+*Change force to use PATCH semantics*: - Currently uses PUT (full
+replacement) - Todo Backend spec requires PATCH (partial update) - Need
+to merge JSON fields, not replace
+
+*** 4. Path Type Considerations
+:PROPERTIES:
+:CUSTOM_ID: path-type-considerations
+:END:
+*Issue*: PICO_TABLE uses =PATH_PICO= keys, but HTTPICO_EWF_HANDLER uses
+=URL_PATH=
+
+*Solution*: - Keep using =PATH_PICO= internally (convert from request
+path) - PATH_PICO has converter: =make_from_string({STRING})= - Build
+path from segments with leading =/=
+
+*** 5. ID Assignment Strategy
+when using PICO_TABLE.collection_extend(data:R)
+it must generate a key.
+implement a method: PICO_TABLE.key_for(data:R):
+that in the mean time is just the maximum + 1 of the current_ids.
+
+
+*** 6. Response Patterns (reuse existing)
+:PROPERTIES:
+:CUSTOM_ID: response-patterns-reuse-existing
+:END:
+- =WSF_JSON_RESPONSE= factory methods + fluent API
+- Exception handling with rescue/retry
+- =if_exists_execute= helper for 404 handling
+- Proper HTTP status codes
+
+** Files to Create
+:PROPERTIES:
+:CUSTOM_ID: files-to-create
+:END:
+1. *HTTPico/src/pico_http_server.e* - Main handler class (generic over
+   R)
+
+** Implementation Steps
+:PROPERTIES:
+:CUSTOM_ID: implementation-steps
+:END:
+*** Phase 1: Core Handler Structure
+:PROPERTIES:
+:CUSTOM_ID: phase-1-core-handler-structure
+:END:
+1. Copy HTTPICO_EWF_HANDLER as template
+2. Rename to PICO_HTTP_SERVER and make generic over =R -> {JSON_OBJECT}=
+3. Add key_for(data:R): to PICO_TABLE
+4. Change path types from URL_PATH to PATH_PICO throughout
+
+*** Phase 2: Collection Operations
+:PROPERTIES:
+:CUSTOM_ID: phase-2-collection-operations
+:END:
+5. [@5] Implement =list_all(req): WSF_JSON_RESPONSE=
+   - Iterate storage, build JSON array
+   - Return 200 OK with array representation
+6. Modify =collection_extend(req)= for key_for(data:R)
+   - Use next_id counter
+   - Inject ID into JSON
+   - Call =storage.extend_collection(data)= with modified object with new_id
+   - Return 201 + Location header
+
+*** Phase 3: PATCH Support
+:PROPERTIES:
+:CUSTOM_ID: phase-3-patch-support
+:END:
+7. [@7] Add =is_patch_request_method= check in response routing
+8. Implement =patch(req, path): WSF_JSON_RESPONSE=
+   - Get existing item from storage
+   - Parse partial JSON from request
+   - Merge fields (update only provided fields)
+   - Call =storage.force(merged_item, path)=
+   - Return 200 OK with updated object
+
+*** Phase 4: Testing
+:PROPERTIES:
+:CUSTOM_ID: phase-4-testing
+:END:
+9. [@9] Create test execution class (like RESTLY_API_SERVER_EXECUTION)
+10. Mount with =map_uri_template("/todos{/id}", handler, methods)=
+11. Run against Nushell acceptance tests from spec
+12. Verify all CRUD operations work correctly
+
+** Key Design Decisions (Resolved)
+:PROPERTIES:
+:CUSTOM_ID: key-design-decisions-resolved
+:END:
+✅ *ID generation*: PICO_TABLE manages  =next_id= by doing the maximum of the current id's
+internally ✅ *Path types*: Use PATH_PICO (convert from request paths)
+✅ *collection_extend*: Use =storage.collection_extend(data)= with storage.key_for(data(server-generated key
+✅ *Routing*: Follow RESTLY pattern with =map_uri_template("/todos{/id}", ...)=
+✅ *PATCH semantics*: Merge partial JSON with existing item, then force update

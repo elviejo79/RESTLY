@@ -32,13 +32,13 @@ feature -- Router
 	setup_router
 			-- Setup `router'
 		local
-      fhdl: WSF_FILE_SYSTEM_HANDLER
+      l_pico_http_server: PICO_HTTP_SERVER
 		do
 			-- Exposing a HTTPico REST service
-
-				map_uri_template ("/todos{/id}",
-					create {PICO_HTTP_SERVER}.make (pico_table),
-					router.methods_GET + router.methods_PUT + router.methods_POST + router.methods_DELETE)
+           create l_pico_http_server.make(pico_table)
+              map_uri_template ("/todos{/id}",
+                create {PICO_HTTP_SERVER}.make (pico_table),
+				    router.methods_GET + router.methods_PUT + router.methods_POST + router.methods_DELETE)
 
 				--| As example:
 				--|   /doc is dispatched to self documentated page
@@ -47,10 +47,10 @@ feature -- Router
 				--| Self documentation
 			router.handle ("/doc", create {WSF_ROUTER_SELF_DOCUMENTATION_HANDLER}.make (router), router.methods_GET)
 
-				--| Files publisher
-			create fhdl.make_hidden ("www")
-			fhdl.set_directory_index (<<"index.html">>)
-			router.handle ("", fhdl, router.methods_GET)
+			-- 	--| Files publisher
+			-- create fhdl.make_hidden ("www")
+			-- fhdl.set_directory_index (<<"index.html">>)
+			-- router.handle ("", fhdl, router.methods_GET)
 
 
 		end
