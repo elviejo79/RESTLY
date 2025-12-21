@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 class
-   PICO_HTTP_SERVER
+   PICO_HTTP_SERVER[R -> JSON_VALUE, S -> PICO_ENTITY]
 
 inherit
 	WSF_URI_TEMPLATE_RESPONSE_HANDLER
@@ -14,20 +14,24 @@ inherit
 		export
 			{NONE} all
 		end
-
+   
 create
 	make
 
 feature {NONE} -- Initialization
 
-	make (a_storage: like storage)
+	make (a_storage: like storage; a_converter:PICO_CONVERTER[R,S])
 		do
-			storage := a_storage
+      storage := a_storage
+         conv := a_converter
 		end
 
+feature
+conv: PICO_CONVERTER[R,S]
+   
 feature {NONE} -- Fields
 
-	storage: PICO_TABLE[JSON_OBJECT]
+	storage: PICO_TABLE[S]
 
 	id_parameter_name: STRING
 		attribute
@@ -41,34 +45,54 @@ response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
         id: PATH_PICO
         has_id: BOOLEAN
     do
-        -- Try to extract id (or PATH_PICO, or whatever your key is)
-        if attached {PATH_PICO} req.path_parameter ("id") as l_id then
+        -- Try to extract id
+        if attached req.path_parameter ("id") as l_param and then not l_param.string_representation.is_empty then
+			create id.make_from_string(l_param.string_representation)
             has_id := True
-            id := l_id
         else
             has_id := False
         end
 
-        if req.is_get_request_method and has_id then
+        if req.is_options_request_method then
+            -- OPTIONS (CORS preflight)
+            Result := add_cors_headers({WSF_JSON_RESPONSE}.ok)
+        elseif req.is_get_request_method and has_id then
             -- GET /resource/{id}
-            Result := do_get(req)
+            Result := add_cors_headers(do_get(req))
         elseif req.is_get_request_method and not has_id then
             -- GET /resources it should return the whole collection
-            Result := do_get_all(req)
+            Result := add_cors_headers(do_get_all(req))
         elseif req.is_put_request_method and has_id then
             -- PUT /resource/id
-              Result := do_patch(req)
+            Result := add_cors_headers(do_patch(req))
+        elseif req.request_method.is_case_insensitive_equal ("PATCH") and has_id then
+            -- PATCH /resource/id
+            Result := add_cors_headers(do_patch(req))
         elseif req.is_delete_request_method and has_id then
             -- DELETE /resource/id
-            Result := do_delete(req)
+            Result := add_cors_headers(do_delete(req))
         elseif req.is_post_request_method and not has_id then
             -- POST /resource
-            Result := do_post(req)
+            Result := add_cors_headers(do_post(req))
+        elseif req.is_delete_request_method and not has_id then
+            -- DELETE /resources - delete all
+            Result := add_cors_headers(do_delete_all(req))
         else
             -- Anything else
-            Result := {WSF_JSON_RESPONSE}.method_not_allowed
+            Result := add_cors_headers({WSF_JSON_RESPONSE}.method_not_allowed)
         end
     end
+
+feature {NONE} -- CORS Support
+
+	add_cors_headers (a_response: WSF_JSON_RESPONSE): WSF_JSON_RESPONSE
+			-- Add CORS headers to response for cross-origin requests
+		do
+			Result := a_response
+				.with_header("Access-Control-Allow-Origin", "*")
+				.with_header("Access-Control-Allow-Headers", "Content-Type, Accept, Origin, X-Requested-With")
+				.with_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
+		end
 
 feature -- verbs like PICO_REQUEST_VERBS but all of them return messages;
 
@@ -76,14 +100,15 @@ feature
    do_post (req: WSF_REQUEST): WSF_JSON_RESPONSE
       do
          if not attached Result then
-            storage.collection_extend (extract_json(req))
-               check attached storage.last_inserted_key as last_id then
-                  Result := json_ok (storage.item(last_id))
+            storage.collection_extend (conv.to_store(extract_json(req)))
+            check attached storage.last_inserted_key as last_id then
+
+                  Result := json_ok (conv.representation(storage.item(last_id)))
                end
        end
      rescue
         Result := convert_exception_to_response(req)
-     retry   
+     retry
     end
 
     do_delete (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -96,43 +121,61 @@ feature
          end
       rescue
         Result := convert_exception_to_response(req)
-        retry   
+        retry
+		end
+
+    do_delete_all (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- DELETE all resources
+		do
+         if not attached Result then
+				storage.wipe_out
+				-- 204 No Content: {"message": "No Content", "status": 204}
+            Result := {WSF_JSON_RESPONSE}.no_content
+         end
+      rescue
+        Result := convert_exception_to_response(req)
+        retry
 		end
 
     do_patch (req: WSF_REQUEST): WSF_JSON_RESPONSE
-			-- DELETE resource
+      -- PATCH resource with partial update
+      local
+      id_key: PATH_PICO
+         original, new : S
 		do
          if not attached Result then
-            storage.force(extract_json(req), extract_id(req))
-            Result := {WSF_JSON_RESPONSE}.ok.with_body (storage.item(extract_id(req)).representation)
+            id_key := extract_id(req)
+            new := conv.to_store(extract_json(req))
+            original := storage.item(id_key)
+            original.merge(new)
+            storage.force(original, id_key)
+
+            Result := {WSF_JSON_RESPONSE}.ok.with_body (conv.representation(storage.item(id_key)).representation)
          end
       rescue
-      Result := convert_exception_to_response(req)
-      retry   
+         Result := convert_exception_to_response(req)
+         retry
 		end
 
    do_get (req: WSF_REQUEST ): WSF_JSON_RESPONSE
 		do
          if not attached Result then
-           Result := json_ok (storage[extract_id(req)])
+           Result := json_ok (conv.representation(storage[extract_id(req)]))
        end
      rescue
         Result := convert_exception_to_response(req)
-     retry   
+     retry
     end
 
     all_items:JSON_ARRAY
-      local
-      values: ARRAYED_LIST [JSON_OBJECT]
       do
-      values := storage.linear_representation -- HASH_TABLE[JSON_OBJECT, …]
-      create Result.make (values.count)     -- pre-size the array
-      across values as c loop
-          Result.extend (c.item)
+      create Result.make_empty
+         across storage as c loop
+             Result.extend (conv.representation(c.item))
       end
       end
 
-   
+
     do_get_all (req: WSF_REQUEST ): WSF_JSON_RESPONSE
     -- http get /todos Should return a json array of all the collection
 	   do
@@ -141,7 +184,7 @@ feature
        end
      rescue
         Result := convert_exception_to_response(req)
-     retry   
+     retry
     end
 
     do_head (req: WSF_REQUEST ): WSF_JSON_RESPONSE
@@ -152,14 +195,69 @@ feature
        end
      rescue
         Result := convert_exception_to_response(req)
-     retry   
+     retry
     end
 
 
 
 
-      
+
 feature {NONE} -- Small helpers
+
+	merge_json (original, patch: R): R
+			-- Merge patch fields into original JSON object
+		local
+			parser: JSON_PARSER
+		do
+			-- Convert to string representation and reparse
+			-- PATCH semantics: merge patch fields over original
+			-- For now, use a simple approach via JSON_CORE library
+			create parser.make_with_string (original.representation)
+			parser.parse_content
+
+			if attached {R} parser.parsed_json_value as orig then
+				create parser.make_with_string (patch.representation)
+				parser.parse_content
+
+				if attached {R} parser.parsed_json_value as patch_val then
+					Result := do_merge(orig, patch_val)
+				else
+					Result := orig
+				end
+			else
+				Result := original
+			end
+		end
+
+	do_merge (base, overlay: R): R
+			-- Merge overlay JSON fields into base
+		local
+			parser: JSON_PARSER
+			merged_repr: STRING
+		do
+			-- Parse both base and overlay to work with them
+			create parser.make_with_string (base.representation)
+			parser.parse_content
+
+			if attached parser.parsed_json_value as base_val then
+				create parser.make_with_string (overlay.representation)
+				parser.parse_content
+
+				if attached parser.parsed_json_value as overlay_val then
+					-- Perform the merge by manipulating the string representation
+					-- For now, use a simple approach: overlay wins
+					-- TODO: Implement proper field-by-field merging
+					create merged_repr.make_from_string (base.representation)
+
+					-- This is a simplified merge - just return overlay for non-empty fields
+					Result := overlay
+				else
+					Result := base
+				end
+			else
+				Result := base
+			end
+		end
 
     json_ok (obj: JSON_VALUE): WSF_JSON_RESPONSE
         do
@@ -237,17 +335,36 @@ do
 
 
 feature {NONE} -- Helpers that get information from the request.
-   
+
    extract_id(req:WSF_REQUEST):PATH_PICO
       require
         id_must_be_part_of_path: attached req.path_parameter("id")
+      local
+         id_as_int: INTEGER
       do
-         check attached {STRING} req.path_parameter("id") as l_id then
-            create Result.make_from_string(l_id)
+         if attached req.path_parameter("id") as l_param then
+            print ("%N=== Debug path_parameter(id) ===%N")
+            print ("Type: " + l_param.generating_type.name + "%N")
+            print ("String representation: " + l_param.string_representation + "%N")
+            if attached {WSF_TABLE} l_param as l_table then
+               print ("It's a WSF_TABLE, getting first_value%N")
+               if attached l_table.first_value as fv then
+                  print ("First value type: " + fv.generating_type.name + "%N")
+                  print ("First value string: " + fv.string_representation + "%N")
                end
+            end
+         end
+         check attached {WSF_TABLE} req.path_parameter("id") as l_table and then
+            attached {WSF_STRING} l_table.first_value as l_id then
+            id_as_int := l_id.integer_value
+            create Result.make_from_string("/" + id_as_int.out)
+               print ("%N this is the parameter %N")
+               print (id_as_int.out + "%N")
+               print (Result.out + "%N")
+         end
       end
 
-	extract_json (req: WSF_REQUEST): JSON_OBJECT
+	extract_json (req: WSF_REQUEST): R
       -- Parse JSON object from request body
       require
         request_cant_be_empty: req.content_length_value > 0
@@ -257,7 +374,14 @@ feature {NONE} -- Helpers that get information from the request.
 		do
 				create input_data.make_empty
             req.read_input_data_into (input_data)
-            create Result.make_from_string(input_data)
+            create json_parser.make_with_string(input_data)
+            if attached {R} json_parser.parse as json_obj then
+            	Result := json_obj
+            else
+            	check attached {R} create {EJSON_JSON_OBJECT}.make_with_capacity(0) as default_obj then
+            		Result := default_obj
+            	end
+            end
 		end
 
 end

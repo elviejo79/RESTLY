@@ -1,5 +1,5 @@
 class
-   SERVICE_PROXY[S -> JSON_OBJECT create make_from_separate end]
+   SERVICE_PROXY[S -> PICO_JSON_OBJECT create make_from_separate end]
 
 inherit
 PICO_REQUEST_METHODS[S]
@@ -56,7 +56,7 @@ last_inserted_key: PATH_PICO
          end
       end
 feature {NONE}
-remote_api_service : separate API_SERVICE[JSON_OBJECT]
+remote_api_service : separate API_SERVICE[PICO_JSON_OBJECT]
 		once ("PROCESS")
 			create Result.make
 		end

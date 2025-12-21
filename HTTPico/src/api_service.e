@@ -1,5 +1,5 @@
 class
-   API_SERVICE[S -> JSON_OBJECT create make_from_separate end]
+   API_SERVICE[S -> PICO_JSON_OBJECT create make_from_separate end]
 
 create
 make

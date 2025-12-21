@@ -27,7 +27,7 @@ feature {NONE} -- Initialization
 
 feature {NONE} -- Fields
 
-	storage: PICO_REQUEST_METHODS[JSON_OBJECT]
+	storage: PICO_REQUEST_METHODS[PICO_JSON_OBJECT]
 
 	id_parameter_name: STRING
 		attribute
@@ -147,7 +147,7 @@ feature {NONE} -- HTTP Handlers
 	extend (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- POST to create new resource
 		local
-			json_data: detachable JSON_OBJECT
+			json_data: detachable PICO_JSON_OBJECT
 			input_data_path: URL_PATH
 		do
 			json_data := parse_json_object (req)
@@ -217,7 +217,7 @@ feature {NONE} -- Helpers
 	-- 		Result := create {WSF_JSON_RESPONSE}.make_with_body (json_array.representation)
 	-- 	end
 
-	parse_json_object (req: WSF_REQUEST): detachable JSON_OBJECT
+	parse_json_object (req: WSF_REQUEST): detachable PICO_JSON_OBJECT
 			-- Parse JSON object from request body
 		local
 			json_parser: JSON_PARSER

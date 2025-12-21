@@ -115,14 +115,14 @@ feature -- Conversion
 			create parser.make_with_string (a_json)
 			parser.parse_content
 
-			if parser.is_valid and then attached {JSON_OBJECT} parser.parsed_json_value as json_object then
+			if parser.is_valid and then attached {PICO_JSON_OBJECT} parser.parsed_json_value as json_object then
 				Result := from_json_object (json_object)
 			end
 		ensure
 			class
 		end
 
-	from_json_object (json_object: JSON_OBJECT): like Current
+	from_json_object (json_object: PICO_JSON_OBJECT): like Current
 			-- Create a repository from JSON object
 		do
 			create Result.make
@@ -159,7 +159,7 @@ feature -- Conversion
 	to_json: STRING
 			-- Convert repository to JSON string
 		local
-			json_object: JSON_OBJECT
+			json_object: PICO_JSON_OBJECT
 		do
 			create json_object.make
 

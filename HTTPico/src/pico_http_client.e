@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 deferred class
-	PICO_HTTP_CLIENT [R -> {JSON_OBJECT} create make_from_string, make_empty end]
+	PICO_HTTP_CLIENT [R -> {PICO_JSON_OBJECT} create make_from_string, make_empty end]
 
 inherit
 	PICO_SCHEME_HANDLER [R]

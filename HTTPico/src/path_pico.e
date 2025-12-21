@@ -9,9 +9,11 @@ class
 
 inherit
 	PATH
-      redefine
-      make_from_separate
-      end
+		redefine
+			make_from_separate,
+			hash_code,
+			is_equal
+		end
 
 
 create
@@ -33,9 +35,21 @@ feature
         make_from_string(s)
       end
 
-   make_from_path(a_path: PATH)
-      do
-        make_from_string(a_path.out)
-      end
+	make_from_path(a_path: PATH)
+		do
+			make_from_string(a_path.out)
+		end
+
+	hash_code: INTEGER
+			-- Hash code value based on string representation
+		do
+			Result := out.hash_code
+		end
+
+	is_equal (other: like Current): BOOLEAN
+			-- Is `other' equal to current object based on string representation?
+		do
+			Result := out.same_string (other.out)
+		end
 
 end

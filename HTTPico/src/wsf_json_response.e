@@ -225,7 +225,7 @@ feature -- Fluent setters (chainable)
             Result := Current
         end
 
-    with_json_object (a_json: JSON_OBJECT): like Current
+    with_json_object (a_json: PICO_JSON_OBJECT): like Current
             -- Set body from JSON_OBJECT (chainable)
         do
             set_body (a_json.representation)

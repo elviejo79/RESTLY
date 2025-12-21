@@ -35,7 +35,7 @@ feature {NONE} -- Initialization
             i: INTEGER
             json_parser: JSON_PARSER
             json_array: JSON_ARRAY
-            json_object: JSON_OBJECT
+            json_object: PICO_JSON_OBJECT
         do
             -- Create HTTP client
             create http_client
@@ -66,7 +66,7 @@ feature {NONE} -- Initialization
                     until
                         i > json_repos.count
                     loop
-                        if attached {JSON_OBJECT} json_repos.i_th (i) as repo_json then
+                        if attached {PICO_JSON_OBJECT} json_repos.i_th (i) as repo_json then
                             l_repo := {GITHUB_REPOSITORY}.from_json_object (repo_json)
 
                             io.put_string ("Name: " + l_repo.name + "%N")

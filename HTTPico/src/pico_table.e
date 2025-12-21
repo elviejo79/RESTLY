@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 class
-	PICO_TABLE [R -> attached ANY]
+	PICO_TABLE [R -> attached ANY ]
 
 inherit
 HASH_TABLE [R, PATH_PICO]
@@ -51,6 +51,9 @@ feature
       do
           new_key := next_available_key
           extend(data, new_key)
+          if attached {PICO_ENTITY} data as entity then
+              entity.sync_with_key(new_key)
+          end
       end
 
   next_available_key: PATH_PICO
