@@ -35,21 +35,16 @@ feature -- Filter
 	create_filter
 			-- Create `filter'
 		do
-				--| Example using Maintenance filter.
 			create {WSF_MAINTENANCE_FILTER} filter
 		end
 
 	setup_filter
 			-- Setup `filter'
-		local
-			f: like filter
-     do
-			create {WSF_LOGGING_FILTER} f
-
-				--| Chain more filters like {WSF_CUSTOM_HEADER_FILTER}, ...
-				--| and your owns filters.
-
-			filter.append (f)
+		do
+				-- Maintenance filter is created in `create_filter'.
+				-- Append CORS and logging filters.
+			filter.append (create {TODO_CORS_FILTER})
+			filter.append (create {WSF_LOGGING_FILTER})
 		end
 
 feature -- Router

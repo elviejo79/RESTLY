@@ -55,44 +55,33 @@ response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
 
         if req.is_options_request_method then
             -- OPTIONS (CORS preflight)
-            Result := add_cors_headers({WSF_JSON_RESPONSE}.ok)
+            Result := {WSF_JSON_RESPONSE}.ok
         elseif req.is_get_request_method and has_id then
             -- GET /resource/{id}
-            Result := add_cors_headers(do_get(req))
+            Result := do_get(req)
         elseif req.is_get_request_method and not has_id then
             -- GET /resources it should return the whole collection
-            Result := add_cors_headers(do_get_all(req))
+            Result := do_get_all(req)
         elseif req.is_put_request_method and has_id then
             -- PUT /resource/id
-            Result := add_cors_headers(do_patch(req))
+            Result := do_patch(req)
         elseif req.request_method.is_case_insensitive_equal ("PATCH") and has_id then
             -- PATCH /resource/id
-            Result := add_cors_headers(do_patch(req))
+            Result := do_patch(req)
         elseif req.is_delete_request_method and has_id then
             -- DELETE /resource/id
-            Result := add_cors_headers(do_delete(req))
+            Result := do_delete(req)
         elseif req.is_post_request_method and not has_id then
             -- POST /resource
-            Result := add_cors_headers(do_post(req))
+            Result := do_post(req)
         elseif req.is_delete_request_method and not has_id then
             -- DELETE /resources - delete all
-            Result := add_cors_headers(do_delete_all(req))
+            Result := do_delete_all(req)
         else
             -- Anything else
-            Result := add_cors_headers({WSF_JSON_RESPONSE}.method_not_allowed)
+            Result := {WSF_JSON_RESPONSE}.method_not_allowed
         end
     end
-
-feature {NONE} -- CORS Support
-
-	add_cors_headers (a_response: WSF_JSON_RESPONSE): WSF_JSON_RESPONSE
-			-- Add CORS headers to response for cross-origin requests
-		do
-			Result := a_response
-				.with_header("Access-Control-Allow-Origin", "*")
-				.with_header("Access-Control-Allow-Headers", "Content-Type, Accept, Origin, X-Requested-With")
-				.with_header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-		end
 
 feature -- verbs like PICO_REQUEST_VERBS but all of them return messages;
 
