@@ -26,6 +26,9 @@
 	</target>
 	<target name="todobackend_demo_server_standalone" extends="common">
 		<root class="TODOBACKEND_DEMO_SERVER" feature="make_and_launch"/>
+		<capability>
+			<concurrency use="thread"/>
+		</capability>
 		<variable name="httpd_ssl_disabled" value="true"/>
 		<library name="default_standalone" location="$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\default\standalone.ecf"/>
 		<cluster name="launcher" location=".\launcher\">
