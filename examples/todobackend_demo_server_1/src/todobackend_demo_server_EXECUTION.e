@@ -35,15 +35,15 @@ feature -- Filter
 	create_filter
 			-- Create `filter'
 		do
-			create {WSF_MAINTENANCE_FILTER} filter
+				-- Global CORS filter as first in the chain
+			create {WSF_CORS_FILTER} filter
 		end
 
 	setup_filter
 			-- Setup `filter'
 		do
-				-- Maintenance filter is created in `create_filter'.
-				-- Append CORS and logging filters.
-			filter.append (create {TODO_CORS_FILTER})
+				-- Append maintenance and logging filters.
+			filter.append (create {WSF_MAINTENANCE_FILTER})
 			filter.append (create {WSF_LOGGING_FILTER})
 		end
 
@@ -56,7 +56,38 @@ feature -- Router
 			create converter.make
 			create todo_router.make (my_todos, converter)
 
-			map_uri_template ("/todos{/id}", todo_router, Void)
+				-- Main handler: allow specific methods on /todos and /todos/{id}
+			map_uri_template ("/todos{/id}", todo_router, methods_GET_POST_PUT_DELETE_PATCH)
+
+				-- CORS preflight handling for OPTIONS on the same URI template
+			map_uri_template_agent ("/todos{/id}", agent options_filter.execute, methods_OPTIONS)
+		end
+
+feature {NONE} -- Methods helpers
+
+   options_filter: WSF_CORS_OPTIONS_FILTER
+      once
+        create Result.make(router)
+      end
+      
+	methods_GET_POST_PUT_DELETE_PATCH: WSF_REQUEST_METHODS
+			-- Allowed methods for /todos{/id}
+		once
+			create Result.make (5)
+			Result.enable_get
+			Result.enable_post
+			Result.enable_put
+			Result.enable_delete
+			Result.enable_patch
+			Result.lock
+		end
+
+	methods_OPTIONS: WSF_REQUEST_METHODS
+			-- OPTIONS only, for CORS preflight
+		once
+			create Result
+			Result.enable_options
+			Result.lock
 		end
 
 end
