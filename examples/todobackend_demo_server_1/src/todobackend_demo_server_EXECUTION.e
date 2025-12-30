@@ -50,7 +50,7 @@ feature -- Filter
 feature -- Router
 	setup_router
 		local
-			todo_router: PICO_HTTP_SERVER[JSON_VALUE,TODO_ITEM]
+			todo_router: TODO_HTTP_SERVER
 			converter: TODO_ITEM_CONVERTER
 		do
 			create converter.make
