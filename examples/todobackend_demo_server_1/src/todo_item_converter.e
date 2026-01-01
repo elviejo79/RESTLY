@@ -1,11 +1,14 @@
 note
-	description: "Converter between JSON_VALUE and TODO_ITEM representations using smart serialization."
+	description: "Mapper between JSON_VALUE and TODO_ITEM using smart serialization with storage delegation."
 
 class
 	TODO_ITEM_CONVERTER
 
 inherit
-	PICO_CONVERTER [JSON_VALUE, TODO_ITEM]
+	PICO_MAPPER [JSON_VALUE, TODO_ITEM]
+		redefine
+			make
+		end
 
 create
 	make
@@ -13,10 +16,11 @@ create
 feature {NONE} -- Initialization
 
 	make
-			-- Initialize converter with smart serialization.
+			-- Initialize mapper with PICO_TABLE storage and smart serialization.
 		local
 			fac: JSON_SERIALIZATION_FACTORY
 		do
+			Precursor
 			create fac
 			serializer := fac.smart_serialization
 
@@ -42,8 +46,8 @@ feature -- Conversion
 		do
 			json_string := a_r.representation
 
-			if attached {TODO_ITEM} serializer.from_json_string (json_string, {TODO_ITEM}) as item then
-				Result := item
+			if attached {TODO_ITEM} serializer.from_json_string (json_string, {TODO_ITEM}) as l_item then
+				Result := l_item
 				-- Note: id will be set later based on storage key from PICO_TABLE
 			else
 				create Result.make_empty
@@ -73,6 +77,15 @@ feature -- Conversion
 				end
 			else
 				create {JSON_OBJECT} Result.make_with_capacity (0)
+			end
+		end
+
+	merge_update (partial_data: JSON_VALUE; key: PATH_PICO)
+			-- Merge JSON partial update into stored TODO_ITEM at key
+		do
+			if attached storage [key] as original then
+				original.merge (to_store (partial_data))
+				storage.force (original, key)
 			end
 		end
 

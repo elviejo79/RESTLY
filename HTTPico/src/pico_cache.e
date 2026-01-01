@@ -1,21 +1,22 @@
 note
 	description: "[
-		{PICO_CACHE_CONVERTIBLE}.
-		A caching implementation for heterogeneous storage where the representation
-		type R differs from the storage type S.
+		{PICO_CACHE}.
+		A caching implementation for heterogeneous storage where the cache (frontend)
+		stores rich domain objects (R) and the persistent backend stores serialized
+		form (S).
 
-		Uses CONVERTIBLE_TO interface to convert R to S for frontend storage,
-		while maintaining a transparent R interface to the user.
+		Uses PICO_MAPPER to handle bidirectional R ↔ S conversion.
+		Optimized for performance: cache hits have zero conversion overhead.
 
-		Example: Cache TODO_ITEM (R) in FILE_SCHEME (stores STRING = S)
-		while backend TODOBACKEND_API uses TODO_ITEM directly.
+		Example: Cache TODO_ITEM (R) in PICO_TABLE (fast, in-memory)
+		         Persist JSON_VALUE/STRING (S) in FILE_SCHEME (slow, disk)
 	]"
 	author: "Alejandro Garcia"
 	date: "$Date$"
 	revision: "$Revision$"
 
 class
-	PICO_CACHE [R -> CONVERTIBLE_TO[S] create make_from_s end, S -> attached ANY]
+	PICO_CACHE [R, S]
 
 inherit
 	PICO_REQUEST_METHODS [R]
@@ -25,25 +26,27 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_cache: PICO_SCHEME_HANDLER[S]; a_dest: PICO_SCHEME_HANDLER[R])
-			-- Initialize with cache storage (stores S) and destination (stores R)
-      require
-         cache_and_server_must_be_different: not (a_cache ~ a_dest)  and then not (a_cache.base_uri ~ a_dest.base_uri)
+	make (a_fast_cache: PICO_REQUEST_METHODS[R]; a_slow_backend: PICO_REQUEST_METHODS[S]; a_mapper: PICO_MAPPER[R, S])
+			-- Initialize with fast cache (stores R), slow backend (stores S), and mapper
+		require
+			cache_and_backend_must_be_different: not (a_fast_cache ~ a_slow_backend)
 		do
-			frontend := a_cache
-			backend := a_dest
-		ensure
-			frontend_set: frontend = a_cache
-			backend_set: backend = a_dest
+			frontend := a_fast_cache
+			backend := a_slow_backend
+			mapper := a_mapper
+
 		end
 
 feature {NONE} -- Access
 
-	frontend: PICO_SCHEME_HANDLER[S]
-			-- The cache storage (stores STRING values)
+	frontend: PICO_REQUEST_METHODS[R]
+			-- The fast cache storage (stores rich domain objects R)
 
-	backend: PICO_SCHEME_HANDLER[R]
-			-- The destination storage (stores R values)
+	backend: PICO_REQUEST_METHODS[S]
+			-- The slow persistent storage (stores serialized form S)
+
+	mapper: PICO_MAPPER[R, S]
+			-- Bidirectional mapper between R and S
 
 feature -- Queries (cache-aside pattern)
 
@@ -54,67 +57,70 @@ feature -- Queries (cache-aside pattern)
 		end
 
 	item alias "[]" (key: PATH_PICO): R
-			-- Retrieve item from cache if available, otherwise fetch from destination
+			-- Retrieve item from cache if available, otherwise fetch from backend
+			-- Optimized: cache hits have zero conversion overhead
 		local
-			frontend_data: S
+			backend_data: S
 		do
 			if frontend.has_key (key) then
-				-- Cache hit: get S from frontend, convert to R
-				frontend_data := frontend [key]
-				create Result.make_from_s (frontend_data)
+				-- Cache HIT: Return R directly from frontend (no conversion!)
+				Result := frontend [key]
 			else
-				-- Cache miss: fetch R directly from backend
-				Result := backend [key]
-				-- Store in frontend as S (using convertible_to_s conversion)
-				frontend.force (Result.to_s, key)
+				-- Cache MISS: Fetch S from backend, convert to R, cache it
+				backend_data := backend [key]
+				Result := mapper.representation (backend_data)
+				-- Store rich object R in frontend cache
+				frontend.force (Result, key)
 			end
 		end
 
 feature -- Commands (write-through pattern)
 
 	force (data: R; key: PATH_PICO)
-			-- Write to both destination and source (cache)
+			-- Write to both cache and backend (write-through)
 		do
-			-- Write to backend (destination) - backend expects R
-			backend.force (data, key)
+			-- Write to frontend cache - store rich object R directly
+			frontend.force (data, key)
 
-			-- Write to frontend (cache) - convert R to S
-			frontend.force (data.to_s, key)
+			-- Write to backend - convert R to S for persistence
+			backend.force (mapper.to_store (data), key)
 
 			-- Track insertion
 			last_inserted_key := key
 		end
 
 	collection_extend (data: R)
-			-- Add to destination and cache the result
+			-- Add to backend and cache the result (write-through)
 		do
-			-- Add to backend - backend expects R
-			backend.collection_extend (data)
+			-- Add to backend - convert R to S for persistence
+			backend.collection_extend (mapper.to_store (data))
 
 			check attached backend.last_inserted_key as backend_key then
-				-- Cache in frontend - convert R to S
-				frontend.force (data.to_s, backend_key)
+				-- Cache in frontend - store rich object R directly
+				frontend.force (data, backend_key)
 				-- Track insertion
 				last_inserted_key := backend_key
 			end
 		end
 
 	remove (key: PATH_PICO)
-			-- Remove from both destination and source (cache)
+			-- Remove from both cache and backend
 		do
-			-- Remove from destination
-			backend.remove (key)
-
-			-- Remove from cache (if exists)
+			-- Remove from frontend cache (if exists)
 			if frontend.has_key (key) then
 				frontend.remove (key)
+			end
+
+			-- Remove from backend persistent storage
+			if backend.has_key (key) then
+				backend.remove (key)
 			end
 		end
 
 feature -- Attributes
 
 	last_inserted_key: PATH_PICO
-			-- Track last insertion
+			-- last inserted key is empty on creation
 		attribute
 			create Result.make_from_string ("")
 		end

@@ -75,8 +75,8 @@ An "In-Process REST" [cite:@Weiher2014] if you will.
 AOP brings into a single program the kind of composability that the Web already enjoys.
 By “shrinking” the Web’s architecture: URLs as polymorphic identifiers, and a small uniform interface of HTTP methods inside a process,
 he turns resources and stores into components that can be freely composed and recomposed.
-In this paper we implement HTTPym an AOP library for Eiffel.
-It uses Eiffel’s Uniform Access Principle, Design by Contract and Multiple Inheritance to realize Weiher’s in-process REST style [cite:WeiherInProcessRest] and Polymorphic Identifiers [cite:WeiherPolymorphicIdentfiers].
+In this paper we implement HTTPico, an AOP library for Eiffel.
+It uses Eiffel's Uniform Access Principle, Design by Contract and Multiple Inheritance to realize Weiher's in-process REST style [cite:WeiherInProcessRest] and Polymorphic Identifiers [cite:WeiherPolymorphicIdentfiers].
 
 Our contributions are:
 
@@ -97,135 +97,189 @@ Section 8 compares against related work.
 Section 9 concludes.
 * Motivating Examples
 Let's not bury the lead here.
-And show how HTTPico allows the composition of components that weren't made to be togother.
+HTTPico lets us talk to very different kinds of resources — environment variables, local files, and remote HTTP services — through the *same* small set of operations.
 
+=PICO_SCHEME_HANDLER= descendants implement the uniform interface defined by =PICO_REQUEST_METHODS=:
+they all provide queries such as =has_key= and =item= (GET/HEAD-like),
+and commands such as =force=, =collection_extend= and =remove= (PUT/POST/DELETE-like).
+The only thing that changes from one scheme to another is *how* those operations are implemented.
 
-SCHEME_HANDLERS  are the classes that know how to communicate to remote and local resources (aka services, processes) and intra services.
-
-Since they abstract the external world to expose it inside our program they are messy by definition.
-BUT the iterface they expose inside the program is clean and predictiable.
-SCHEME_HANDLERS  are the classes that know how to communicate to remote and local resources (aka services, processes) and intra services.
-
-Since they abstract the external world to expose it inside our program they are messy by definition.
-BUT the iterface they expose inside the program is clean and predictiable.
-
+Here is a small example that uses three concrete handlers side by side:
 
 #+begin_src eiffel
 local
- l_file: FILE
- l_env: ENV
- l_http: HTTP
- l_schema:SCHEMA_HANDLER
+  env: ENV_SCHEME
+  files: PICO_FILE_CLIENT [STRING]
+  http: PICO_HTTP_CLIENT [PICO_JSON_OBJECT]
 do
- create l_env
- create l_file
- create l_http
+  -- Base URIs as plain strings; converted to the right URL types
+  create env.make ("env://")
+  create files.make ("file:///home/user/")
+  create http.make ("http://localhost:8080/")
+
+  -- Same interface everywhere: item / has_key / assignment via `force`
+  print (env ["/HOSTNAME"])             -- read environment variable
+
+  files ["/notes.txt"] := "hello"       -- write file (PUT)
+  print (files ["/notes.txt"])          -- read file (GET)
+
+  print (http ["/status"])              -- GET http://localhost:8080/status
 end
 #+end_src
 
-The way to use them is:
+Although the underlying mechanisms are very different, the developer interface is identical:
 
-#+begin_src Eiffel
-print(l_env["hostname"])  -- lets get the name of the current computer executing the file.
+- =ENV_SCHEME= treats =env://= as a key–value store: =env ["/HOSTNAME"]= reads an environment variable; =has_key= checks whether it exists; mutation operations are intentionally limited.
+- =PICO_FILE_CLIENT [R]= treats =file://= paths as keys: =files ["/notes.txt"]= reads a file; =files ["/notes.txt"] := "hello"= is syntactic sugar for calling =force= to write it; =remove= deletes the file.
+- =PICO_HTTP_CLIENT [R]= treats =http://= and =https://= as remote stores: =http ["/status"]= sends an HTTP GET; =http ["/todos/3"] := some_json= sends an HTTP PUT; collection POSTs are implemented in descendants.
 
-l_file["an_example_file.txt"] := "this is writing to  a new file" -- this synta
+In all three cases, the code manipulates a store that *looks* like a hash table keyed by =PATH_PICO= values (=/HOSTNAME=, =/notes.txt=, =/status=),
+even though the actual resources live in the process environment, the file system, or on the network.
+This is the uniform interface promised by =PICO_REQUEST_METHODS= and =PICO_SCHEME_HANDLER=, made concrete for three very different schemes.
+** Complete Example: TODO Backend Server
 
-content_of_file := l_http["http://www.example.com/about.html"] -- this is doing a get
+The TODO Backend project (todobackend.com) defines a specification for a REST API managing a simple todo list. Implementations exist in dozens of frameworks across multiple languages, providing a realistic benchmark for web APIs.
 
-print(content_of_file)
+HTTPico's implementation demonstrates how naturally the library composes: domain model + storage + web server, each incredibly concise.
 
-l_schema["file:my_current_file.txt"] -- this generate a file schema_handler and does the put
+*** Domain Model
+
+First, TODO_ITEM represents a todo with merge semantics:
+
+#+begin_src eiffel
+class TODO_ITEM
+inherit
+	PICO_ENTITY
+
+create
+	make, make_empty
+
+feature -- Access
+	id: STRING
+	title: STRING
+	completed: BOOLEAN
+	order: INTEGER
+
+feature -- Operations
+	merge (other: like Current)
+		-- Merge changes from other into current item
+		do
+			if attached other.title and then not other.title.is_empty then
+				title := other.title
+			end
+			if completed /= other.completed then
+				completed := other.completed
+			end
+			if order /= 0 then
+				order := other.order
+			end
+		end
+end
 #+end_src
 
-Goning further, to read the contents of a website in a local server
+Nothing special here—just a domain entity with fields and a merge operation for partial updates.
 
+*** Storage Layer
 
-a website remotely we can use:
+The storage is a singleton that inherits from PICO_TABLE:
 
-#+begin_src Eiffel
-http_client: SCHEME_CLIENT = "http://www.example.com/"
-print(http_client["/about"])
+#+begin_src eiffel
+once class TODOS_TABLE
+inherit
+	PICO_TABLE[TODO_ITEM]
+
+create
+	make_default
+
+feature {NONE} -- Initialization
+	make_default
+		once ("PROCESS")
+			make (10)
+		end
+end
 #+end_src
 
-Or perhaps we want te read a website in a local web server
+That's it. Because TODOS_TABLE inherits from PICO_TABLE, it automatically provides all CRUD operations:
+- ~item~ — GET a todo by key
+- ~force~ — PUT a todo at a specific key
+- ~remove~ — DELETE a todo
+- ~collection_extend~ — POST a new todo with auto-generated key
+- ~has_key~ — HEAD check if todo exists
 
-#+begin_src Eiffel
-http_client: SCHEME_CLIENT = "http://localhost/"
-print(http_client["/about"])
+No manual implementation needed. The hash table /is/ the storage.
+
+*** HTTP Server
+
+Here's where it gets interesting. PICO_HTTP_SERVER provides default implementations for all HTTP verbs by delegating to PICO_TABLE operations. TODO_HTTP_SERVER only customizes one behavior:
+
+#+begin_src eiffel
+class TODO_HTTP_SERVER
+inherit
+	PICO_HTTP_SERVER [JSON_VALUE, TODO_ITEM]
+		redefine
+			do_put
+		end
+
+create
+	make
+
+feature -- HTTP Verbs
+	do_put (req: WSF_REQUEST): WSF_JSON_RESPONSE
+		-- PUT /todos/{id} - use merge instead of replace
+		local
+			id_key: PATH_PICO
+			original, new: TODO_ITEM
+		do
+			id_key := extract_id (req)
+			new := converter.to_store (extract_json (req))
+			original := storage.item (id_key)
+			original.merge (new)
+			storage.force (original, id_key)
+			Result := json_ok (converter.representation (storage.item (id_key)))
+		end
+end
 #+end_src
 
-The usability of URLs is more manifest when we use different schemas like "file" or "ftp".
+Everything else—POST, GET, PATCH, DELETE, HEAD, exception handling, routing—is inherited from PICO_HTTP_SERVER. The base class automatically maps HTTP verbs to PICO_TABLE operations.
 
+*** In Action
 
-#+begin_src Eiffel
-file_reader : SCHEME_CLIENT = "file:///home/username/about.txt"
+The server passes all TODO Backend specification tests:
+
+#+begin_src bash
+# Create a todo
+curl -X POST http://localhost:8080/ \
+	-H "Content-Type: application/json" \
+	-d '{"title":"Buy milk","completed":false,"order":1}'
+# Returns: {"id":"1","title":"Buy milk","completed":false,"order":1}
+
+# Get all todos
+curl http://localhost:8080/
+# Returns: [{"id":"1","title":"Buy milk","completed":false,"order":1}]
+
+# Partial update
+curl -X PATCH http://localhost:8080/1 \
+	-H "Content-Type: application/json" \
+	-d '{"completed":true}'
+# Returns: {"id":"1","title":"Buy milk","completed":true,"order":1}
+
+# Delete a todo
+curl -X DELETE http://localhost:8080/1
+# Returns: 204 No Content
 #+end_src
 
-Even environment variables with a pseudo-scheme `env`
+*** The Punchline
 
+The complete TODO Backend implementation:
+- TODO_ITEM: ~30 lines (domain model with merge semantics)
+- TODOS_TABLE: ~10 lines (inherits all CRUD from PICO_TABLE)
+- TODO_HTTP_SERVER: ~15 lines (redefines only PUT)
+- TODO_ITEM_CONVERTER: ~60 lines (JSON serialization)
+- Server configuration: ~20 lines (web server setup)
 
-#+begin_example
-local_variabels : SCHEME_CLIENT = "env://"
-#+end_example
+/Total: ~135 lines of application code for a fully-compliant REST API./
 
-It is important to know that each schema (http, file, env, etc.) require their own {SCHEMA_HANDLER} that understands each protocol, but exposes the communication through a uniform interface.
-
-The uniform interface is inspired by HTTP methods, and we go into a lot more detail and justification in our next paper.
-about the HTTPico library.
-
-For now suffice to say that all the SCHEME_CLIENTS expose the same interface, i.e. features.
-** Example TODOMVC
-TODOMVC is an example todo-list.
-Ipmlemented in multiple frontend frameworks so that developers can compare their implementations.
-All the different versions of the frontend work with the same API Backend.
-
-@todo Insert a screenshot of todomvc.
-
-The complement is TODOBACKEND were multiple backend frameworks are developed to expose the same Web Api.
-So that different front ends can connect to i.
-
-Now we need to asks ourselves:
-
-
-
-
-
-*** How difficult should a client like TODOMVC be?
-*** How difficult a TODOBACKEND should be?
-Now we asks ourselves the opposito question.
-
-How hard could it be to create a backend implementation of a TODO list?
-
-Well in HTTPico is like this:
-
-*** How can we make a local first TODOLIST?
-Now let's go beyond the traditional TODOMVC
-
-And reflect how could we create local todo-mvc
-that doesn't go to the internet everytimme
-we want to read the mvc.
-
-So that we want to cache the data locally.
-and keep our local and remote copies sync.
-I don't know about you.
-But that looks pretty small to me.
-
-If you want to see how to achieve such brevity.
-Follow a long to learn about HTTPico and Weihers StorageCombinators and how Eiffel makes it possible.
-
-Just preamble the same command line client in C# is
-
-@askchatgpt make a client in C# for the code
-
-
-And in Java like this.
-
-
-In Javascrip which is asymptotic because JSON
-is it's native datatype
-
-@askchatgpt make comparable client in javascript to connect to from the commandline
-
+The key insight: PICO_REQUEST_METHODS provides a uniform interface that works both as an in-memory hash table (PICO_TABLE) and as HTTP verbs (PICO_HTTP_SERVER). By inheriting from both, storage and web layers compose with near-zero impedance mismatch. You write a hash table; you get a web API.
 
 * Background
 
@@ -442,7 +496,7 @@ In the rest of the paper we make this correspondence concrete: HTTPico defines E
 
 * Implementation
 
-** HTTP URIs become URI_PYM
+** HTTP URIs become URI_PICO
 
 To support polymorphic identifiers in Eiffel, we first need a solid representation of URLs/URIs *inside* the program.
 Fortunately we do not have to re-implement URL parsing from scratch: EiffelStudio already ships with a =URI= library that understands the standard components of a URI.
@@ -451,119 +505,142 @@ For reference, a URI can be decomposed as follows:
 
 (modified from a parsing diagram by Steven Levithan and the WHATWG URL specification.)
 
-In HTTPico we reuse Eiffel’s =URI= class and extend it into =URI_PYM=.
-The goal of =URI_PYM= is **not** to change the syntax of URIs, but to make URIs *more convenient as polymorphic identifiers*:
+In HTTPico we reuse Eiffel's =URI= class and extend it into =URI_PICO=.
+The goal of =URI_PICO= is **not** to change the syntax of URIs, but to make URIs *more convenient as polymorphic identifiers*:
 
-- we add conversion routines to turn a =URI_PYM= into scheme-specific helper types (e.g., =FILE_URL=, =ENV_URL=, =HTTP_URL=);
+- we add conversion routines to turn a =URI_PICO= into scheme-specific helper types (e.g., =FILE_URL=, =ENV_URL=);
 - we provide queries that expose the path as a sequence of segments, which we later reuse as keys for stores;
 - we keep the representation immutable, so that a URI safely identifies the same resource throughout its lifetime.
 
 The Eiffel implementation is a thin wrapper around =URI=;
-the interesting behavior comes later, when we plug =URI_PYM= into scheme handlers and stores.
+the interesting behavior comes later, when we plug =URI_PICO= into scheme handlers and stores.
 
 Here is the listing
 
 #+results:
-;; (Generated short view of class URI_PYM, omitted here.)
+;; (Generated short view of class URI_PICO, omitted here.)
 
 
-** HTTP Request become HTTPICO_VERBS
+** HTTP Request become PICO_REQUEST_METHODS
 
-Once URIs are available as =URI_PYM= objects, we need an in-process equivalent of HTTP methods.
-In Weiher’s work this is the =Storage= protocol;
-in HTTPico it is a deferred Eiffel class we call =HTTPICO_VERBS=,
-which provides the core “HTTP-like” operations for in-process REST.
+Once URIs are available as =URI_PICO= objects, we need an in-process equivalent of HTTP methods.
+In Weiher's work this is the =Storage= protocol;
+in HTTPico it is a deferred Eiffel class we call =PICO_REQUEST_METHODS=,
+which provides the core "HTTP-like" operations for in-process REST.
 
 We deliberately design this interface to resemble both:
 
 - the HTTP method vocabulary (GET, HEAD, PUT, POST, DELETE, etc.), and
-- Eiffel’s =HASH_TABLE= protocol, so that stores feel as familiar as ordinary tables.
+- Eiffel's =HASH_TABLE= protocol, so that stores feel as familiar as ordinary tables.
 
 #+begin_src bash
-ec -config ./restful.cfg -short HTTPICO_VERBS
+ec -config ./httpico.ecf -short PICO_REQUEST_METHODS
 #+end_src
-;; (Generated short view of class HTTPICO_VERBS, omitted here.)
+;; (Generated short view of class PICO_REQUEST_METHODS, omitted here.)
 
 
 Several points are worth noting:
 
-- Weiher’s original interface is named =Storage= and expressed as an Objective-S protocol.
-  In our Eiffel implementation we call the deferred class =HTTPICO_VERBS=,
+- Weiher's original interface is named =Storage= and expressed as an Objective-S protocol.
+  In our Eiffel implementation we call the deferred class =PICO_REQUEST_METHODS=,
   because EiffelBase already uses the names =STORAGE= and =STORE= for different purposes.
 - The interface is **inspired** by HTTP methods, but follows the *shape* of a hash table:
-  queries such as =has_item= and =item= correspond to safe, idempotent access (HEAD/GET),
-  and commands such as =expand= and =force= correspond to state-changing operations (POST/PUT).
-- This connection to =HASH_TABLE= is intentional and mirrors Weiher’s decision to align with the =NSDictionary= protocol in Objective-C:
+  queries such as =has_key= and =item= correspond to safe, idempotent access (HEAD/GET),
+  and commands such as =collection_extend= and =force= correspond to state-changing operations (POST/PUT).
+- This connection to =HASH_TABLE= is intentional and mirrors Weiher's decision to align with the =NSDictionary= protocol in Objective-C:
   instead of inventing a new dictionary-like API,
   we reuse the vocabulary that Eiffel programmers already know.
 
-Conceptually, =HTTPICO_VERBS= offers:
+Conceptually, =PICO_REQUEST_METHODS= offers:
 
 - a family of *queries* that do not change state (GET/HEAD-like),
-- a family of *commands* that change state (PUT/POST/PATCH/DELETE-like),
+- a family of *commands* that change state (PUT/POST/DELETE-like),
 - and Eiffel contracts that make success and failure conditions explicit
   (preconditions and postconditions instead of raw status codes).
 
 This interface will be the common backbone shared by all scheme handlers and storage combinators.
 
 
-A =HTTPICO_SCHEME_HANDLER= is a subclass that tries to preserve HTTP semantics more strictly:
-it interprets safe vs. unsafe and idempotent vs. non-idempotent operations in a way that closely matches their HTTP counterparts. In the rest of this section, we always expose our in-process storage through this small, HTTP-inspired API.
+** PICO_TABLE
+
+While =PICO_REQUEST_METHODS= defines the HTTP-like interface, we still need a concrete in-process store that applications can use directly.
+HTTPico provides this as =PICO_TABLE [R -> attached ANY]=: an in-memory implementation that combines Eiffel's =HASH_TABLE [R, PATH_PICO]= with the =PICO_REQUEST_METHODS [R]= protocol.
+
+#+begin_src bash
+ec -config ./httpico.ecf -short PICO_TABLE
+#+end_src
+;; (Generated short view of class PICO_TABLE, omitted here.)
+
+Several points are worth noting:
+
+- =PICO_TABLE= reuses Eiffel's hash-table vocabulary: clients use familiar queries such as =has_key= and =item=, and commands such as =force= and =remove=, but now over keys of type =PATH_PICO= instead of plain strings.
+- The command =force (data; key)= corresponds to HTTP =PUT=: the client chooses an explicit key (for example the path ="/3"= in a request =PUT /3=) and the entry is inserted or replaced at that location, idempotently.
+- The command =collection_extend (data)= corresponds to HTTP =POST= on a collection: the client sends a representation to ="/"=, and the table picks a fresh identifier by calling =next_available_key= (producing paths ="/1"=, ="/2"=, ...) and updates =last_inserted_key= and any attached =PICO_ENTITY= with that key.
+- Together, =item=, =has_key=, =force=, =collection_extend= and =remove= give =PICO_TABLE= the same "feel" as a normal hash table, while still preserving the HTTP-inspired semantics captured by =PICO_REQUEST_METHODS=.
+- In the TODO backend demo, =TODOS_TABLE= is defined as a once =PICO_TABLE [TODO_ITEM]=, so operations such as =GET /{id}=, =POST /= and =DELETE /{id}= are implemented directly in terms of these table operations on =PATH_PICO= keys.
 
 
-** HTTPICO_SCHEME_HANDLERs
+** PICO_SCHEME_HANDLER
 
-In practice, URIs can use many schemes: =http=, =https=, =file=, =env=, =ftp=, and so on.
+In practice, URIs can use many schemes: =http=, =https=, =file=, =env=, and so on.
 For each scheme we need a component that understands how to *talk* to the corresponding origin:
 open files, read environment variables, issue HTTP requests, etc.
 
-A =SCHEME_HANDLER= is such a component:
-a class that knows how to communicate with a server for a given scheme and that exposes the common HTTPico request interface.
+A =PICO_SCHEME_HANDLER= is such a component:
+a class that knows how to communicate with a resource for a given scheme and that exposes the common HTTPico request interface.
 
 In HTTPico, a scheme handler has two important properties:
 
-1. It is always defined *with respect to* a base URL.
-   This mirrors the browser notion of a “current origin”.
-2. It respects the common interface defined by =HTTPICO_VERBS= (our HTTP-like query/command protocol),
+1. It is always defined *with respect to* a base URI.
+   This mirrors the browser notion of a "current origin".
+2. It respects the common interface defined by =PICO_REQUEST_METHODS= (our HTTP-like query/command protocol),
    so that other components can treat handlers uniformly.
 
-*** Deferred SCHEME_HANDLER
+*** Deferred PICO_SCHEME_HANDLER
 
 We start from an abstract scheme handler that captures what all handlers have in common.
-Conceptually, a handler manages one or more schemes (e.g., =http= and =https= together) and can manufacture concrete handler objects for specific base URIs.
+Conceptually, a handler manages one or more schemes (e.g., =http= and =https= together) and can be instantiated for specific base URIs.
 
 A simplified version looks like this:
 
 #+begin_src eiffel
-deferred class RAW_SCHEMA_HANDLER
+deferred class PICO_SCHEME_HANDLER [R -> attached ANY]
+
+inherit
+  PICO_REQUEST_METHODS [R]
 
 feature -- Supported schemes
 
-  my_schemas: LIST [STRING]
+  Valid_scheme: ARRAY[STRING_8]
       -- Schemes handled by this class (e.g., <<"http", "https">>)
-
-feature -- Factory
-
-  for (a_url: URL): like Current
-      -- Return a handler instance suitable for `a_url`.
-    require
-      url_must_be_for_my_schema: a_url.schema ∈ my_schemas
     deferred
-      -- In descendants: create Result and attach it to `a_url` as base.
     end
 
-feature {NONE} -- Creation details
+feature -- Initialization
 
-  -- ... hidden creation routines ...
+  make (a_root: URI)
+      -- Initialize scheme handler with base URI
+    require
+      valid_scheme: Valid_scheme.has (a_root.scheme)
+    deferred
+    ensure
+      base_uri_set: base_uri ~ a_root
+      can_connect_to_proposed_base_url: can_connect (base_uri)
+    end
+
+feature -- Attributes
+
+  base_uri: URI
+      -- The URI that identifies this scheme handler
 
 end
 #+end_src
 
 This class does not yet know *how* to talk to HTTP, files, or the environment;
-it only specifies the **contract**: given a URL whose scheme belongs to =my_schemas=,
-you can obtain a handler that will later support the HTTPico request methods for that URL.
+it only specifies the **contract**: given a URI whose scheme belongs to =Valid_scheme=,
+you can create a handler that will support the HTTPico request methods for that URI.
 
-*** How we handle different schemas?
+*** How we handle different schemes?
 
 Each concrete scheme handler faces the same tension:
 
@@ -571,65 +648,13 @@ Each concrete scheme handler faces the same tension:
 - but it must expose the **same** request interface so that higher-level components can remain generic.
 
 HTTP gives us a ready-made answer: its method vocabulary.
-We therefore define an abstract =SCHEMA_HANDLER= that:
+The abstract =PICO_SCHEME_HANDLER= that we showed above already provides this:
 
-- fixes the schema (or schemas) it is responsible for,
-- stores a base path (origin) to which relative paths are resolved,
-- and declares a set of HTTP-inspired queries and commands.
+- fixes the scheme (or schemes) it is responsible for via =Valid_scheme=,
+- stores a base URI (origin) to which relative paths are resolved,
+- and inherits the HTTP-inspired queries and commands from =PICO_REQUEST_METHODS=.
 
-In Eiffel this is a deferred class, parameterized by the representation type =R=:
-
-#+begin_src eiffel
-deferred class SCHEMA_HANDLER [R]
-
-feature -- Schema identification
-
-  schema: IMMUTABLE_STRING
-      -- Primary scheme handled by this class (e.g., "http")
-
-feature -- Connection state
-
-  base_path: URL
-      -- Base URL for resolving relative paths.
-
-  connect (a_base_path: URL)
-      -- Attach this handler to `a_base_path`.
-    require
-      same_schema: a_base_path.schema ~ schema
-    deferred
-      -- Descendants set `base_path := a_base_path`.
-    end
-
-feature -- HTTP-inspired queries
-
-  has_item (key: PATH): BOOLEAN
-      -- Equivalent of HTTP HEAD: does resource for `key` exist?
-    deferred
-    end
-
-  item (key: PATH): R
-      -- Equivalent of HTTP GET: obtain representation for `key`.
-    deferred
-    end
-
-feature -- HTTP-inspired commands
-
-  expand (data: R; key: PATH)
-      -- Equivalent of HTTP POST: add or extend resource at `key`.
-    deferred
-    end
-
-  force (data: R; key: PATH)
-      -- Equivalent of HTTP PUT: create or replace resource at `key`.
-    deferred
-    end
-
-  -- Additional operations (merge, delete, etc.) can be added as needed.
-
-end
-#+end_src
-
-Descendants of =SCHEMA_HANDLER= implement these operations in a scheme-specific way
+Descendants of =PICO_SCHEME_HANDLER= implement these operations in a scheme-specific way
 (e.g., using file I/O, environment variables, or HTTP client libraries),
 but clients always see the same small, HTTP-inspired protocol.
 
@@ -638,149 +663,187 @@ but clients always see the same small, HTTP-inspired protocol.
 An =env://= handler treats the process environment as a simple key–value store.
 Keys correspond to variable names; values are strings returned by the operating system.
 
-Conceptually, an environment handler might look like this:
+The environment handler looks like this:
 
 #+begin_src eiffel
-class ENV_HANDLER
+class ENV_SCHEME
 inherit
-  SCHEMA_HANDLER [STRING]
-    redefine
-      schema, has_item, item, expand, force
+  PICO_SCHEME_HANDLER [STRING]
+
+  EXECUTION_ENVIRONMENT
+    rename
+      item as env_item
     end
 
-feature -- Schema identification
+feature -- Supported schemes
 
-  schema: IMMUTABLE_STRING = "env"
+  Valid_scheme: ARRAY [STRING_8]
+    once
+      Result := <<"env">>
+    end
 
 feature -- HTTP-inspired queries
 
-  has_item (key: PATH): BOOLEAN
-      -- Is there an environment variable with this name?
+  has_key (key: PATH_PICO): BOOLEAN
     do
-      Result := os_has_environment_variable (key.to_string_8)
+      Result := attached env_item (key.name)
     end
 
-  item (key: PATH): STRING
-      -- Get the value of the environment variable.
+  item (key: PATH_PICO): STRING
     do
-      Result := os_environment_variable (key.to_string_8)
-    ensure
-      defined_implies_not_void: has_item (key) implies Result /= Void
+      check attached env_item (key.name) as l_item then
+        Result := l_item
+      end
     end
 
 feature -- HTTP-inspired commands
 
-  expand (data: STRING; key: PATH)
-      -- Set an environment variable (where the OS allows it).
+  force (data: STRING; key: PATH_PICO)
+      -- Equivalent to HTTP PUT
     do
-      os_set_environment_variable (key.to_string_8, data)
+      put (data, key.name)
+      last_inserted_key := key
     end
 
-  force (data: STRING; key: PATH)
-      -- Same as `expand` for this simple store.
-    do
-      expand (data, key)
-    end
+  -- collection_extend, remove not supported for environment variables
 
 end
 #+end_src
 
-The details (which OS calls to use, how to represent =PATH=) are implementation-specific,
-but the key point is that =env://= URIs now participate in the same in-process REST protocol as HTTP and file resources.
+The key point is that =env://= URIs now participate in the same in-process REST protocol as HTTP and file resources.
 
 **** How does a file:// handler look?
 
 A =file://= handler uses the local filesystem as its backing store.
-To keep the URI semantics explicit, we first introduce a =FILE_URL= type as a specialization of =URL=:
+To keep the URI semantics explicit, we introduce a =FILE_URL= type as a specialization of =URI=:
 
 #+begin_src eiffel
 class FILE_URL
-    -- A file URL is a URL whose scheme is "file".
 inherit
-  URL
-    -- Inherit parsing and access to components.
-  -- ...
+  URI
+    -- Inherit parsing and access to components
 
 invariant
-  schema_must_be_file: schema ~ "file"
+  schema_must_be_file: scheme ~ "file"
 end
 #+end_src
 
 The handler then maps file URIs to actual file operations:
 
 #+begin_src eiffel
-class FILE_HANDLER [R]
+class PICO_FILE_CLIENT [R -> STRING create make_from_string end]
 inherit
-  SCHEMA_HANDLER [R]
-    redefine
-      schema, has_item, item, expand, force
+  PICO_SCHEME_HANDLER [R]
+
+  DIRECTORY
+    -- Inherits directory operations
+
+feature -- Supported schemes
+
+  Valid_scheme: ARRAY[STRING_8]
+    once
+      Result := << "file" >>
     end
-
-feature -- Schema identification
-
-  schema: IMMUTABLE_STRING = "file"
 
 feature -- HTTP-inspired queries
 
-  has_item (key: PATH): BOOLEAN
-      -- Does the file designated by `key` exist?
+  has_key (key: PATH_PICO): BOOLEAN
+      -- Does the file exist?
     do
-      Result := file_exists (to_file_url (key))
+      Result := has_entry (key.name)
     end
 
-  item (key: PATH): R
-      -- Read the contents of the file designated by `key`.
+  item (key: PATH_PICO): R
+      -- Read the file contents
     local
       f: PLAIN_TEXT_FILE
     do
-      create f.make_open_read (to_file_url (key).as_string_8)
-      -- In a concrete instantiation, `R` would typically be STRING or RAW_FILE.
-      -- For simplicity we assume `R` can be built from the file contents.
-      Result := read_representation (f)
+      create f.make_with_path (path.extended_path (key))
+      f.open_read
+      f.read_stream (f.count)
+      create Result.make_from_string (f.last_string)
+      f.close
     end
 
 feature -- HTTP-inspired commands
 
-  expand (data: R; key: PATH)
-      -- Append or create a file (POST-like behavior).
+  collection_extend (data: R)
+      -- POST: create new file with generated name
     do
-      -- ...
+      -- Uses SHA-256 hash for naming
     end
 
-  force (data: R; key: PATH)
-      -- Overwrite or create a file (PUT-like behavior).
+  force (data: R; key: PATH_PICO)
+      -- PUT: write or overwrite file
     do
-      -- ...
+      -- Write data to file at key
     end
 
-feature {NONE} -- Helper
-
-  to_file_url (key: PATH): FILE_URL
-      -- Build a FILE_URL from the handler's base path and `key`.
+  remove (key: PATH_PICO)
+      -- DELETE: remove file
     do
-      -- ...
-    end
-
-  read_representation (f: PLAIN_TEXT_FILE): R
-      -- Construct a representation from file contents.
-    do
-      -- ...
+      -- Delete file at key
     end
 
 end
 #+end_src
 
-Again, the exact details are less important than the fact that the handler adheres to the same =SCHEMA_HANDLER= protocol.
+The handler adheres to the same =PICO_SCHEME_HANDLER= protocol.
 
 **** How does an http handler look?
 
 An HTTP handler wraps an HTTP client library and delegates HTTPico operations to real HTTP requests.
-Given a base URL such as =http://api.github.com=, the handler can implement:
 
-- =has_item= with HTTP HEAD (or GET and mapping 404 to False),
-- =item= with HTTP GET,
-- =expand= with POST,
-- =force= with PUT or PATCH.
+#+begin_src eiffel
+deferred class PICO_HTTP_CLIENT [R -> PICO_JSON_OBJECT]
+inherit
+  PICO_SCHEME_HANDLER [R]
+
+feature -- Supported schemes
+
+  Valid_scheme: ARRAY[STRING_8]
+    once
+      Result := << "http", "https" >>
+    end
+
+feature -- HTTP-inspired queries
+
+  has_key (a_path: PATH_PICO): BOOLEAN
+      -- HTTP HEAD or GET to check existence
+    do
+      response := get_following_redirects (a_path, Max_redirects)
+      Result := response.status = 200
+    end
+
+  item (a_path: PATH_PICO): R
+      -- HTTP GET
+    do
+      response := get_following_redirects (a_path, Max_redirects)
+      create Result.make_from_string (response.body)
+    end
+
+feature -- HTTP-inspired commands
+
+  force (data: R; a_path: PATH_PICO)
+      -- HTTP PUT
+    do
+      response := proxy.put (build_absolute_url (a_path), context, data.representation)
+      last_inserted_key := a_path
+    end
+
+  remove (a_path: PATH_PICO)
+      -- HTTP DELETE
+    do
+      response := proxy.delete (build_absolute_url (a_path), context)
+    end
+
+  collection_extend (data: R)
+      -- HTTP POST (deferred - API-specific)
+    deferred
+    end
+
+end
+#+end_src
 
 The core idea is that =http://= URIs are not special:
 they are just another scheme handled through the same uniform interface,
@@ -788,34 +851,66 @@ whether the underlying transport is a local file,
 an environment variable, or a networked HTTP service.
 
 
-** HTTPICO_RESOURCES
+** PICO_HTTP_SERVER
+
+So far our implementation has focused on *clients* that talk to existing HTTP services.
+In practice we also want to expose an in-process store as a RESTful HTTP API.
+The deferred class =PICO_HTTP_SERVER [R -> JSON_VALUE, S -> PICO_ENTITY]= plays this role: it connects EiffelWeb's request/response machinery to a =PICO_TABLE [S]= and a =PICO_CONVERTER [R, S]=.
+
+The central feature is the =response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE= routine, which acts as a router.
+For each incoming request it inspects the HTTP method and the presence of an =id= path parameter,
+then dispatches to the corresponding =PICO_REQUEST_METHODS= operation on the underlying =storage: PICO_TABLE [S]=:
+
+- =GET /{id}= → calls =item= on =storage= to read a single entity.
+- =GET /= → iterates over =storage= to build a collection representation.
+- =HEAD /{id}= → calls =has_key= to check existence without returning a body.
+- =POST /= → calls =collection_extend= to create a new entity with a server-generated identifier.
+- =PUT /{id}= → calls =force= at an explicit =PATH_PICO= key to replace or create an entity.
+- =PATCH /{id}= → performs an application-specific merge of the existing and incoming entity, then calls =force=.
+- =DELETE /{id}= → calls =remove= on =storage= to delete a single entity.
+- =DELETE /= → calls =wipe_out= to clear the entire collection.
+
+On the HTTP side, =PICO_HTTP_SERVER= derives the storage key from the =id= path parameter (for example turning =/todos/3= into the key ="/3"= using =PATH_PICO=),
+parses request bodies as JSON via =extract_json=,
+and relies on a =PICO_CONVERTER [R, S]= to translate between JSON representations and domain entities.
+Every verb handler returns a =WSF_JSON_RESPONSE=, and shared helper routines such as =json_ok= take care of wiring JSON values into HTTP responses.
+
+All operations are executed through a wrapper =safely= that uses Eiffel's =EXCEPTION_MANAGER= to turn contract violations into HTTP status codes:
+precondition violations become =412 Precondition Failed=,
+postcondition violations become =500 Internal Server Error=,
+and unexpected exceptions likewise produce detailed 5xx responses.
+In the TODO backend demo, =TODO_HTTP_SERVER= simply inherits from =PICO_HTTP_SERVER [JSON_VALUE, TODO_ITEM]= and overrides =do_put= to implement merge-based updates,
+reusing the same routing and error-handling logic while customizing the resource-specific behavior.
+
+
+** PICO_RESOURCE
 
 A *resource* in HTTPico is an object that represents an **origin** that is unique within the system.
 For example, there is only one GitHub service on the public Internet, reachable at =https://api.github.com=.
 In the same spirit, there should be a single =GITHUB= resource object in the program.
 
-An HTTPICO_RESOURCE (despite the name, now part of HTTPico) therefore combines:
+A =PICO_RESOURCE= therefore combines:
 
 - a canonical base URI (e.g., =https://api.github.com=),
-- a suitable =SCHEME_HANDLER= (e.g., an HTTP handler),
-- and possibly additional domain-specific behavior (e.g., GitHub-specific endpoints).
+- registration with the DNS (Domain Name Server) for uniqueness,
+- and possibly additional domain-specific behavior (e.g., GitHub-specific endpoints via descendants).
 
 Instead of scattering ad-hoc HTTP client instances throughout the codebase,
 we centralize access through resource objects.
 This makes reasoning about caching, rate limiting, and authentication much easier,
-and aligns with the idea that “anything that can be named can be a resource.”
+and aligns with the idea that "anything that can be named can be a resource."
 
 
 ** Web DNS became Resource Name Server
 
 On the Web, the Domain Name System (DNS) maps human-readable names to network addresses
-and helps ensure thappt “github.com” denotes the same origin for every client.
+and helps ensure that "github.com" denotes the same origin for every client.
 In HTTPico we need a similar mechanism *inside* the program:
 a registry that maps resource names or URIs to the unique resource objects that represent them.
 
-We call this component the =RESOURCE_NAME_SERVER=. It follows a classic Registry pattern:
+We call this component =DNS=. It follows a classic Registry pattern:
 
-- it holds a mapping from resource identifiers (strings or URIs) to resource objects;
+- it holds a mapping from resource identifiers (URIs) to resource objects;
 - it guarantees that each identifier is associated with **exactly one** resource instance;
 - it returns existing instances on repeated lookups instead of creating new ones.
 
@@ -827,8 +922,8 @@ The advantages are twofold:
      cross-cutting concerns such as caching, logging, authentication,
       or rate limiting can be implemented once (via storage combinators around the handler) and automatically benefit all callers.
 
-In other words, the RESOURCE_NAME_SERVER plays the role of an *in-process DNS* for HTTPico:
-it ensures that names (URIs) reliably identify the same in-process resources,
+In other words, the =DNS= class plays the role of an *in-process DNS* for HTTPico:
+it ensures that URIs reliably identify the same in-process resources,
 completing the mapping from Web architecture to Eiffel implementation.
 
 
@@ -902,8 +997,8 @@ A pleasant surprise of the Eiffel version is how much we could reuse existing in
 We did not implement URL parsing, file I/O, HTTP clients, or environment-variable access from scratch.
 Instead we:
 
-- reused the existing `URI` library and wrapped it as `URI_PYM`,
-- wrapped the filesystem, environment variables, and HTTP client as `SCHEME_HANDLER` descendants,
+- reused the existing `URI` library and wrapped it as `URI_PICO`,
+- wrapped the filesystem, environment variables, and HTTP client as `PICO_SCHEME_HANDLER` descendants,
 - and added the storage combinator protocol on top.
 
 Multiple inheritance was particularly useful:
@@ -939,21 +1034,21 @@ but a concrete engineering method:
 pick a well-understood architecture that already scales (here: HTTP/REST),
 then scale it *down* into a language while preserving its composition properties.
 
-*** Schema_handlers will be many, but resources should be unique
+*** PICO_SCHEME_HANDLER instances will be many, but resources should be unique
 
 Another lesson concerns *identity*.
 On the Web, a URL names a resource globally.
 Many different HTTP servers, caches, and proxies may handle traffic for that URL,
-but there is still a single, conceptual “resource at that address”.
+but there is still a single, conceptual "resource at that address".
 
 In HTTPico this leads to a separation:
 
-- there may be many `SCHEME_HANDLER` instances for a given scheme (e.g., several HTTP clients, multiple filesystem roots),
+- there may be many `PICO_SCHEME_HANDLER` instances for a given scheme (e.g., several HTTP clients, multiple filesystem roots),
 - but a given URI should correspond to one *logical resource* in the in-program world.
 
-To support this, we introduced a Resource Name Server (RNS),
+To support this, we introduced the =DNS= class,
 an in-program registry that maps URIs to resource objects.
-The RNS plays a role analogous to DNS:
+The =DNS= plays a role analogous to Web DNS:
 it ensures that different parts of the program that talk about `http://example.org/foo`
 end up referring to the same logical resource, no matter which handler they use.
 
@@ -961,7 +1056,7 @@ The design guideline is:
 
 - let *handlers* be plentiful and configurable,
 - but maintain a *single registry of resources* to preserve the intuition
-  that “a URI points to one thing”.
+  that "a URI points to one thing".
 
 *** Naming is really hard
 
@@ -1004,10 +1099,10 @@ The guideline is:
   trees for hierarchical URIs, hash tables for fast lookups, and so on;
 - make those structures explicit in the implementation, instead of hiding them behind ad-hoc access patterns.
 
-*** Maybe Resoure Name Server is not Necessary in Eiffel
+*** Maybe DNS is not Necessary in Eiffel
 
-Given Eiffel’s support for `once` routines and “singleton-like” patterns,
-it was tempting to avoid the Resource Name Server entirely,
+Given Eiffel's support for `once` routines and "singleton-like" patterns,
+it was tempting to avoid the =DNS= class entirely,
 and to represent each resource as a separate once object:
 
 - for each URI we could, in principle, have a dedicated class whose once feature yields the unique instance.
@@ -1019,13 +1114,13 @@ and we would lose the ability to treat URIs as purely data-driven resource ident
 
 In practice, we found that:
 
-- Eiffel’s `once` mechanism is great for global services,
-  but less suited to “one instance per dynamic URI string”;
-- a central RNS with a dictionary-like structure is simpler to reason about
+- Eiffel's `once` mechanism is great for global services,
+  but less suited to "one instance per dynamic URI string";
+- a central =DNS= with a dictionary-like structure is simpler to reason about
   and matches the way DNS works on the Web.
 
-So while Eiffel’s singleton mechanisms are attractive,
-our experience suggests that an explicit name server is the better match
+So while Eiffel's singleton mechanisms are attractive,
+our experience suggests that an explicit =DNS= class is the better match
 for HTTP-style resource identity.
 
 ** Limitations
@@ -1297,8 +1392,8 @@ but a small in-process architecture for accessing heterogeneous resources in a u
 URIs become polymorphic identifiers for in-program resources.
 Scheme handlers encapsulate the concrete mechanisms for `env://`, `file://`, and `http://` access,
 while exposing a common storage protocol.
-A Resource Name Server (RNS) keeps the intuition that “a URI points to one thing” even when several handlers and intermediaries may be involved.
-Eiffel’s contracts turn HTTP’s implicit assumptions and status codes into explicit preconditions and postconditions,
+The =DNS= class keeps the intuition that "a URI points to one thing" even when several handlers and intermediaries may be involved.
+Eiffel's contracts turn HTTP's implicit assumptions and status codes into explicit preconditions and postconditions,
 so protocol violations become contract failures instead of ad-hoc error codes.
 
 From an “analysis plus delta” perspective, HTTPico confirms much of Weiher’s original insight and adds a different angle.

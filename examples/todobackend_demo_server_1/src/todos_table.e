@@ -2,7 +2,7 @@ note
 	description: "Singleton storage for TODO items"
 
 once class
-	TODO_STORAGE
+	TODOS_TABLE
 
 inherit
 PICO_TABLE[TODO_ITEM]

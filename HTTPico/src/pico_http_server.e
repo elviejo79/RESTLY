@@ -17,18 +17,14 @@ inherit
 
 feature {NONE} -- Initialization
 
-	make (a_storage: like storage; a_converter:PICO_CONVERTER[R,S])
+	make (a_storage: like storage)
 		do
-      storage := a_storage
-         converter := a_converter
+			storage := a_storage
 		end
 
-feature
-   converter: PICO_CONVERTER[R,S]
-   
 feature {NONE} -- Fields
 
-	storage: PICO_TABLE[S]
+	storage: PICO_MAPPER [R, S]
 
 	id_parameter_name: STRING = "id"
 
@@ -72,12 +68,21 @@ feature -- verbs like PICO_REQUEST_VERBS but all of them return messages;
 feature
 	do_post (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- POST /resource - create new resource
-		deferred
+		do
+			storage.collection_extend (extract_json (req))
+			check attached storage.last_inserted_key as last_id then
+				Result := json_ok (storage.item (last_id))
+			end
 		end
 
 	do_put (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- PUT /resource/{id} - replace entire resource
-		deferred
+		local
+			id_key: PATH_PICO
+		do
+			id_key := extract_id (req)
+			storage.force (extract_json (req), id_key)
+			Result := json_ok (storage.item (id_key))
 		end
 
     do_delete (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -101,14 +106,16 @@ feature
 		deferred
 		end
 
-   do_get (req: WSF_REQUEST ): WSF_JSON_RESPONSE
+	do_get (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- GET /resource/{id} - retrieve single resource
 		do
-         Result := json_ok (converter.representation (storage [extract_id (req)]))
-    end
+			Result := json_ok (storage [extract_id (req)])
+		end
 
 	do_get_all (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- GET /resources - retrieve entire collection
-		deferred
+		do
+			Result := json_ok (all_items)
 		end
 
     do_head (req: WSF_REQUEST ): WSF_JSON_RESPONSE
@@ -150,14 +157,16 @@ feature {NONE} -- Small helpers
 			Result := {WSF_JSON_RESPONSE}.ok.with_body (obj.representation)
 		end
 
-   all_items: JSON_ARRAY
-         -- Internal helper to collect all stored items as JSON values
-      do
-         create Result.make_empty
-         across storage as c loop
-            Result.extend (converter.representation (c.item))
-         end
-      end
+	all_items: JSON_ARRAY
+			-- Internal helper to collect all stored items as JSON values
+		do
+			create Result.make_empty
+			across storage.all_keys as key_cursor loop
+				if attached {JSON_VALUE} storage.item (key_cursor.item) as json_val then
+					Result.extend (json_val)
+				end
+			end
+		end
 
    is_patch_request (req: WSF_REQUEST): BOOLEAN
          -- Is `req` using the PATCH method?

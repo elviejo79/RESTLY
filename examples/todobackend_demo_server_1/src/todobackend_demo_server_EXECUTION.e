@@ -24,7 +24,7 @@ create
 
 feature {NONE} -- Initialization
 
-	my_todos: TODO_STORAGE
+	todos_table: TODOS_TABLE
 		once
 			create Result.make_default
 		end
@@ -54,7 +54,7 @@ feature -- Router
 			converter: TODO_ITEM_CONVERTER
 		do
 			create converter.make
-			create todo_router.make (my_todos, converter)
+			create todo_router.make (converter)
 
 				-- Main handler: allow specific methods on /todos and /todos/{id}
 			map_uri_template ("/todos{/id}", todo_router, methods_GET_POST_PUT_DELETE_PATCH)
