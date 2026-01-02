@@ -1,7 +1,7 @@
 #!/usr/bin/env nu
 # Simple sequential Todo-Backend API test script
 
-let API_ROOT = if ($env | get --ignore-errors ARGS | default [] | length) > 0 {
+let API_ROOT = if ($env | get --optional ARGS | default [] | length) > 0 {
     $env.ARGS.0
 } else {
     "http://localhost:8080/todos/"
