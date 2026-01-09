@@ -1,21 +1,37 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="HTTPico3" uuid="FF8259F5-0EE7-4D9E-9611-E8D6CD2ED7B0">
-	<target name="HTTPico3">
-		<root feature="make" class="APPLICATION"/>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="httpico3" uuid="FF8259F5-0EE7-4D9E-9611-E8D6CD2ED7B0" readonly="false" library_target="library">
+	<description>HTTPico3 library for composable REST-inspired systems</description>
+	<target name="base" abstract="true">
+		<description>Base configuration for all HTTPico3 targets</description>
 		<file_rule>
+			<exclude>/CVS$</exclude>
 			<exclude>/EIFGENs$</exclude>
+			<exclude>/\.git$</exclude>
+			<exclude>/\.svn$</exclude>
 			<exclude>/\..*$</exclude>
 		</file_rule>
 		<option warning="warning">
 			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
 		</option>
-		<setting name="console_application" value="true"/>
+		<setting name="total_order_on_reals" value="true"/>
+		<setting name="dead_code_removal" value="feature"/>
 		<library name="base" location="$ISE_LIBRARY/library/base/base.ecf"/>
 		<library name="json" location="$ISE_LIBRARY/contrib/library/text/parser/json/library/json.ecf">
 			<renaming old_name="JSON_OBJECT" new_name="EJSON_JSON_OBJECT"/>
 		</library>
 		<library name="uri" location="$ISE_LIBRARY/library/text/uri/uri.ecf"/>
-	<library name="time" location="$ISE_LIBRARY/library/time/time.ecf"/>
-		<cluster name="httpico3" location=".\" recursive="true"/>
+		<library name="time" location="$ISE_LIBRARY/library/time/time.ecf"/>
+		<cluster name="src" location="src\" recursive="true"/>
+		<cluster name="tests" location="tests\" recursive="true"/>
+	</target>
+	<target name="library" extends="base">
+		<description>HTTPico3 library for composable REST-inspired systems</description>
+	</target>
+	<target name="example_cli" extends="base">
+		<description>HTTPico3 CLI example application</description>
+		<root class="APPLICATION" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<setting name="executable_name" value="httpico3_example"/>
+		<cluster name="example_cli" location="examples\cli\" recursive="true"/>
 	</target>
 </system>
