@@ -17,63 +17,63 @@
               "children": [
                 {
                   "gnx": "agarciafdz.20260103180500.1",
-                  "vh": "@clean ../HTTPico3/convertible_with.e"
+                  "vh": "@clean ../HTTPico3/src/convertible_with.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103230651.1",
-                  "vh": "@clean ../HTTPico3/convertible_with_json_value.e"
+                  "vh": "@clean ../HTTPico3/src/convertible_with_json_value.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103230716.1",
-                  "vh": "@clean ../HTTPico3/convertible_with_string_32.e"
+                  "vh": "@clean ../HTTPico3/src/convertible_with_string_32.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103183802.1",
-                  "vh": "@clean ../HTTPico3/todo_item.e"
+                  "vh": "@clean ../HTTPico3/examples/cli/todo_item.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103184114.1",
-                  "vh": "@clean ../HTTPico3/todo_item_convertible.e"
+                  "vh": "@clean ../HTTPico3/examples/cli/todo_item_convertible.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103234505.1",
-                  "vh": "@clean ../HTTPico3/patchable.e"
+                  "vh": "@clean ../HTTPico3/src/patchable.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103223916.1",
-                  "vh": "@clean ../HTTPico3/todo_item_patchable.e"
+                  "vh": "@clean ../HTTPico3/examples/cli/todo_item_patchable.e"
                 },
                 {
                   "gnx": "agarciafdz.20260104002324.1",
-                  "vh": "@clean ../HTTPico3/pico_request_methods_unconstrained.e"
+                  "vh": "@clean ../HTTPico3/src/pico_request_methods_unconstrained.e"
                 },
                 {
                   "gnx": "agarciafdz.20260104003117.1",
-                  "vh": "@clean ../HTTPico3/pico_request_methods.e"
+                  "vh": "@clean ../HTTPico3/src/pico_request_methods.e"
                 },
                 {
                   "gnx": "agarciafdz.20260105181829.1",
-                  "vh": "@clean ../HTTPico3/pico_path_table_unconstrained.e"
+                  "vh": "@clean ../HTTPico3/src/pico_path_table_unconstrained.e"
                 },
                 {
                   "gnx": "agarciafdz.20260104003302.1",
-                  "vh": "@clean ../HTTPico3/pico_path_table.e"
+                  "vh": "@clean ../HTTPico3/src/pico_path_table.e"
                 },
                 {
                   "gnx": "agarciafdz.20260106222902.1",
-                  "vh": "@clean ../HTTPico3/pico_converter.e"
+                  "vh": "@clean ../HTTPico3/src/pico_converter.e"
                 },
                 {
                   "gnx": "agarciafdz.20260105145115.1",
-                  "vh": "@clean ../HTTPico3/pico_forward_converter.e"
+                  "vh": "@clean ../HTTPico3/src/pico_forward_converter.e"
                 },
                 {
                   "gnx": "agarciafdz.20260105145728.1",
-                  "vh": "@clean ../HTTPico3/pico_backward_converter.e"
+                  "vh": "@clean ../HTTPico3/src/pico_backward_converter.e"
                 },
                 {
                   "gnx": "agarciafdz.20260103193205.1",
-                  "vh": "@auto ../HTTPico3/application.e"
+                  "vh": "@auto ../HTTPico3/examples/cli/application.e"
                 },
                 {
                   "gnx": "agarciafdz.20260109000623.1",
@@ -1618,46 +1618,46 @@
   },
   "uas": {
     "agarciafdz.20260103180500.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260103230651.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260103230716.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260103183802.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260103184114.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9644904
     },
     "agarciafdz.20260103234505.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260103223916.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9644904
     },
     "agarciafdz.20260104002324.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260104003117.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260105181829.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260104003302.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260106222902.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260105145115.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20260105145728.1": {
-      "_mod_time": 1767986353.273054
+      "_mod_time": 1767996759.9604905
     },
     "agarciafdz.20251024144157.1": {
       "annotate": {

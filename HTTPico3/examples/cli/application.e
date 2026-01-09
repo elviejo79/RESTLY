@@ -13,7 +13,7 @@ feature -- Initialization
            test_passtrough_combinator
            test_backward_converter
         end
-                                         
+                                             
     test_basic_conversion
         local
             convertible_todo: TODO_ITEM_CONVERTIBLE
@@ -40,16 +40,14 @@ feature -- Initialization
         local
             patchable_todo: TODO_ITEM_PATCHABLE
             new_title: STRING_32
-            maybe_int : detachable INTEGER_REF
-            maybe_bool : detachable BOOLEAN_REF
         do
             new_title := current_time_string
-                                            
+                                                
             create patchable_todo.make_from_patch (test_patch)
             print ("%N%NThis is the patchable_todo made only with title %N")
             print (patchable_todo.to_string_32)
             print ("%N%N")
-                                            
+                                                
             check
                 patchable_todo.title ~ new_title
             end
@@ -67,7 +65,7 @@ feature -- Initialization
             end
 
             todo_list.wipe_out
-                                            
+                                                
             check
                 todo_list.is_empty
             end
@@ -91,7 +89,7 @@ feature -- Initialization
                 json_todo_list,
                 agent l_dummy.new_from_json_value,
                 agent l_dummy.new_to_json_value)
-                                            
+                                                
             facade_todo_list.force(todo_item,l_path_pico)
             print ("%N Our goal is to operate only with TODO_ITEM objects but what jet's stored are json_values %N")
             print ("%N facade_todo_list[/1]")
@@ -120,8 +118,8 @@ feature -- Initialization
                 agent l_dummy.new_to_json_value,
                 agent l_dummy.new_from_json_value
                 )
-                            
-                                    
+                                
+                                        
             print ("%N%N # TODO_BACKWARD_CONVERTR")
             print ("%N Our goal is to operate only with JSON_OBJECTS objects but what jet's stored are TODO_ITEM %N")
 
