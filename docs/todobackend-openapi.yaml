@@ -1,0 +1,344 @@
+openapi: 3.0.3
+info:
+  title: Todo Backend API
+  description: |
+    A simple todo list API conforming to the Todo-Backend specification.
+
+    This API supports creating, reading, updating, and deleting todo items.
+    All endpoints support CORS with wildcard origin for cross-domain access.
+  version: 1.0.0
+  contact:
+    name: Todo Backend
+    url: https://todobackend.com
+
+servers:
+  - url: http://localhost:8080/todos/
+    description: Local development server
+
+tags:
+  - name: todos
+    description: Todo item operations
+
+paths:
+  /:
+    get:
+      tags:
+        - todos
+      summary: Get all todos
+      description: Returns a list of all todo items
+      operationId: linear_representation
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TodoItem'
+              examples:
+                emptyList:
+                  summary: Empty todo list
+                  value: []
+                withTodos:
+                  summary: List with todos
+                  value:
+                    - id: "1"
+                      url: "http://localhost:8080/todos/1"
+                      title: "Walk the dog"
+                      completed: false
+                      order: 0
+                    - id: "2"
+                      url: "http://localhost:8080/todos/2"
+                      title: "Buy groceries"
+                      completed: true
+                      order: 1
+
+    post:
+      tags:
+        - todos
+      summary: Create a new todo
+      description: Creates a new todo item and returns it with server-generated id and url
+      operationId: extend_with_incomplete
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoItemInput'
+            examples:
+              simple:
+                summary: Simple todo
+                value:
+                  title: "Walk the dog"
+              withOrder:
+                summary: Todo with order
+                value:
+                  title: "Important task"
+                  order: 523
+              withCompleted:
+                summary: Todo already completed
+                value:
+                  title: "Already done"
+                  completed: true
+      responses:
+        '200':
+          description: Todo created successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoItem'
+              example:
+                id: "1"
+                url: "http://localhost:8080/todos/1"
+                title: "Walk the dog"
+                completed: false
+                order: 0
+
+    delete:
+      tags:
+        - todos
+      summary: Delete all todos
+      description: Deletes all todo items from the list
+      operationId: wipe_out
+      responses:
+        '204':
+          description: All todos deleted successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+
+    options:
+      tags:
+        - todos
+      summary: CORS preflight
+      description: Handles CORS preflight requests for the todos collection
+      operationId: todosOptions
+      responses:
+        '200':
+          description: CORS headers
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+                example: "GET, POST, DELETE, OPTIONS"
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+                example: "Content-Type"
+
+  /{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: The unique identifier of the todo item
+        schema:
+          type: string
+        example: "1"
+
+    get:
+      tags:
+        - todos
+      summary: Get a specific todo
+      description: Returns a single todo item by its ID
+      operationId: item(key)
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoItem'
+              example:
+                id: "1"
+                url: "http://localhost:8080/todos/1"
+                title: "Walk the dog"
+                completed: false
+                order: 0
+        '404':
+          description: Todo not found
+
+    patch:
+      tags:
+        - todos
+      summary: Update a todo
+      description: |
+        Partially updates a todo item. Only the fields provided in the request body will be updated.
+        Returns the updated todo item.
+      operationId: patch(incomplete_data,key)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoItemPatch'
+            examples:
+              updateTitle:
+                summary: Update title
+                value:
+                  title: "Bathe the cat"
+              updateCompleted:
+                summary: Mark as completed
+                value:
+                  completed: true
+              updateOrder:
+                summary: Change order
+                value:
+                  order: 95
+              updateMultiple:
+                summary: Update multiple fields
+                value:
+                  title: "Changed title"
+                  completed: true
+                  order: 10
+      responses:
+        '200':
+          description: Todo updated successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoItem'
+              example:
+                id: "1"
+                url: "http://localhost:8080/todos/1"
+                title: "Bathe the cat"
+                completed: true
+                order: 10
+        '404':
+          description: Todo not found
+
+    delete:
+      tags:
+        - todos
+      summary: Delete a todo
+      description: Deletes a specific todo item by its ID
+      operationId: remove(key)
+      responses:
+        '204':
+          description: Todo deleted successfully
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+        '404':
+          description: Todo not found
+
+    options:
+      tags:
+        - todos
+      summary: CORS preflight for specific todo
+      description: Handles CORS preflight requests for a specific todo item
+      operationId: todoItemOptions
+      responses:
+        '200':
+          description: CORS headers
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+                example: "*"
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+                example: "GET, PATCH, DELETE, OPTIONS"
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+                example: "Content-Type"
+
+components:
+  schemas:
+    TodoItem:
+      type: object
+      required:
+        - id
+        - url
+        - title
+        - completed
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the todo item (server-generated)
+          example: "1"
+        url:
+          type: string
+          format: uri
+          description: URL to access this specific todo item (server-generated)
+          example: "http://localhost:8080/todos/1"
+        title:
+          type: string
+          description: The todo item's title/description
+          example: "Walk the dog"
+        completed:
+          type: boolean
+          description: Whether the todo item is completed
+          default: false
+          example: false
+        order:
+          type: integer
+          description: Optional field to track the order/priority of todos
+          example: 0
+
+    TodoItemInput:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: The todo item's title/description
+          example: "Walk the dog"
+        completed:
+          type: boolean
+          description: Whether the todo item is completed
+          default: false
+          example: false
+        order:
+          type: integer
+          description: Optional field to track the order/priority of todos
+          example: 0
+
+    TodoItemPatch:
+      type: object
+      description: Partial update - all fields are optional
+      properties:
+        title:
+          type: string
+          description: The todo item's title/description
+          example: "Bathe the cat"
+        completed:
+          type: boolean
+          description: Whether the todo item is completed
+          example: true
+        order:
+          type: integer
+          description: The order/priority of this todo
+          example: 95

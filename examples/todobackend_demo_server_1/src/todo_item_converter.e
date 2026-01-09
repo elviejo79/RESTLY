@@ -48,7 +48,11 @@ feature -- Conversion
 
 			if attached {TODO_ITEM} serializer.from_json_string (json_string, {TODO_ITEM}) as l_item then
 				Result := l_item
-				-- Note: id will be set later based on storage key from PICO_TABLE
+				-- Generate id if not provided in JSON
+				if not attached Result.id or else Result.id.is_empty then
+					Result.id_counter.put (Result.id_counter.item + 1)
+					Result.set_id (Result.id_counter.item.out)
+				end
 			else
 				create Result.make_empty
 			end
@@ -66,11 +70,12 @@ feature -- Conversion
 				create parser.make_with_string (json_string)
 				parser.parse_content
 				if attached {JSON_OBJECT} parser.parsed_json_value as json_val then
-					-- Add url field computed from base_url and id
+					-- Add url field computed from base_url and id (always present even if id is empty/null)
+					url_value := base_url
 					if attached a_store.id as item_id and then not item_id.is_empty then
 						url_value := base_url + item_id
-						json_val.put_string (url_value, "url")
 					end
+					json_val.put_string (url_value, "url")
 					Result := json_val
 				else
 					create {JSON_OBJECT} Result.make_with_capacity (0)
@@ -78,6 +83,9 @@ feature -- Conversion
 			else
 				create {JSON_OBJECT} Result.make_with_capacity (0)
 			end
+		ensure then
+			id_not_null: attached {JSON_OBJECT} Result as obj implies (attached obj.item ("id") as id_val and then not id_val.is_null)
+			url_present: attached {JSON_OBJECT} Result as obj implies (attached {JSON_STRING} obj.item ("url") as url_str and then not url_str.item.is_empty)
 		end
 
 	merge_update (partial_data: JSON_VALUE; key: PATH_PICO)

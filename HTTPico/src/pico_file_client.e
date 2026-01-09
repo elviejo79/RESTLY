@@ -148,6 +148,26 @@ feature -- Helpers
 			end
 		end
 
+	all_keys: ITERABLE [PATH_PICO]
+			-- All keys (file names) in this directory
+		local
+			keys_list: ARRAYED_LIST [PATH_PICO]
+			entry_path: detachable PATH
+			entry_name: STRING_8
+		do
+			create keys_list.make (10)
+			open_read
+			across keys as k loop
+				entry_path := k.item.entry
+				if attached entry_path and then not entry_path.name.starts_with (".") then
+					entry_name := entry_path.name.to_string_8
+					keys_list.extend (create {PATH_PICO}.make_from_string (entry_name))
+				end
+			end
+			close
+			Result := keys_list
+		end
+
 feature {NONE} -- Implementation
 
 	root: FILE_URL

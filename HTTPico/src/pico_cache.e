@@ -16,7 +16,7 @@ note
 	revision: "$Revision$"
 
 class
-	PICO_CACHE [R, S]
+	PICO_CACHE [R -> attached ANY, S -> attached ANY]
 
 inherit
 	PICO_REQUEST_METHODS [R]
@@ -92,14 +92,14 @@ feature -- Commands (write-through pattern)
 	collection_extend (data: R)
 			-- Add to backend and cache the result (write-through)
 		do
-			-- Add to backend - convert R to S for persistence
-			backend.collection_extend (mapper.to_store (data))
+			-- Add to frontend first - it generates the key
+			frontend.collection_extend (data)
 
-			check attached backend.last_inserted_key as backend_key then
-				-- Cache in frontend - store rich object R directly
-				frontend.force (data, backend_key)
+			check attached frontend.last_inserted_key as frontend_key then
+				-- Persist to backend using the same key
+				backend.force (mapper.to_store (data), frontend_key)
 				-- Track insertion
-				last_inserted_key := backend_key
+				last_inserted_key := frontend_key
 			end
 		end
 
@@ -115,6 +115,48 @@ feature -- Commands (write-through pattern)
 			if backend.has_key (key) then
 				backend.remove (key)
 			end
+		end
+
+	wipe_out
+			-- Remove all items from both cache and backend
+		local
+			keys_to_remove: ARRAYED_LIST [PATH_PICO]
+		do
+			-- Clear frontend cache (if it has wipe_out)
+			if attached {HASH_TABLE [R, PATH_PICO]} frontend as ht then
+				ht.wipe_out
+			end
+
+			-- Clear backend (iterate through its keys)
+			create keys_to_remove.make (10)
+			across backend.all_keys as key_cursor loop
+				keys_to_remove.extend (key_cursor.item)
+			end
+			across keys_to_remove as key_cursor loop
+				backend.remove (key_cursor.item)
+			end
+		end
+
+feature -- Queries
+
+	all_keys: ITERABLE [PATH_PICO]
+			-- All keys from both frontend cache and backend storage
+		local
+			combined_keys: ARRAYED_SET [PATH_PICO]
+		do
+			create combined_keys.make (10)
+
+			-- Add keys from frontend cache
+			across frontend.all_keys as key_cursor loop
+				combined_keys.put (key_cursor.item)
+			end
+
+			-- Add keys from backend storage
+			across backend.all_keys as key_cursor loop
+				combined_keys.put (key_cursor.item)
+			end
+
+			Result := combined_keys
 		end
 
 feature -- Attributes

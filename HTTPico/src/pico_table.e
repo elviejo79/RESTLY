@@ -57,24 +57,28 @@ feature
       end
 
   next_available_key: PATH_PICO
-      -- Generate "/1", "/2", "/3", etc. based on max existing ID
+      -- Generate "1", "2", "3", etc. based on max existing ID
       local
           max_id: INTEGER
           id_str: STRING
       do
           max_id := 0
           across current_keys as k loop
-              -- Extract numeric part from PATH_PICO (e.g., "/123" → 123)
-              if attached k.item.out as path_str and then path_str.count > 1 then
-                  id_str := path_str.substring(2, path_str.count) -- skip "/"
+              -- Extract numeric part from PATH_PICO (e.g., "123" → 123)
+              if attached k.item.out as path_str and then path_str.count > 0 then
+                  id_str := path_str
                   if id_str.is_integer then
                       max_id := max_id.max(id_str.to_integer)
                   end
               end
           end
-          create Result.make_from_string("/" + (max_id + 1).out)
+          create Result.make_from_string((max_id + 1).out)
       end
 
-
+	all_keys: ITERABLE [PATH_PICO]
+			-- All keys in the table
+		do
+			Result := current_keys
+		end
 
 end

@@ -55,6 +55,21 @@ last_inserted_key: PATH_PICO
          Result := remote.count
          end
       end
+
+	all_keys: ITERABLE [PATH_PICO]
+			-- All keys from remote service
+		local
+			keys_list: ARRAYED_LIST [PATH_PICO]
+		do
+			create keys_list.make (0)
+			separate remote_api_service as remote do
+				across remote.all_keys as k loop
+					keys_list.extend (create {PATH_PICO}.make_from_string (k.item.out))
+				end
+			end
+			Result := keys_list
+		end
+
 feature {NONE}
 remote_api_service : separate API_SERVICE[PICO_JSON_OBJECT]
 		once ("PROCESS")

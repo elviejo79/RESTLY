@@ -24,9 +24,26 @@ create
 
 feature {NONE} -- Initialization
 
-	todos_table: TODOS_TABLE
+	todos_storage: PICO_CACHE [TODO_ITEM, STRING]
+			-- Cache with PICO_TABLE frontend and FILE_CLIENT backend
+		local
+			table_cache: PICO_TABLE [TODO_ITEM]
+			file_backend: PICO_FILE_CLIENT [STRING]
+			file_uri: FILE_URL
+			string_mapper: TODO_ITEM_STRING_MAPPER
 		once
-			create Result.make_default
+			-- Create in-memory cache (fast)
+			create table_cache.make (100)
+
+			-- Create file backend (slow, persistent)
+			create file_uri.make_from_string ("file:///tmp/todos-backend")
+			create file_backend.make (file_uri)
+
+			-- Create mapper for TODO_ITEM <-> STRING conversion
+			create string_mapper.make
+
+			-- Create cache with write-through + cache-aside pattern
+			create Result.make (table_cache, file_backend, string_mapper)
 		end
 
 
@@ -51,10 +68,14 @@ feature -- Router
 	setup_router
 		local
 			todo_router: TODO_HTTP_SERVER
-			converter: TODO_ITEM_CONVERTER
+			json_converter: TODO_ITEM_CONVERTER
 		do
-			create converter.make
-			create todo_router.make (converter)
+			-- Create JSON converter that wraps the cache
+			create json_converter.make
+			json_converter.set_store (todos_storage)
+
+			-- Create router with the converter
+			create todo_router.make (json_converter)
 
 				-- Main handler: allow specific methods on /todos and /todos/{id}
 			map_uri_template ("/todos{/id}", todo_router, methods_GET_POST_PUT_DELETE_PATCH)

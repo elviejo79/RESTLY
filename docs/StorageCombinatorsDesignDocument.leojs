@@ -8,6 +8,86 @@
       "vh": "Implementing Storage Combinators in Eiffel",
       "children": [
         {
+          "gnx": "agarciafdz.20260103182617.1",
+          "vh": "@chapter HTTPico3",
+          "children": [
+            {
+              "gnx": "agarciafdz.20260103182630.1",
+              "vh": "code files",
+              "children": [
+                {
+                  "gnx": "agarciafdz.20260103180500.1",
+                  "vh": "@clean ../HTTPico3/convertible_with.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103230651.1",
+                  "vh": "@clean ../HTTPico3/convertible_with_json_value.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103230716.1",
+                  "vh": "@clean ../HTTPico3/convertible_with_string_32.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103183802.1",
+                  "vh": "@clean ../HTTPico3/todo_item.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103184114.1",
+                  "vh": "@clean ../HTTPico3/todo_item_convertible.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103234505.1",
+                  "vh": "@clean ../HTTPico3/patchable.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103223916.1",
+                  "vh": "@clean ../HTTPico3/todo_item_patchable.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260104002324.1",
+                  "vh": "@clean ../HTTPico3/pico_request_methods_unconstrained.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260104003117.1",
+                  "vh": "@clean ../HTTPico3/pico_request_methods.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260105181829.1",
+                  "vh": "@clean ../HTTPico3/pico_path_table_unconstrained.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260104003302.1",
+                  "vh": "@clean ../HTTPico3/pico_path_table.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260106222902.1",
+                  "vh": "@clean ../HTTPico3/pico_converter.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260105145115.1",
+                  "vh": "@clean ../HTTPico3/pico_forward_converter.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260105145728.1",
+                  "vh": "@clean ../HTTPico3/pico_backward_converter.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260103193205.1",
+                  "vh": "@auto ../HTTPico3/application.e"
+                },
+                {
+                  "gnx": "agarciafdz.20260109000623.1",
+                  "vh": "@auto ../HTTPico3/pico_http_server.e"
+                }
+              ]
+            },
+            {
+              "gnx": "agarciafdz.20260103173722.1",
+              "vh": "@auto-org ./exports-from-leo/plan_version_2.org"
+            }
+          ]
+        },
+        {
           "gnx": "agarciafdz.20251206144122.1",
           "vh": "@chapter HTTPico Planning",
           "children": [
@@ -1356,9 +1436,33 @@
           ]
         }
       ]
+    },
+    {
+      "gnx": "agarciafdz.20260104233414.1",
+      "vh": "Imported Files",
+      "children": [
+        {
+          "gnx": "agarciafdz.20260104233414.2",
+          "vh": "@auto ../HTTPico3/application.e"
+        }
+      ]
     }
   ],
   "tnodes": {
+    "agarciafdz.20260103180500.1": "deferred class CONVERTIBLE_WITH [G]\n-- note in the make claus of the heirs from_other must be part of the creation procedures.\n\nconvert\n\tmake_from_other ({G}),\n\tto_other: {G}\n\nfeature {NONE} -- initialization\n\tmake_from_other (other: G)\n\t\tdeferred\n\t\tend\n\nfeature -- converter\n\tto_other: G\n\t\tdeferred\n\t\tend\n\nend\n",
+    "agarciafdz.20260103230651.1": "deferred class CONVERTIBLE_WITH_JSON_VALUE\n\t-- Conversion support for JSON_VALUE\n\t-- Note: heirs must include make_from_json_value in their create clause\n\t-- and add conversion in their convert clause\n    \ninherit \n    ANY\n    undefine\n\t\t\tis_equal\n\t\tend\n        \nfeature {NONE} -- Initialization\n\n\tmake_from_json_value (jv: JSON_VALUE)\n\t\tdeferred\n\t\tend\n\nfeature -- Conversion\n\n\tto_json_value: JSON_VALUE\n\t\tdeferred\n\t\tend\n\nfeature  -- Static conversion\n\n\tnew_from_json_value (jv: JSON_VALUE): like Current\n\t\t-- A static factory of things like {Current} that can be called like {Current}.new_from_json_value()\n\t\t-- Note: This is deferred because we cannot create instances of deferred class\n\tdeferred\n\tend\n\n\tnew_to_json_value (me: like Current): JSON_VALUE\n\t\t-- A static factory of things like {Current} that can be called like {Current}.new_from_json_value()\n\tdo\n        Result := me.to_json_value\n\tend\n\n\nend\n",
+    "agarciafdz.20260103230716.1": "deferred class CONVERTIBLE_WITH_STRING_32\n\t-- Conversion support for STRING_32\n\t-- Note: heirs must include make_from_string_32 in their create clause\n\t-- and add conversion in their convert clause\nfeature {NONE} -- Initialization\n\n\tmake_from_string_32 (s: STRING_32)\n\t\tdeferred\n\t\tend\n\nfeature -- Conversion\n\n\tto_string_32: STRING_32\n\t\tdeferred\n\t\tend\n\nend\n",
+    "agarciafdz.20260103183802.1": "class TODO_ITEM\n\ninherit\n\tANY\n\t\tredefine\n\t\t\tis_equal\n\t\tend\n\ncreate\n\tmake_empty\n\nfeature {NONE} -- Initialization\n\n\tmake_empty\n\t\tdo\n\t\t\tcreate title.make_empty\n\t\t\tcompleted := False\n\t\t\torder := 0\n\t\t\tid := 0\n\t\tend\n\nfeature -- Access\n\tid: INTEGER\n\ttitle: STRING_32\n\tcompleted: BOOLEAN\n\torder: INTEGER\n\turl: URI\n\t\tattribute\n\t\t\tcreate Result.make_from_string (\"\")\n\t\tend\n\nfeature -- Comparison\n\n\tis_equal (other: like Current): BOOLEAN\n\t\t\t-- Is `other' equal to Current based on content?\n\t\tdo\n\t\t\tResult := id = other.id and then\n\t\t\t\t\t  title ~ other.title and then\n\t\t\t\t\t  completed = other.completed and then\n\t\t\t\t\t  order = other.order and then\n\t\t\t\t\t  url.string ~ other.url.string\n\t\tend\n\nend\n",
+    "agarciafdz.20260103184114.1": "class TODO_ITEM_CONVERTIBLE\n\ninherit\n\tTODO_ITEM\n\tCONVERTIBLE_WITH_JSON_VALUE\n\tCONVERTIBLE_WITH_STRING_32\n\t\tundefine\n\t\t\tis_equal\n\t\tend\n\ncreate\n\tmake_empty,\n\tmake_from_json_value,\n\tmake_from_string_32\n\nconvert\n\tmake_from_json_value ({JSON_VALUE}),\n\tmake_from_string_32 ({STRING_32}),\n\tto_json_value: {JSON_VALUE},\n\tto_string_32: {STRING_32}\n\n   \nfeature -- convertible_with json_value\n\tto_json_value: JSON_VALUE\n\t\tlocal\n\t\t\tobj: EJSON_JSON_OBJECT\n\t\tdo\n\t\t\tcreate obj.make_with_capacity (5)\n\t\t\tobj.put_integer (id, \"id\")\n\t\t\tobj.put_string (title, \"title\")\n\t\t\tobj.put_boolean (completed, \"completed\")\n\t\t\tobj.put_integer (order, \"order\")\n\t\t\tobj.put_string (url.string, \"url\")\n\t\t\tResult := obj\n\t\tend\n\n\tmake_from_json_value (jv: JSON_VALUE)\n\t\tdo\n\t\t\tmake_empty\n\t\t\tif attached {EJSON_JSON_OBJECT} jv as obj then\n\t\t\t\tif attached {JSON_STRING} obj.item (\"title\") as t then\n\t\t\t\t\ttitle := t.unescaped_string_32\n\t\t\t\tend\n\t\t\t\tif attached {JSON_BOOLEAN} obj.item (\"completed\") as c then\n\t\t\t\t\tcompleted := c.item\n\t\t\t\tend\n\t\t\t\tif attached {JSON_NUMBER} obj.item (\"order\") as o then\n\t\t\t\t\torder := o.integer_64_item.to_integer\n\t\t\t\tend\n\t\t\t\tif attached {JSON_NUMBER} obj.item (\"id\") as i then\n\t\t\t\t\tid := i.integer_64_item.to_integer\n\t\t\t\tend\n\t\t\tend\n\t\tend\n\n\tfrom_json_value (jv: JSON_VALUE): TODO_ITEM_CONVERTIBLE\n\t\t\t-- Function version that returns a new instance\n\t\tdo\n\t\t\tcreate Result.make_from_json_value (jv)\n\t\tend\n\n\tnew_from_json_value (jv: JSON_VALUE): like Current\n\t\t\t-- Static factory method\n\t\tdo\n\t\t\tcreate Result.make_from_json_value (jv)\n\t\tend\n\n\nfeature -- convertible_with string_32\n\tto_string_32: STRING_32\n\t\tdo\n\t\t\tResult := to_json_value.representation\n\t\tend\n\tmake_from_string_32 (other: STRING_32)\n\t\tlocal\n\t\t\tparser: JSON_PARSER\n\t\tdo\n\t\t\tcreate parser.make_with_string (other.to_string_8)\n\t\t\tparser.parse_content\n\t\t\tcheck parser.is_valid and then attached parser.parsed_json_value as jv then\n\t\t\t\tmake_from_json_value (jv)\n\t\t\tend\n\t\tend\n\n\tfrom_string_32 (other: STRING_32): TODO_ITEM_CONVERTIBLE\n\t\t\t-- Function version that returns a new instance\n\t\tdo\n\t\t\tcreate Result.make_from_string_32 (other)\n\t\tend\n\nend\n",
+    "agarciafdz.20260103234505.1": "deferred class PATCHABLE\n\nfeature -- Access\n\n\tpatch_fields: ARRAY[STRING]\n\t\tdeferred\n\t\tend\n\nfeature -- Initialization\n\n\tmake_empty\n\t\tdeferred\n\t\tend\n\n\tmake_from_patch (a_patch_list: HASH_TABLE[detachable ANY, STRING])\n\t\tlocal\n\t\t\tl_value: detachable ANY\n\t\tdo\n\t\t\tmake_empty\n\t\t\tfrom\n\t\t\t\ta_patch_list.start\n\t\t\tuntil\n\t\t\t\ta_patch_list.after\n\t\t\tloop\n\t\t\t\tl_value := a_patch_list.item_for_iteration\n\t\t\t\tif attached l_value as v then\n\t\t\t\t\tfield_setter (v, a_patch_list.key_for_iteration)\n\t\t\t\tend\n\t\t\t\ta_patch_list.forth\n\t\t\tend\n\t\tend\n\n\tupdate_from_patch (a_patch_list: HASH_TABLE[detachable ANY, STRING])\n\t\tlocal\n\t\t\tl_value: detachable ANY\n\t\tdo\n\t\t\tfrom\n\t\t\t\ta_patch_list.start\n\t\t\tuntil\n\t\t\t\ta_patch_list.after\n\t\t\tloop\n\t\t\t\tl_value := a_patch_list.item_for_iteration\n\t\t\t\tif attached l_value as v then\n\t\t\t\t\tfield_setter (v, a_patch_list.key_for_iteration)\n\t\t\t\tend\n\t\t\t\ta_patch_list.forth\n\t\t\tend\n\t\tend\n\nfeature {NONE} -- Implementation\n\n\tfield_setter (a_value: ANY; a_key: STRING)\n\t\t\t-- Set field identified by `a_key` to `a_value`\n\t\tdeferred\n\t\tend\n\nend\n",
+    "agarciafdz.20260103223916.1": "class TODO_ITEM_PATCHABLE\n\ninherit\n\tTODO_ITEM_CONVERTIBLE\n\tPATCHABLE\n\t\tundefine\n\t\t\tis_equal\n\t\tend\n\ncreate\n\tmake_empty,\n\tmake_from_json_value,\n\tmake_from_string_32,\n\tmake_from_patch\n\nconvert\n\tmake_from_json_value ({JSON_VALUE}),\n\tmake_from_string_32 ({STRING_32}),\n\tto_json_value: {JSON_VALUE},\n\tto_string_32: {STRING_32}\n\nfeature -- Access\n\n\tpatch_fields: ARRAY[STRING]\n\t\tonce\n\t\t\tResult := <<\"title\", \"completed\", \"order\">>\n\t\tend\n\nfeature {NONE} -- Implementation\n\n\tfield_setter (a_value: ANY; a_key: STRING)\n\t\t\t-- Set field identified by `a_key` to `a_value`\n\t\tdo\n\t\t\tif a_key.same_string (\"title\") then\n\t\t\t\tif attached {STRING_32} a_value as l_title then\n\t\t\t\t\ttitle := l_title\n\t\t\t\tend\n\t\t\telseif a_key.same_string (\"completed\") then\n\t\t\t\tif attached {BOOLEAN_REF} a_value as l_completed then\n\t\t\t\t\tcompleted := l_completed.item\n\t\t\t\tend\n\t\t\telseif a_key.same_string (\"order\") then\n\t\t\t\tif attached {INTEGER_REF} a_value as l_order then\n\t\t\t\t\torder := l_order.item\n\t\t\t\tend\n\t\t\tend\n\t\tend\n\nend\n",
+    "agarciafdz.20260104002324.1": "deferred class PICO_REQUEST_METHODS_UNCONSTRAINED[R]\n\nfeature -- Queries aka HTTP safe methods\n\n    has(key: PATH_PICO):BOOLEAN\n        -- equivalent of http head /{key}\n        deferred\n        end\n        \n\titem alias \"[]\" (key: PATH_PICO): R assign force\n\t\t\t-- Equivalent to http GET /key\n\t\t\t-- Requests a resource representation; retrieves data only.\n\t\trequire\n\t\t\trequested_a_known_key_or_throw_404_not_found: has (key)\n        deferred\n        end\n    \n    linear_representation: LIST[R]\n      -- Equivalent to http GET /  to list all items in an array\n      deferred\n      end\n\n\tkey_for (data: R): PATH_PICO\n\t\t\t-- Returns the key for the given data item\n\t\tdeferred\n\t\tend\n\n\toptions: LIST[STRING]\n\t\t\t-- Returns supported HTTP methods/options\n\t\tdeferred\n\t\tend\n\n\nfeature -- Commands aka Http unsafe verbs\n   \n   extend (data: R)\n\t\t\t-- equivalent to http POST\n\t\t\t-- Submits data; may change state or cause side effects\n\t\tdeferred\n\t\tensure\n\t\t\tdata_stored_or_throw_510_not_extended: attached last_inserted_key\n\t\t\tkey_tracked: attached last_inserted_key as key implies has(key)\n\t\tend\n\n\tforce (data: R; key: PATH_PICO)\n\t\t\t-- Equivalent to http PUT\n\t\t\t-- Replaces the resource's representation with the request content.\n\t\t\t-- if key didn't exist it stil inserts it\n\t\tdeferred\n\t\tensure then\n\t\t\tdata_stored_or_throw_507_insuficient_storage: attached item (key)\n\t\t\tdata_stored_and_retrivabe_or_throw_500_internal_server_error:\n\t\t\t(data ~ item (key)) or else\n\t\t\t(if attached {JSON_VALUE} data as jv_data and attached {JSON_VALUE} item(key) as jv_item then\n\t\t\t\tjv_data.representation ~ jv_item.representation\n\t\t\telse\n\t\t\t\tFalse\n\t\t\tend)\n\t\tend\n\n\tremove (key: PATH_PICO)\n\t\t\t-- Equivalent to http DELETE /{key}\n\t\t\t-- Removes the specified resource.\n\t\tdeferred\n\t\tensure\n\t\t\ttruly_eliminated_or_throw_500_internal_server_error: not has(key)\n\t\tend\n\n   wipe_out\n   -- equivalent to http DELETE /\n   -- thi method is dangerous probably shouldn't export it most of \n-- the time.\n      deferred\n      end\n      \n      is_empty:BOOLEAN\n      deferred\n      end\n      \nfeature \n\n\textend_with_patch (a_patch: TABLE_ITERABLE [detachable ANY, STRING])\n\t\t\t-- Equivalent to http POST with PATCH data\n\t\t\t-- Creates a new resource using partial data from the patch\n\t\tdeferred\n\t\tensure\n\t\t\tdata_stored_or_throw_510_not_extended: attached last_inserted_key\n\t\t\tkey_tracked: attached last_inserted_key as key implies has(key)\n\t\tend\n\n\tpatch (a_patch: TABLE_ITERABLE [detachable ANY, STRING]; key: PATH_PICO)\n\t\t\t-- Equivalent to http PATCH /{key}\n\t\t\t-- Partially modifies the resource's representation\n\t\trequire\n\t\t\trequested_a_known_key_or_throw_404_not_found: has (key)\n\t\tdeferred\n\t\tend\n\n\nfeature -- helpers\n\tlast_inserted_key: PATH_PICO\n\t\t\t-- There is NO equivalent for this in http protocol.\n\t\t\t-- but is necessary to keep the Command / Query Separation principle in Eiffel\n            attribute\n                create Result.make_from_string(\"last_insert_id_default_value\")\n            end\n\nend\n",
+    "agarciafdz.20260104003117.1": "deferred class PICO_REQUEST_METHODS [R -> {PATCHABLE} create make_from_patch end]\n\ninherit\n\tPICO_REQUEST_METHODS_UNCONSTRAINED [R]\n\n\nend\n",
+    "agarciafdz.20260105181829.1": "class PICO_PATH_TABLE_UNCONSTRAINED [R]\n\ninherit\n\tPICO_REQUEST_METHODS_UNCONSTRAINED [R]\n\t\tundefine copy, is_equal\n\t\tend\n\tHASH_TABLE [R, PATH_PICO]\n\t\trename\n\t\t\textend as keyed_extend,\n\t\t\titem as hash_item\n\t\tend\n\ncreate\n\tmake\n\nfeature -- Queries\n\toptions: LIST [STRING]\n\t\tonce\n\t\t\tcreate {ARRAYED_LIST [STRING]} Result.make_from_array (<<\"HEAD\", \"GET\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\">>) end\n\n    item alias \"[]\" (key: PATH_PICO): R assign force\n\t\t\t-- Equivalent to http GET /key\n\t\t\t-- Requests a resource representation; retrieves data only.\n\t\tdo\n            check attached hash_item(key) as l_item then\n                Result := l_item\n            end\n        end\n\n\tkey_for (data: R): PATH_PICO\n\t\t\t-- Generate timestamp-based key in format: yyyymmdd_hhmmss\n\t\tlocal\n\t\t\tdt: DATE_TIME\n\t\tdo\n\t\t\tcreate dt.make_now\n\t\t\tcreate Result.make_from_string (dt.formatted_out (\"yyyy[0]mm[0]dd_[0]hh[0]mi[0]ss\"))\n\t\tend\n\n    \nfeature -- Commands\n\textend (data: R)\n\t\tdo\n\t\t\tlast_inserted_key := key_for (data)\n\t\t\tforce (data, last_inserted_key)\n\t\tend\n\n\textend_with_patch (a_patch: TABLE_ITERABLE [detachable ANY, STRING])\n\t\t\t-- Not supported for non-patchable types\n\t\tdo\n\t\t\t-- Cannot implement for arbitrary R without PATCHABLE constraint\n\t\t\tcheck False then end\n\t\tend\n\n\tpatch (a_patch: TABLE_ITERABLE [detachable ANY, STRING]; key: PATH_PICO)\n\t\t\t-- Not supported for non-patchable types\n\t\tdo\n\t\t\t-- Cannot implement for arbitrary R without PATCHABLE constraint\n\t\t\tcheck False then end\n\t\tend\n\n\nend\n",
+    "agarciafdz.20260104003302.1": "class PICO_PATH_TABLE [R -> {PATCHABLE} create make_from_patch end]\n\ninherit\n\tPICO_PATH_TABLE_UNCONSTRAINED [R]\n\t\tundefine copy, is_equal\n\t\tredefine patch, extend_with_patch\n\t\tend\n\tPICO_REQUEST_METHODS[R]\n\ncreate\n\tmake\n\nfeature -- Commands\n\n\textend_with_patch (a_patch: HASH_TABLE[detachable ANY, STRING])\n\t\tlocal\n\t\t\tl_rep: R\n\t\tdo\n\t\t\tcreate l_rep.make_from_patch (a_patch)\n\t\t\tlast_inserted_key := key_for (l_rep)\n\t\t\textend (l_rep)\n\t\tend\n\n\tpatch (a_patch: HASH_TABLE[detachable ANY, STRING]; key: PATH_PICO)\n\t\tlocal\n\t\t\tl_rep: R\n\t\tdo\n            l_rep := item(key)\n            l_rep.update_from_patch(a_patch)\n\t\t\tforce (l_rep, key)\n\t\t\tlast_inserted_key := key\n\t\tend\n\nend\n",
+    "agarciafdz.20260106222902.1": "deferred class PICO_CONVERTER [R, S, B -> {PICO_REQUEST_METHODS_UNCONSTRAINED[S]}]\n\t-- Base class for bidirectional converters between representation (R) and storage (S)\n\t-- Provides delegation pattern with automatic conversion between types\n\ninherit\n    PICO_REQUEST_METHODS_UNCONSTRAINED[R]\n    \nfeature -- Converters\n\n\tto_representation: FUNCTION [S, R]\n\t\t\t-- Function to convert from storage to representation\n\n\tto_storage: FUNCTION [R, S]\n\t\t\t-- Function to convert from representation to storage\n\nfeature -- Internal storage\n\n\tbackend: B\n\t\t\t-- Storage backend\n\nfeature -- Initialization\n\n\tmake(a_backend: like backend; a_to_representation: like to_representation; a_to_storage: like to_storage)\n\t\tdo\n\t\t\tbackend := a_backend\n\t\t\tto_representation := a_to_representation\n\t\t\tto_storage := a_to_storage\n\t\tend\n\nfeature -- Queries\n\n\thas (key: PATH_PICO): BOOLEAN\n\t\t\t-- Does backend have an item at `key'?\n\t\tdo\n\t\t\tResult := backend.has (key)\n\t\tend\n\n\titem alias \"[]\" (key: PATH_PICO): R assign force\n\t\t\t-- Item at `key', converted to representation\n\t\tdo\n\t\t\tcheck attached backend.item (key) as backend_item then\n\t\t\t\tResult := to_representation (backend_item)\n\t\t\tend\n\t\tend\n\n\tlinear_representation: LIST [R]\n\t\t\t-- Linear representation of all items\n\t\tlocal\n\t\t\tresult_list: ARRAYED_LIST [R]\n\t\tdo\n\t\t\t-- TODO: Implement proper conversion from backend storage to representation\n\t\t\t-- Currently has SCOOP-related issues with s_item.item access\n\t\t\tcreate result_list.make (0)\n\t\t\tResult := result_list\n\t\tend\n\n\toptions: LIST [STRING]\n\t\t\t-- Available HTTP options\n\t\tdo\n\t\t\tResult := backend.options\n\t\tend\n\nfeature -- Commands\n\n\textend (a_representation: R)\n\t\t\t-- Extend backend with representation, converting to storage\n\t\tlocal\n\t\t\tl_storage: S\n\t\tdo\n\t\t\tl_storage := to_storage (a_representation)\n\t\t\tbackend.extend (l_storage)\n\t\t\tlast_inserted_key := backend.last_inserted_key\n\t\tend\n\n\tforce (a_representation: R; key: PATH_PICO)\n\t\t\t-- Force representation at `key', converting to storage\n\t\tlocal\n\t\t\tl_storage: S\n\t\tdo\n\t\t\tl_storage := to_storage (a_representation)\n\t\t\tbackend.force (l_storage, key)\n\t\t\tlast_inserted_key := backend.last_inserted_key\n\t\tend\n\nfeature {NONE} -- Destructive operations\n\n\twipe_out\n\t\t\t-- Remove all items from backend\n\t\tdo\n\t\t\tbackend.wipe_out\n\t\tend\n\n\tremove (key: PATH_PICO)\n\t\t\t-- Remove item at `key'\n\t\tdo\n\t\t\tbackend.remove (key)\n\t\tend\n\nfeature -- State of the resource\n\n\tkey_for (a_representation: R): PATH_PICO\n\t\t\t-- Key for given representation\n\t\tdo\n\t\t\tResult := backend.key_for (to_storage (a_representation))\n\t\tend\n\nfeature -- Helpers\n\n\tis_empty: BOOLEAN\n\t\t\t-- Is backend empty?\n\t\tdo\n\t\t\tResult := backend.is_empty\n\t\tend\n\n\nend\n",
+    "agarciafdz.20260105145115.1": "class PICO_FORWARD_CONVERTER [R -> {PATCHABLE} create make_from_patch end, S]\n\t-- Converter where representation (R) is constrained to PATCHABLE\n\t-- Used when operating with PATCHABLE types that get stored as unconstrained types\n\t-- Example: R = TODO_ITEM_PATCHABLE, S = JSON_VALUE\n\ninherit\n\tPICO_CONVERTER [R, S, PICO_REQUEST_METHODS_UNCONSTRAINED[S]]\n\n\tPICO_REQUEST_METHODS[R]\n\ncreate\n\tmake\n\nfeature -- Internal storage\n\n\nfeature -- Commands with PATCHABLE constraint\n\n\textend_with_patch (a_patch: HASH_TABLE [detachable ANY, STRING])\n\t\t\t-- Create representation from patch, convert to storage, and extend backend\n\t\tlocal\n\t\t\tl_representation: R\n\t\t\tl_storage: S\n\t\tdo\n\t\t\tcreate l_representation.make_from_patch (a_patch)\n\t\t\tl_storage := to_storage (l_representation)\n\t\t\tbackend.extend (l_storage)\n\t\t\tlast_inserted_key := backend.last_inserted_key\n\t\tend\n\n\tpatch (a_patch: HASH_TABLE [detachable ANY, STRING]; key: PATH_PICO)\n\t\t\t-- Create representation from patch, convert to storage, and force to backend\n\t\tlocal\n\t\t\tl_representation: R\n\t\t\tl_storage: S\n\t\tdo\n\t\t\tcreate l_representation.make_from_patch (a_patch)\n\t\t\tl_storage := to_storage (l_representation)\n\t\t\tbackend.force (l_storage, key)\n\t\tend\n\n\nend\n",
+    "agarciafdz.20260105145728.1": "class PICO_BACKWARD_CONVERTER [R, S -> {PATCHABLE} create make_from_patch end]\n\t-- Converter where storage (S) is constrained to PATCHABLE\n\t-- Used when operating with unconstrained types (e.g., JSON) that get stored as PATCHABLE types\n\t-- Example: R = EJSON_JSON_OBJECT, S = TODO_ITEM_PATCHABLE\n\ninherit\n    PICO_CONVERTER [R, S, PICO_REQUEST_METHODS[S]]\n\ncreate\n\tmake\n\n\nfeature -- Commands with PATCHABLE constraint\n\n\textend_with_patch (a_patch: TABLE_ITERABLE [detachable ANY, STRING])\n\t\t\t-- Type-check representation and delegate patch to backend\n\t\tdo\n\t\t\tbackend.extend_with_patch (a_patch)\n\t\t\tlast_inserted_key := backend.last_inserted_key\n\t\tend\n\n\tpatch (a_patch: TABLE_ITERABLE [detachable ANY, STRING]; key: PATH_PICO)\n\t\t\t-- Type-check representation and delegate patch to backend\n\t\tdo\n\t\t\tbackend.patch (a_patch, key)\n\t\tend\n\nend\n",
     "agarciafdz.20251107231447.1": "this article has a good review of all the many isuses with URLS.\n\nthe two thinks that are important to me:\none a not all schemes use :// some use only :\nand two web browsers don't send the #fragment part.\nand Apache even rejects the conection if it receives it.\n\nhttps://www.netmeister.org/blog/urls.html",
     "agarciafdz.20251102131754.1": "I found this paper:\n\nFormalizing a Hirerchical File System by Wim H. Hesselnik and Muhammad Ikarm Lali.\n\nThat seems perfectly tailored, to the task of developing a FileSystem in Eiffel.\n\nI think I could do an exercise in transforming the paper to Eiffel with an AI assistant.\n\nThen I think I could make this tree as a generic interface,\nand then use it to communicate with \"real file system\"\n\nand then use the same interface to modify JSON documents,\ndoing it that way, I might be able to create an operational transformation for json documents.\nand xml documents and so on??",
     "agarciafdz.20251031224149.1": "\nroot:PRFIX_TREE_DIRECTORY\n\ncreate root.make(\"~/home/\")\n\nprint root(\"/\") -- should list all the files and directories inside ~/home/\n\nacross root(\"/agarciafdz\") as entry do  -- root(\"/agarciafdz\") should return an iterable\n   print entry --should list all the files and directories inside ~/home/agarciafdz \nend \n\nprint root [\"/agarciafdz/file.txt\"] --should print the contents of ~/home/agarciafdz/file.txt\n\nroot[\"/agarciafdz/file.txt\"] := \"this is the contents of the file\" --should save the string in the file.\nroot[\"/agarciafdz\"] := another_prefix_tree -- should set the contents to a subdirectory?\n\n\nser\u00eda bueno tomar la convensi\u00f3n de que operaci\u00f3nes en [] son para el individuo y operaciones en () son para la colecci\u00f3n.\nEn este directorio hasta los nombres de directorio tinen contenido... (es como el listado default).\n\nroot[\"/agarciafdz/file.txt\"] := \"este es el contenido del archivo file1.txt\"\nroot(\"/agarciafdz/file.txt\") -- regresa vac\u00edo porque () no tiene sub archivos ni subdirectorios.\n\nroot(\"/agarciafdz/\") -- regresa un iterable de todos los archivos y sub archivos en agarciafdz\nroot(\"/agarciafdz\") :=  subdirectorio  --es un error ya que eso ser\u00eda como reemplazar una colecc\u00edon completa por otra?\nroot(\"/agarciafdz\").mkdir(\"books\") -- crea el subdirectorio ~/home/agarciafdz/books\nroot(\"/agarciafdz\").mkdir(\"books\").mkdir(\"Eiffel\") -- crea el directorio ~/home/agarciafdz/books/Eiffel\nroot(\"/agarciafdz\").mkdir(\"/books/Eiffel\") -- crea el directorio ~/home/agarciafdz/Eiffel\nroot.mkdir(\"/agarciafdz/books/Eiffel\") -- crea el directorio ~/home/agarciafdz/Eiffel\nroot.ls --should return all the files an directories in ~/home\nroot.touch(\"file1.txt\") -- should create ~/home/file1.txt\nroot[\"file1.txt\"] := \"this are the contents of the file1.txt\"\nroot.mv(\"/agarciafdz\").to(\"/another\") -- means move the whole subtree inside /another? -- if it was a rename it should be called rename???\nroot.remove(\"/agarciafdz\") -- should fail until the directory is empty?? so it doesn'n have any children??\nroot[\"/agarciafdz\"].remove --should fail because \"/agarcia\" is a directory not a file???\n\nEn definitiva a\u00fan no s\u00e9 c\u00f3mo manejar los directorios como \u00e1rboles... sin que la interfaz sea completamente confusa.\n\n# Otra idea mantener la semantica sujeto verbo\n\ncreate root.make(\"~/home/\")\n\nroot[\"/agarciafdz\"].ls  -- a HASH_TABLE of Files and Directories\nroot[\"/agarciafdz\"].mkdir(\"/books\") -- make ~/agarciafdz/books\nroot[\"/agarciafdz/file1.txt\"] := \"este es el contenido de file1\" -- que pasaba si file1 no exist\u00eda??\nroot[\"/agarciafdz/\"].extend(\"file1.txt\") -- crea el archivo vac\u00edo \"file1.txt\" ??\n\n",
@@ -1513,6 +1617,48 @@
     "agarciafdz.20251021212132.1": "this one is the one that has the same interface with SEPARATE parameters.\n\nAnd has inside the storage... "
   },
   "uas": {
+    "agarciafdz.20260103180500.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103230651.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103230716.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103183802.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103184114.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103234505.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260103223916.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260104002324.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260104003117.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260105181829.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260104003302.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260106222902.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260105145115.1": {
+      "_mod_time": 1767985289.701629
+    },
+    "agarciafdz.20260105145728.1": {
+      "_mod_time": 1767985289.701629
+    },
     "agarciafdz.20251024144157.1": {
       "annotate": {
         "priority": 19,

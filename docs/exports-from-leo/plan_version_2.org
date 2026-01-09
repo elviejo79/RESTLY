@@ -1,0 +1,1016 @@
+# Created 2026-01-01
+#+OPTIONS: num:t H:10 ^:{}
+#+OPTIONS: html5-fancy:t
+#+TITLE: HTTPico: Shrinking HTTP architecture into Eiffel (an AOP implementation)
+#+DATE: <17 November 2025>
+#+AUTHOR: Alejandro Garcia
+#+language: en
+#+bibliography: references.bib
+#+html_head: <link rel="stylesheet" href="https://unpkg.com/latex.css/style.min.css" />
+#+html_doctype: html5
+#+html_mathjax: yes
+#+macro: impnote <<imp$1-destination>> [[imp$1-origin][↩ $1]]
+#+macro: impmark <<imp$1-origin>>^{[[imp$1-destination][obs:$1]]}
+
+
+We are going to create the next version of the HTTPico library hopefully
+more elegant.
+
+* Introduction
+Having worken the HTTPICO library since April of 2025
+I got fed-up with the fact that it still doesn't work.
+I even got Claude and Codex to help but with every new "help"
+they made the code a little worse and a littel more verbose.
+
+So I did what I  always do in this situations.
+Re-wrote it from scratch.
+But now with all the learning that I have from my previous attemps.
+
+In this new version my goals are:
+
++ Make the todobackend server as smoth as possible. With elegant brief code.
++ Focus on the conversion operations. That was always headache with my previous attempt.
++ Can handle PATCH operations with partial data. That is a common ocurrence that I didn't consider before.
+
+* 1st Goal Conversion
+First I need to make sure that implicit conversions work the way I imagine them.
+
+Let's create a deferred class that will make sure things can be converted.
+
+#+INCLUDE: "../../HTTPico2/src/convert_with.e" src eiffel
+** A Deferred class that says that things can be converted.
+This is what I wish I could say:
+
+#+INCLUDE: "../../HTTPico2/src/convert_with.e" src eiffel
+
+So inheritancence would be something like
+
+#+BEGIN_SRC
+
+class TODO_ITEM_CONVERTIBLE
+inherit
+    TODO_ITEM
+    CONVERTIBLE_WITH[JSON_VALUE]
+        rename
+            to_other as to_json_value
+            make_from_other as make_from_json_value
+        end
+    CONVERTIBLE_WITH[STRING_32]
+        rename
+            to_other as to_string_32
+            make_from_other as make_from_string_32
+        end
+
+create
+    make_default,
+    make_from_patch,
+    make_from_json_value,
+    make_from_string_32
+
+feature -- convertible_with json_value
+
+...
+...
+end
+
+#+END_EXAMPLE
+
+Unfortunately Eiffel doesn't allow multiple inheritance from the same class with generic types.
+So I had to create specilized classes:
+
+*** Specific conversion classes
+#+INCLUDE: "../../HTTPico3/src/convertible_with_json_value.e" src eiffel
+
+#+INCLUDE: "../../HTTPico3/src/convertible_with_string_32.e" src eiffel
+** A Standard data object class
+#+INCLUDE: "../../HTTPico2/src/todo_item.e" src eiffel
+** Now a Data Object Class that is convertible
+How would a TODO_ITEM that converts to json would look like?
+
+#+INCLUDE: "../../HTTPico2/src/todo_item_convertible.e" src eiffel
+** Now let's look at how this could should work
+This is an example tests
+
+#+INCLUDE: "../../HTTPico2/src/application.e" src eiffel
+*** To compile the application use
+#+BEGIN_SRC bash
+ec -batch -config ./httpico3.ecf -c_compile -stop
+./EIFGENs/httpico3/W_code/httpico3
+#+END_SRC
+
+and then to execute the program would use
+
+#+BEGIN_SRC bash
+./EIFGENs/httpico3/W_code/httpico3
+#+END_SRC
+
+the output would something like:
+
+#+BEGIN_EXAMPLE
+     This is the string representation of a todo      
+     {
+       "id": 0,
+       "title": "",
+       "completed": false,
+       "order": 0,
+       "url": ""
+     }
+     This is the json_value representation of a todo
+     {
+       "id": 0,
+       "title": "",
+       "completed": false,
+       "order": 0,
+       "url": ""
+     }
+
+#+END_EXAMPLE
+
+Perfect! The program executed successfully. It shows:
+  1. The string representation of a TODO_ITEM (converted via to_string_32)
+  2. The JSON_VALUE representation of a TODO_ITEM (converted via to_json_value)
+
+  make_default.
+* 2nd Goal PATCH behaivours
+** What does a patch mean?
+In HTTP the PATCH verb is used to express the idea that we are going to update *part* of a Resource.
+so by definition the patch must be something that can have variable parts
+in Eiffel the only data type that can vary in size is the TUPLE
+
+#+INCLUDE: "../../HTTPico3/patchable.e" src eiffel
+
+With this example you can see how I can create a new todo based on incomplete information
+
+#+BEGIN_EXAMPLE
+create patchable_todo.make_from_patch (
+            new_title, 
+            (if attached maybe_bool then maybe_bool else Void end) , 
+            maybe_int
+            )
+#+END_EXAMPLE
+
+*** test_patchable_todo
+    test_patchable_todo
+        local
+            patchable_todo: TODO_ITEM_PATCHABLE
+            new_title: STRING_32
+            maybe_int : detachable INTEGER_REF
+            maybe_bool : detachable BOOLEAN_REF
+        do
+            new_title := "This is the new title"
+            
+            create patchable_todo.make_from_patch (new_title, 
+            (if attached maybe_bool then maybe_bool else Void end) , 
+            maybe_int
+            )
+            print ("%N%NThis is the patchable_todo made only with title %N")
+            print (patchable_todo.to_string_32)
+            print ("%N%N")
+            
+            check
+                patchable_todo.title ~ new_title
+            end
+        end
+
+*** Example Output
+This creates a the following output
+
+#+BEGIN_EXAMPLE
+     This is the patchable_todo made only with title
+     {
+       "id": 0,
+       "title": "This is the new title",
+       "completed": false,
+       "order": 0,
+       "url": ""
+     }
+
+#+END_EXAMPLE
+* 3rd Goal Implement PICO_HASH_TABLE
+** Request Methods
+
+Now I want to define a class that creates the equivalent of HTTP methods
+but in Eiffel.
+
+It must be heavily inspired by HASH_TABLE
+
+#+INCLUDE: "../../HTTPico3/pico_request_methods_lax.e" src eiffel
+
+#+INCLUDE: "../../HTTPico3/pico_request_methods.e" src eiffel
+
+
+
+** First implementation of a PICO_HASH_TABLE
+
+{PICO HASH_TABLE} is a table that stores in memory the data and /must/
+implement the request_methods
+
+#+INCLUDE: "../../HTTPico3/pico_hash_table.e" src eiffel
+
+** test_hash_table
+    test_hash_table
+        local
+            todo_list: PICO_HASH_TABLE [TODO_ITEM_PATCHABLE]
+        do
+            create todo_list.make (10)
+
+            todo_list.extend_with_incomplete ("This is my first todo",Void, Void)
+            check
+                todo_list.count = 1
+            end
+
+            todo_list.wipe_out
+            
+            check
+                todo_list.is_empty
+            end
+        end
+
+end
+* Goal Implement a STORAGE_COMBINATOR
+Let's create a class that will let us convert data implicitly from one format to another.
+
+#+INCLUDE: "../../HTTPico3/pico_forward_converter.e" src eiffel
+** Now let's create the opposite
+#+INCLUDE: "../../HTTPico3/pico_backward_converter.e" src eiffel
+** Learnings 
+On the development of this part I had several learnings.
+
+If we see our system like this:
+
+ Client (outside our control) ---> System under control --> supplier (outside our control)
+ 
+ We need a component tha can take JSON or XML of which we don't have control and transform it in the kind of object we control.
+ 
+ And then on the supplier side we need to transform objects that we control. 
+ into things that we don't control like the filesystem.
+ 
+ Currently the objects that we control Are called PATCHABLE (because they implement a make_from_patch constructor)
+ 
+ and the Boundary for Suppliers is PICO_FORWARD_CONVERTER
+ and the Boundary for Clients is called PICO_BACKWARD_CONVERTER
+ I need to create another one like INTERNAL_CONVERTER for objects that are inside the system and we can control
+* Goal Implement a PICO_EWF_JSON_SERVER
+EWF is the Eiffel web framework
+
+It has Router (to link http request to handler.features) 
+I implement a handler for json objects
+
+```
+class PICO_EWF_ROUTER[R,S -> PATCHABLE]
+* In this case let's create file scheme to save text files
+:PROPERTIES:
+:CUSTOM_ID: in-this-case-lets-create-file-scheme-to-save-text-files
+:END:
+#+begin_src eiffel
+
+class
+    PICO_PLAIN_TEXT_FILE
+
+inherit
+    PICO_SCHEME_HANDLER [STRING_32]
+        undefine
+            has_item
+        redefine
+            can_connect,
+            base_uri
+        end
+
+    DIRECTORY
+        rename
+            entries as keys,
+            make as directory_make,
+            make_with_path as directory_make_with_path
+        export
+            {none} all
+        end
+
+create
+    make
+
+feature {NONE} -- Initialization
+
+    make (a_root: FILE_URL)
+            -- Initialize with URL
+        do
+            base_uri := a_root
+            root := a_root
+            directory_make_with_path (a_root.file_path)
+        end
+
+feature -- Attributes
+
+    base_uri: FILE_URL
+            -- Redefine to be more specific type
+
+    Valid_scheme: ARRAY[STRING_8]
+            -- This client handles file:// URLs
+        once
+            Result := << "file" >>
+            Result.compare_objects
+        end
+feature -- Queries aka HTTP safe verbs
+
+    can_connect (a_uri: FILE_URL): BOOLEAN
+            -- Can we connect to the directory at `a_uri`?
+            -- For FILE_SCHEME, this means the directory must exist.
+        local
+            dir: DIRECTORY
+        do
+            create dir.make_with_path (a_uri.file_path)
+            Result := dir.exists
+        end
+
+    has_key (key: PATH_PICO): BOOLEAN
+            -- Does file exist?
+        do
+            Result := has_entry (key.name)
+        end
+
+    item alias "[]" (key: PATH_PICO): STRING_32 assign force
+            -- Equivalent to HTTP GET: get file contents.
+        local
+            f: PLAIN_TEXT_FILE
+        do
+            create f.make_with_path (path.extended_path (key))
+            f.open_read
+            if f.count > 0  then
+                f.read_stream (f.count)
+                create Result.make_from_string(f.last_string.twin)
+            else
+                create Result.make_from_string("")
+            end
+            f.close
+        end
+
+  linear_representation: LIST [STRING_32]
+      local
+          result_list: ARRAYED_LIST [STRING_32]
+      do
+          create result_list.make (10)
+          across all_keys as k loop
+              result_list.extend (k.item.name.to_string_32)
+          end
+          Result := result_list
+      end
+
+feature -- Commands aka HTTP unsafe verbs
+
+    collection_extend (data: STRING_32)
+            -- Equivalent to HTTP POST.
+            -- Submits `data`; may change state or cause side effects.
+        local
+            l_key: PATH_PICO
+        do
+            l_key := new_post_key (data)
+            internal_write (l_key, data)
+            last_inserted_key_internal := l_key
+        end
+
+    force (data: STRING_32; key: PATH_PICO)
+            -- Equivalent to HTTP PUT.
+            -- Replaces the resource's representation with the request content.
+            -- If `key` didn't exist it inserts it.
+        do
+            internal_write (key, data)
+            last_inserted_key_internal := key
+        ensure then
+            data_stored_or_throw_507_insufficient_storage: item (key) /= Void
+        end
+
+    remove (key: PATH_PICO)
+            -- Equivalent to HTTP DELETE: remove specified resource.
+        local
+            f: PLAIN_TEXT_FILE
+        do
+            create f.make_with_path (path.extended_path (key))
+            if f.exists then
+                f.delete
+            end
+        end
+
+feature -- Helpers
+
+    last_inserted_key: PATH_PICO
+            -- Last key created/modified by POST or PUT.
+            -- No pure HTTP equivalent; needed for CQS in Eiffel.
+        do
+            check attached last_inserted_key_internal as k then
+                Result := k
+            end
+        end
+
+    has_item (data: STRING_32): BOOLEAN
+            -- Does any file in `root` directory have contents equal to `data`?
+            -- No HTTP equivalent; helper for Eiffel-level contracts.
+        local
+            k: PATH_PICO
+            k_conv: PATH_PICO
+            v: R
+        do
+            across
+                keys as c
+            until
+                Result
+            loop
+                k := c.item
+                create k_conv.make_from_string(k.out)
+                if has_key (k_conv) then
+                    v := item (k_conv)
+                    if v.same_string (data) then
+                        Result := True
+                    end
+                end
+            end
+        end
+
+    all_keys: ITERABLE [PATH_PICO]
+            -- All keys (file names) in this directory
+        local
+            keys_list: ARRAYED_LIST [PATH_PICO]
+            entry_path: detachable PATH_PICO
+            entry_name: STRING_8
+        do
+            create keys_list.make (10)
+            open_read
+            across keys as k loop
+                entry_path := k.item.entry
+                if attached entry_path and then not entry_path.name.starts_with (".") then
+                    entry_name := entry_path.name.to_string_8
+                    keys_list.extend (create {PATH_PICO}.make_from_string (entry_name))
+                end
+            end
+            close
+            Result := keys_list
+        end
+
+feature {NONE} -- Implementation
+
+    root: FILE_URL
+            -- Base directory for generated files (POST/PUT).
+
+    last_inserted_key_internal: detachable PATH_PICO
+            -- Backing field for `last_inserted_key`.
+
+    new_post_key (data: STRING_32): PATH_PICO
+            -- Key under `root` for POST; name is SHA-256 of `data`.
+        local
+            digest: STRING
+            p:PATH_PICO
+        do
+            digest := sha256_hex (data)
+            create p.make_empty
+            create Result.make_from_string((p.appended (digest).appended_with_extension ("txt")).out)
+
+        end
+
+    internal_write (key: PATH_PICO; data: STRING_32)
+            -- Write `data` into file identified by `key`.
+        local
+            f: PLAIN_TEXT_FILE
+        do
+            create f.make_with_path (path.extended_path (key))
+            if f.exists then
+                f.open_write
+            else
+                f.create_read_write
+            end
+            f.put_string (data)
+            f.close
+        end
+
+    is_plain_file (p: PATH_PICO): BOOLEAN
+            -- Is `p` a regular (plain) file?
+        local
+            info: FILE_INFO
+        do
+            create info.make
+            info.update (p.name)
+            Result := info.exists and then info.is_plain
+        end
+
+    sha256_hex (data: STRING): STRING
+            -- Hexadecimal SHA-256 digest of `data`.
+            -- Requires `crypto` library (class SHA256).
+        local
+            hash: SHA256
+        do
+            create hash.make
+            hash.update_from_string (data)
+            Result := hash.digest_as_string
+                -- Result := "fixed_name"
+        end
+
+invariant
+    root_not_void: root /= Void
+
+end
+#+end_src
+
+* 5th Goal Re-implemented TODOBACKEND
+** In a file scheme the store is the filesystem and the representation is objects that live inside the program
+:PROPERTIES:
+:CUSTOM_ID: in-a-file-scheme-the-store-is-the-filesystem-and-the-representation-is-objects-that-live-inside-the-program
+:END:
+#+begin_src eiffel
+note
+    description: "Summary description for {SCHEME_CLIENT}."
+    author: ""
+    date: "$Date$"
+    revision: "$Revision$"
+
+deferred class
+    PICO_SCHEME_HANDLER[R -> PATCHABLE]
+
+inherit
+    PICO_REQUEST_METHODS [R]
+
+
+feature {NONE} -- Initialization
+
+    make (a_root: URI)
+            -- Initialize scheme client with URL
+        require
+            valid_scheme: Valid_scheme.has (a_root.scheme)
+        deferred
+        ensure
+            base_uri_set: base_uri ~ a_root
+            -- no_insertions_yet: last_inserted_key = Void
+            can_connect_to_proposed_base_url: can_connect (base_uri)
+        end
+
+feature -- Attributes
+
+    base_uri: URI
+        -- The URL that identifies this scheme client
+
+    Valid_scheme: ARRAY[STRING_8]
+            -- The scheme this client handles (e.g., "file", "http", "env")
+        deferred
+        end
+
+feature -- Queries
+
+    can_connect (a_uri: URI): BOOLEAN
+            -- Can we connect to the resource at `a_uri`?
+            -- Default implementation returns True.
+            -- Descendants may redefine to check actual connectivity.
+        do
+            Result := True
+        end
+
+end
+#+end_src
+
+** now let's store the TODO_ITEMs in disk
+:PROPERTIES:
+:CUSTOM_ID: now-lets-store-the-todo_items-in-disk
+:END:
+#+begin_src eiffel
+local
+   file_storage: PICO_PLAIN_TEXT_FILE
+   todo_list: PICO_PASSTHROUGH_FORWARD_CONVERTER [TODO_ITEM_CONVERTIBLE, STRING_32]
+   new_todo: TODO_ITEM_CONVERTIBLE
+do
+   create file_storage.make ("file:///tmp/backend/")
+   create todo_list.make (file_storage)
+   create new_todo.make_from_patch ([title: "my title"])
+   todo_list.extend (new_todo)
+   check
+      todo_list.item (todo_list.last_inserted_id) ~ new_todo
+   end
+end
+#+end_src
+
+** Boundary to the clients.
+:PROPERTIES:
+:CUSTOM_ID: boundary-to-the-clients.
+:END:
+Clients of our libraries can send json or string or xml requests and we
+don't have control in the format. so is responsability for the backend
+to be able to be transformed TO and FROM the client format request.
+
+*** A an inverted passthrough
+:PROPERTIES:
+:CUSTOM_ID: a-an-inverted-passthrough
+:END:
+#+begin_src eiffel
+class PICO_PASSTHROUGH_BACKWARD_CONVERTER [R; S -> CONVERTIBLE_WITH[R]]
+
+inherit
+    PICO_REQUEST_METHODS_LAX [R]
+
+feature -- Initialization
+
+    make (a_backend: PICO_REQUEST_METHODS [S])
+        do
+            backend := a_backend
+        end
+
+feature -- Internal storage
+
+    backend: PICO_REQUEST_METHODS [S]
+
+feature -- Queries
+
+    has (key: PATH_PICO): BOOLEAN
+        do
+            Result := backend.has (key)
+        end
+
+    item alias "[]" (key: PATH_PICO): R assign force
+        do
+            Result := backend.item (key)  -- implicitly converts storage to representation
+        end
+
+    linear_representation: LIST [R]
+        local
+            result_list: ARRAYED_LIST [R]
+        do
+            create result_list.make (backend.linear_representation.count)
+            across backend.linear_representation as s_item loop
+                result_list.extend (s_item.item)  -- implicit conversion
+            end
+            Result := result_list
+        end
+
+    options: LIST [STRING]
+        do
+            Result := backend.options
+        end
+
+feature -- Commands
+
+    extend_with_incomplete (data: TUPLE[R])
+        do
+            backend.extend_with_incomplete (data)
+        end
+
+    extend (data: R)
+        do
+            backend.extend (data)  -- implicitly converts data to storage
+        end
+
+    force (data: R; key: PATH_PICO)
+        do
+            backend.force (data, key)  -- implicitly converts data to storage
+        end
+
+    patch (incomplete_data: like {R}.patch_tuple; key: PATH_PICO)
+        do
+            backend.patch (incomplete_data, key)
+        end
+
+feature {NONE} -- Destructive operations
+
+    wipe_out
+        do
+            backend.wipe_out
+        end
+
+957
+remove (key: PATH_PICO)
+        do
+            backend.remove (key)
+        end
+
+feature -- State of the resource
+
+    last_inserted_id: PATH_PICO
+        do
+            Result := backend.last_inserted_id
+        end
+
+    key_for_incomplete (data: TUPLE[{R}]): PATH_PICO
+        do
+            Result := backend.key_for_incomplete (data)
+        end
+
+    key_for (data: R): PATH_PICO
+        do
+            Result := backend.key_for (data)
+        end
+
+end
+#+end_src
+
+** This example shws how we would input a data that we have no control over STRING_32 and then convert into an entity of TODO_ITEM
+:PROPERTIES:
+:CUSTOM_ID: this-example-shws-how-we-would-input-a-data-that-we-have-no-control-over-string_32-and-then-convert-into-an-entity-of-todo_item
+:END:
+#+begin_src eiffel
+local
+   raw_json: STRING_32
+   todo_hash_table: PICO_HASH_TABLE[TODO_ITEM_CONVERTIBLE]
+   todo_list_service: PICO_PASSTHROUGH_BACKWARD_CONVERTER [STRING_32, TODO_ITEM_CONVERTIBLE]]
+
+do
+   raw_json := "{title:'this is a raw string object that should be a valid json'}"
+   create todo_hash_table
+   create todo_list_service_boundary.make (todo_hash_table)
+   todo_list_service.extend(raw_json)
+
+   check
+      todo_list_service.item (todo_list_service.last_inserted_id).title ~ raw_json -- actually this would be the json of a competetodo
+   end
+end
+#+end_src
+
+** How creating storage combinators
+:PROPERTIES:
+:CUSTOM_ID: how-creating-storage-combinators
+:END:
+#+begin_src eiffel
+
+deferred class PICO_STORAGE_COMBINATOR[R,S]
+inherit
+  PICO_REQUEST_METHODS[R]
+feature {NONE}
+  frontend : PICO_REQUEST_METHODS[R]
+  backend : PICO_REQUEST_METHODS[S]
+
+feature
+  make(a_frontend:PICO_REQUEST_METHODS[R]; a_backend: PICO_REQUEST_METHODS[S])
+end
+#+end_src
+
+*** A cache is a kind of storage combinator
+:PROPERTIES:
+:CUSTOM_ID: a-cache-is-a-kind-of-storage-combinator
+:END:
+#+begin_src eiffel
+class PICO_CACHE [R -> PATCHABLE]
+
+inherit
+    PICO_STORAGE_COMBINATOR [R, R]
+
+create
+    make
+
+feature -- Queries equivalent of http safe methods
+
+    has (key: PATH_PICO): BOOLEAN
+            -- Equivalent of http HEAD
+            -- Check cache first, then backend
+        do
+            Result := frontend.has (key) or backend.has (key)
+        end
+
+    item alias "[]" (key: PATH_PICO): R assign force
+            -- Equivalent of http GET /{key}
+            -- Read-through cache: check cache first, populate if miss
+        require
+            key_exists: has (key)
+        do
+            if frontend.has (key) then
+                Result := frontend.item (key)
+            else
+                Result := backend.item (key)
+                frontend.force (Result, key)
+            end
+        ensure
+            cached: frontend.has (key)
+        end
+
+    linear_representation: LIST [R]
+            -- Equivalent of http GET /
+            -- Returns all items from backend (cache may be incomplete)
+        do
+            Result := backend.linear_representation
+        end
+
+    options: LIST [STRING]
+            -- Equivalent of http OPTIONS
+        do
+            Result := backend.options
+        end
+
+feature -- Commands
+
+    extend_with_incomplete (data: like {R}.patch_tuple)
+            -- Equivalent of http POST / with a key created by the server
+            -- Write-through: update backend and cache
+        do
+            backend.extend_with_incomplete (data)
+            frontend.extend_with_incomplete (data)
+        ensure
+            it_is_inserted: last_inserted_id = key_for_incomplete (data)
+            cached: frontend.has (last_inserted_id)
+        end
+
+    extend (data: R)
+            -- Equivalent to http POST appending the complete record
+            -- Write-through: update backend and cache
+        do
+            backend.extend (data)
+            frontend.extend (data)
+        ensure
+            it_is_inserted: last_inserted_id = key_for (data)
+            cached: frontend.has (last_inserted_id)
+        end
+
+    force (data: R; key: PATH_PICO)
+            -- Equivalent of http PUT with updating or inserting the complete record
+            -- Write-through: update backend and cache
+        do
+            backend.force (data, key)
+            frontend.force (data, key)
+        ensure
+            it_is_inserted: last_inserted_id = key
+            cached: frontend.has (key)
+        end
+
+    patch (incomplete_data: like {R}.patch_tuple; key: PATH_PICO)
+            -- Equivalent of http PATCH /{key} with partial update
+            -- Write-through: update backend and invalidate cache entry
+        do
+            backend.patch (incomplete_data, key)
+            if frontend.has (key) then
+                frontend.remove (key)
+            end
+        ensure
+            it_is_updated: last_inserted_id = key
+        end
+
+feature {NONE} -- Destructive operations
+
+    wipe_out
+            -- Equivalent of http DELETE /
+            -- Clear both cache and backend
+        do
+            backend.wipe_out
+            frontend.wipe_out
+        ensure
+            its_empty: linear_representation.is_empty
+            cache_empty: frontend.linear_representation.is_empty
+        end
+
+    remove (key: PATH_PICO)
+            -- Equivalent of http DELETE /{key}
+            -- Remove from both cache and backend
+        do
+            backend.remove (key)
+            if frontend.has (key) then
+                frontend.remove (key)
+            end
+        ensure
+            not_present: not has (key)
+            not_cached: not frontend.has (key)
+        end
+
+feature -- State of the resource
+
+    last_inserted_id: PATH_PICO
+            -- <Precursor>
+        do
+            Result := backend.last_inserted_id
+        end
+
+    key_for_incomplete (data: like {R}.patch_tuple): PATH_PICO
+            -- <Precursor>
+        do
+            Result := backend.key_for_incomplete (data)
+        end
+
+    key_for (data: R): PATH_PICO
+            -- <Precursor>
+        do
+            Result := backend.key_for (data)
+        end
+
+end
+#+end_src
+
+** Logging Combinator
+:PROPERTIES:
+:CUSTOM_ID: logging-combinator
+:END:
+The logging combinator is a fire and forget combinator where: - All
+queries go to the frontend (the actual data store) - All commands go to
+the frontend AND log to the backend asynchronously - The backend is
+typically an append-only log (e.g., file storage)
+
+#+begin_src eiffel
+class PICO_LOGGING_COMBINATOR [R -> PATCHABLE, S -> CONVERTIBLE_WITH[R]]
+
+inherit
+    PICO_STORAGE_COMBINATOR [R, S]
+
+create
+    make
+
+feature -- Queries equivalent of http safe methods
+    -- All queries are delegated to the frontend
+
+    has (key: PATH_PICO): BOOLEAN
+        do
+            Result := frontend.has (key)
+        end
+
+    item alias "[]" (key: PATH_PICO): R assign force
+        do
+            Result := frontend.item (key)
+        end
+
+    linear_representation: LIST [R]
+        do
+            Result := frontend.linear_representation
+        end
+
+    options: LIST [STRING]
+        do
+            Result := frontend.options
+        end
+
+feature -- Commands
+    -- All commands go to frontend and log to backend (fire and forget)
+
+    extend_with_incomplete (data: like {R}.patch_tuple)
+        do
+            frontend.extend_with_incomplete (data)
+            log_operation ("POST", frontend.last_inserted_id, data)
+        ensure
+            it_is_inserted: last_inserted_id = key_for_incomplete (data)
+        end
+
+    extend (data: R)
+        do
+            frontend.extend (data)
+            log_operation ("POST", frontend.last_inserted_id, data)
+        ensure
+            it_is_inserted: last_inserted_id = key_for (data)
+        end
+
+    force (data: R; key: PATH_PICO)
+        do
+            frontend.force (data, key)
+            log_operation ("PUT", key, data)
+        ensure
+            it_is_inserted: last_inserted_id = key
+        end
+
+    patch (incomplete_data: like {R}.patch_tuple; key: PATH_PICO)
+        do
+            frontend.patch (incomplete_data, key)
+            log_operation ("PATCH", key, incomplete_data)
+        ensure
+            it_is_updated: last_inserted_id = key
+        end
+
+feature {NONE} -- Destructive operations
+
+    wipe_out
+        do
+            frontend.wipe_out
+            log_operation ("DELETE", create {PATH_PICO}.make_from_string ("/"), Void)
+        ensure
+            its_empty: linear_representation.is_empty
+        end
+
+    remove (key: PATH_PICO)
+        do
+            frontend.remove (key)
+            log_operation ("DELETE", key, Void)
+        ensure
+            not_present: not has (key)
+        end
+
+feature -- State of the resource
+
+    last_inserted_id: PATH_PICO
+        do
+            Result := frontend.last_inserted_id
+        end
+
+    key_for_incomplete (data: like {R}.patch_tuple): PATH_PICO
+        do
+            Result := frontend.key_for_incomplete (data)
+        end
+
+    key_for (data: R): PATH_PICO
+        do
+            Result := frontend.key_for (data)
+        end
+
+feature {NONE} -- Implementation
+
+    log_operation (operation: STRING; key: PATH_PICO; data: detachable ANY)
+            -- Log operation to backend (fire and forget)
+        local
+            log_entry: S
+            log_message: STRING_32
+        do
+            log_message := operation + " " + key.out
+            if attached data then
+                log_message := log_message + " " + data.out
+            end
+
+            -- Fire and forget: we don't check if logging succeeded
+            -- This could be enhanced with async execution or error handling
+            backend.extend (log_message)
+        rescue
+            -- Silently ignore logging failures
+        end
+
+end
+#+end_src

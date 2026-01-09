@@ -13,7 +13,7 @@ note
 	revision: "$Revision$"
 
 deferred class
-	PICO_REQUEST_METHODS [R -> attached ANY]
+	PICO_REQUEST_METHODS [R -> PICO_DATA_OBJECT]
 
 feature -- Queries aka Http safe verbs
 
@@ -27,7 +27,7 @@ feature -- Queries aka Http safe verbs
 		end
 
 	item alias "[]" (key: PATH_PICO): R assign force
-			-- Equivalent to http GET
+			-- Equivalent to http GET /key
 			-- Requests a resource representation; retrieves data only.
 		require else
 			requested_a_known_key_or_throw_404_not_found: has_key (key)
@@ -38,9 +38,34 @@ feature -- Queries aka Http safe verbs
 				-- is_safe: old Current = Current
 				-- item (http get) shouldn't change the state of the resource
 		end
+      
+      linear_representation: ARRAY_LIST[R]
+      -- Equivalent to http GET /  to list all items in an array
+      deferred
+      end
+         
+      all_keys: ITERABLE [PATH_PICO]
+			-- All keys in the storage
+		deferred
+		end
+
+      -- items:HASH_TABLE[R:PATH_PICO]
+      -- deferred
+      -- end
+
 
 feature -- Commands aka Http unsafe verbs
-	collection_extend (data: R)
+   
+	extend_with_incomplete (data: like {R}.patch_data_type)
+			-- equivalent to http POST
+			-- Submits data; may change state or cause side effects
+		deferred
+		ensure
+			data_stored_or_throw_510_not_extended: attached last_inserted_key
+			key_tracked: attached last_inserted_key as key implies has_key (key)
+		end
+
+   extend (data: R)
 			-- equivalent to http POST
 			-- Submits data; may change state or cause side effects
 		deferred
@@ -61,23 +86,27 @@ feature -- Commands aka Http unsafe verbs
 			key_exists: attached last_inserted_key as k implies has_key (k)
 		end
 
+   patch(incomplet_data : TUPLE)
+      deferred
+      end
+         
 	remove (key: PATH_PICO)
-			-- Equivalent to http DELETE
+			-- Equivalent to http DELETE /{key}
 			-- Removes the specified resource.
 		deferred
 		ensure
 			truly_eliminated_or_throw_500_internal_server_error: not has_key (key)
 		end
 
-      -- keys:LIST[PATH_PICO]
-      --    -- Gives a list of all the keys in the data structure
-      -- deferred
-      -- end
-         
-      -- items:HASH_TABLE[R:PATH_PICO]
-      -- deferred
-      -- end
-   
+   wipe_out
+   -- equivalent to http DELETE /
+   -- thi method is dangerous probably shouldn't export it most of 
+-- the time.
+      deferred
+      ensure
+         nothing_remains_stored: all_keys.is_empty
+      end
+      
 feature -- helpers
 	last_inserted_key: detachable PATH_PICO
 			-- There is NO equivalent for this in http protocol.

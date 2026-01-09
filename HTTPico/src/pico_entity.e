@@ -27,6 +27,9 @@ feature -- Initialization
 			result_exists: Result /= Void
 		end
 
+feature
+  patch_data_type: detachable TUPLE
+   
 feature -- Access
 
 	id_counter: CELL [NATURAL_64]

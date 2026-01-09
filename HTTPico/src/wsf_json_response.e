@@ -156,8 +156,10 @@ feature -- Factory: Success responses (2xx)
 
     no_content: WSF_JSON_RESPONSE
             -- Create new 204 No Content response
+            -- Note: 204 MUST NOT include a message body per HTTP spec (RFC 7231)
         do
-            create Result.make_with_status ({HTTP_STATUS_CODE}.no_content)
+            create Result.make
+            Result.set_status_code ({HTTP_STATUS_CODE}.no_content)
         ensure
             instance_free: class
         end

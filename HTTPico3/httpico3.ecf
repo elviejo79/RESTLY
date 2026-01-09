@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="HTTPico3" uuid="FF8259F5-0EE7-4D9E-9611-E8D6CD2ED7B0">
+	<target name="HTTPico3">
+		<root feature="make" class="APPLICATION"/>
+		<file_rule>
+			<exclude>/EIFGENs$</exclude>
+			<exclude>/\..*$</exclude>
+		</file_rule>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<setting name="console_application" value="true"/>
+		<library name="base" location="$ISE_LIBRARY/library/base/base.ecf"/>
+		<library name="json" location="$ISE_LIBRARY/contrib/library/text/parser/json/library/json.ecf">
+			<renaming old_name="JSON_OBJECT" new_name="EJSON_JSON_OBJECT"/>
+		</library>
+		<library name="uri" location="$ISE_LIBRARY/library/text/uri/uri.ecf"/>
+	<library name="time" location="$ISE_LIBRARY/library/time/time.ecf"/>
+		<cluster name="httpico3" location=".\" recursive="true"/>
+	</target>
+</system>

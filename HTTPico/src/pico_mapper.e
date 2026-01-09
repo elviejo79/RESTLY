@@ -101,8 +101,8 @@ feature -- Commands (delegated with conversion)
 	wipe_out
 			-- Remove all items from storage
 		do
-			if attached {HASH_TABLE [S, PATH_PICO]} storage as ht then
-				ht.wipe_out
+			across storage.all_keys as key_cursor loop
+				storage.remove (key_cursor.item)
 			end
 		end
 
@@ -119,11 +119,7 @@ feature -- Internal storage access
 	all_keys: ITERABLE [PATH_PICO]
 			-- All keys in storage
 		do
-			if attached {HASH_TABLE [S, PATH_PICO]} storage as ht then
-				Result := ht.current_keys
-			else
-				create {ARRAYED_LIST [PATH_PICO]} Result.make (0)
-			end
+			Result := storage.all_keys
 		end
 
 end
