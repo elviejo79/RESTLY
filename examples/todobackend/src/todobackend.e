@@ -28,7 +28,7 @@ feature {NONE} -- Initialization
 			Precursor
 			set_service_option ("port", 8080)
 			set_service_option ("verbose", "yes")
-			set_service_option ("max_concurrent_connections", 1)
+			set_service_option ("max_concurrent_connections", 10)
 		end
 
 
