@@ -22,7 +22,15 @@ convert
 
 feature -- fields
 
-key: detachable PATH
+   key: detachable PATH assign set_key
+
+      set_key(v: detachable PATH)
+      do
+      check attached v then
+         key := v
+      end
+      end
+      
 title: attached STRING
 completed: BOOLEAN
 order: INTEGER
@@ -95,10 +103,12 @@ feature -- convertible_with_json
          create Result.make_with_capacity(5)
          if attached key as l_key then
             Result.put_string(l_key.out, "key")
+            Result.put_string("http://localhost:8080/todos/"+l_key.out, "url")
          end
          Result.put_string(title, "title")
          Result.put_boolean(completed, "completed")
          Result.put_integer(order, "order")
+         
       end
 
 feature -- convertible_with_json_value

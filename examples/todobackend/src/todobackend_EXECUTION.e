@@ -23,12 +23,12 @@ create
 feature {NONE} -- Initialization
 
 db : TODO_LIST
-	once
+	once ("PROCESS")
 		create Result.make_default
 	end
 
   todo_handler : TODO_HANDLER
-      once
+      once ("PROCESS")
         create Result.make_with_backend(db, "http://localhost:8080/todos/")
       end
 

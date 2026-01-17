@@ -46,9 +46,15 @@ feature -- Access
 			elseif req.is_post_request_method and not has_id then
 				-- POST /resource - create new
 				Result := safely (req, agent do_post)
+			elseif req.request_method.is_case_insensitive_equal ("PUT") and has_id then
+				-- PUT /resource/{id} - replace entire resource
+				Result := safely (req, agent do_put)
 			elseif req.request_method.is_case_insensitive_equal ("PATCH") and has_id then
 				-- PATCH /resource/{id} - partial update
 				Result := safely (req, agent do_patch)
+			elseif req.request_method.is_case_insensitive_equal ("HEAD") and has_id then
+				-- HEAD /resource/{id} - check if resource exists
+				Result := safely (req, agent do_head)
 			elseif req.is_delete_request_method and has_id then
 				-- DELETE /resource/{id}
 				Result := safely (req, agent do_delete)
@@ -102,15 +108,37 @@ feature {NONE} -- HTTP Verbs (deferred)
 		deferred
 		end
 
+feature {NONE} -- Constants
+
+	Max_body_length: INTEGER = 1024
+			-- Maximum length of request body to include in exception details
+
+	Initial_buffer_size: INTEGER = 512
+			-- Initial size for exception detail string buffer
+
 feature {NONE} -- Helpers
+
+	extract_id_string (req: WSF_REQUEST): detachable STRING_8
+			-- Extract id string from path parameter, or Void if not present
+		do
+			if attached req.path_parameter ("id") as l_param then
+				if attached {WSF_STRING} l_param as l_str then
+					Result := l_str.value.to_string_8
+				elseif attached {WSF_TABLE} l_param as l_table and then l_table.count > 0 then
+					-- URI template parameter returns a WSF_TABLE, get first value
+					across l_table as ic loop
+						Result := ic.string_representation.to_string_8
+					end
+				else
+					Result := l_param.string_representation.to_string_8
+				end
+			end
+		end
 
 	has_id_parameter (req: WSF_REQUEST): BOOLEAN
 			-- Does request have a non-empty id path parameter?
 		do
-			if attached req.path_parameter ("id") as l_param and then
-			   not l_param.string_representation.is_empty then
-				Result := True
-			end
+			Result := attached extract_id_string (req) as id_value and then not id_value.is_empty
 		end
 
 	extract_id (req: WSF_REQUEST): PATH
@@ -118,8 +146,8 @@ feature {NONE} -- Helpers
 		require
 			has_id_parameter (req)
 		do
-			check attached req.path_parameter ("id") as l_param then
-				create Result.make_from_string (l_param.string_representation.to_string_8)
+			check attached extract_id_string (req) as id_string then
+				create Result.make_from_string (id_string)
 			end
 		end
 
@@ -161,45 +189,49 @@ feature {NONE} -- Helpers
 	build_exception_detail (req: WSF_REQUEST): STRING
 			-- Build a detailed message for the last exception, including request context.
 		local
-			max_body_length: INTEGER
+			tag_str, desc_str, body_str, trace_str: STRING
 		do
-			max_body_length := 1024
-			create Result.make (256)
-
 			if not attached last_exception as l_exception then
-				Result.append ("No exception available")
+				Result := "No exception available"
 			else
 				-- Exception tag
 				if attached l_exception.tag as tag then
-					Result.append (tag.to_string_8)
+					tag_str := tag.to_string_8
 				else
-					Result.append ("Unknown")
+					tag_str := "(none)"
 				end
-				Result.append (": ")
 
 				-- Exception description
 				if attached l_exception.description as desc then
-					Result.append (desc.to_string_8)
+					desc_str := desc.to_string_8
 				else
-					Result.append ("No description available")
+					desc_str := "(no description)"
 				end
 
-				-- Request context
-				Result.append ("%NRequest: ")
-				Result.append (req.request_method)
-				Result.append (" ")
-				Result.append (req.request_uri)
-
-				-- Request body if available
+				-- Request body
+				body_str := ""
 				if req.raw_input_data_recorded and then attached req.raw_input_data as raw then
-					Result.append ("%NBody: ")
-					if raw.count > max_body_length then
-						Result.append (raw.substring (1, max_body_length))
-						Result.append ("... (truncated)")
+					if raw.count > Max_body_length then
+						body_str := "Body: " + raw.substring (1, Max_body_length) + "... (truncated)%N"
 					else
-						Result.append (raw)
+						body_str := "Body: " + raw + "%N"
 					end
 				end
+
+				-- Stack trace
+				trace_str := ""
+				if attached l_exception.trace as trace then
+					trace_str := "Stack trace:%N" + trace.to_string_8
+				end
+
+				-- Combine all parts
+				Result := "Exception: " + l_exception.generating_type.name_32.to_string_8 + "%N" +
+				          "Code: " + l_exception.code.out + "%N" +
+				          "Tag: " + tag_str + "%N" +
+				          "Message: " + desc_str + "%N" +
+				          "Request: " + req.request_method + " " + req.request_uri + "%N" +
+				          body_str +
+				          trace_str
 			end
 		end
 
