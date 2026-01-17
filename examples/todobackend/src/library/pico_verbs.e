@@ -16,6 +16,8 @@ feature -- Queries: http safe verbs
 
 	item alias "/" (key: PATH): R assign force
 			-- equivalent to http GET /{key}
+		require
+			requested_a_known_key_or_throw_404_not_found: has (key)
 		deferred
 		end
 

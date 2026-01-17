@@ -38,15 +38,19 @@ feature -- Implementation of PICO_VERBS
 			l_item: TODO_ITEM
 		do
 			create l_item.make_from_patch({TODO_ITEM}.tuple_from_json_object(a_jo))
-			extend(l_item)
+            extend(l_item)
+            l_item.key := last_modified_key
 		end
 
 	key_for (v: TODO_ITEM): PATH
+		local
+			l_count_string: STRING_8
 		do
-			if attached v.key as l_key then
+			if attached v.key as l_key and then not l_key.is_empty then
 				Result := l_key
 			else
-				create Result.make_from_string("/todo/" + count.out)
+				l_count_string := count.out.to_string_8
+				create Result.make_from_string(l_count_string)
 			end
 		end
 

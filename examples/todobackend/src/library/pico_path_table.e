@@ -8,13 +8,17 @@ deferred class
 	PICO_PATH_TABLE[R -> attached ANY, P]
 
 inherit
-	HASH_TABLE [R, PATH]
+	HASH_TABLE [R, STRING]
 	rename
 		item as hash_item,
 		extend as hash_extend,
-		linear_representation as hash_linear_representation
+		linear_representation as hash_linear_representation,
+		has as hash_has,
+		force as hash_force,
+		remove as hash_remove
 	export
 		{NONE} all
+		{ANY} hash_has
 	undefine
 		empty_duplicate
 	end
@@ -27,10 +31,25 @@ inherit
 feature -- Query
 
 	item alias "/" (key: PATH): R assign force
+		local
+			l_key: STRING
+			l_result: detachable R
 		do
-			check attached {R} hash_item(key) as l_res then
-				Result := l_res
+			l_key := path_to_string(key)
+			l_result := hash_item(l_key)
+			if attached l_result as l_item then
+				Result := l_item
+			else
+				-- This should not happen if precondition is checked
+				check False then
+					-- Will fail here with precondition message
+				end
 			end
+		end
+
+	has (key: PATH): BOOLEAN
+		do
+			Result := hash_has(path_to_string(key))
 		end
 
 	linear_representation: LIST[R]
@@ -47,14 +66,32 @@ feature -- Query
 	extend (v: R)
 		local
 			l_key: PATH
+			l_string_key: STRING
 		do
 			l_key := key_for(v)
-			hash_extend(v, l_key)
+			l_string_key := path_to_string(l_key)
+			put(v, l_string_key)
 			last_modified_key := l_key
 		end
 
+	force (v: R; key: PATH)
+		do
+			hash_force(v, path_to_string(key))
+			last_modified_key := key
+		end
+
+	remove (key: PATH)
+		do
+			hash_remove(path_to_string(key))
+		end
 
 feature {NONE} -- Implementation
+
+	path_to_string (a_path: PATH): STRING
+			-- Convert PATH to STRING for hash table operations
+		do
+			Result := a_path.name.to_string_8
+		end
 
 	empty_duplicate (n: INTEGER): like Current
 		deferred
