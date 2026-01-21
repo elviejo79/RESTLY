@@ -7,6 +7,17 @@ note
 class
 	TODO_ITEM
 
+inherit
+   CONVERTIBLE_WITH_JSON
+      redefine
+         to_json_object
+      end
+
+   PATCHABLE
+      redefine
+         make_from_patch
+      end
+   
 create
 	make_empty,
 	make_from_patch,
@@ -31,7 +42,7 @@ feature -- fields
       end
       end
       
-title: attached STRING
+title: STRING
 completed: BOOLEAN
 order: INTEGER
 
@@ -43,20 +54,21 @@ feature
 		order := 0
 	end
 
-	Patch_fields : TUPLE[title: detachable STRING; completed: detachable BOOLEAN_REF; order: detachable INTEGER_REF]
+feature -- PATCHABLE
+	Patch_ds : TUPLE[title: detachable STRING; completed: detachable BOOLEAN_REF; order: detachable INTEGER_REF]
 	do
 		Result := [Void, Void, Void]
 	end
 
-	make_from_patch(a_patch: like Patch_fields)
-	require
+	make_from_patch(a_patch: like Patch_ds)
+	require else
 		title_is_required_field: attached a_patch.title
 	do
 		make_empty
 		patch(a_patch)
 	end
 
-	patch(a_patch: like Patch_fields)
+	patch(a_patch: like Patch_ds)
 	do
 		if attached a_patch.title as l_title then
 			title := l_title
@@ -76,28 +88,6 @@ feature -- convertible_with_json
 		patch(tuple_from_json_object(a_jo))
 	end
 
-	tuple_from_json_object(a_jo:JSON_OBJECT): like Patch_fields
-	local
-		l_completed_ref: detachable BOOLEAN_REF
-		l_order_ref: detachable INTEGER_REF
-	do
-		if attached {JSON_BOOLEAN} a_jo.item("completed") as l_val and then attached {BOOLEAN} l_val.item as l_r then
-			create l_completed_ref
-			l_completed_ref.set_item(l_r)
-		end
-		if attached {JSON_NUMBER} a_jo.item("order") as l_val and then attached {INTEGER} l_val.item as l_r then
-			create l_order_ref
-			l_order_ref.set_item(l_r.to_integer)
-		end
-		Result := [
-			(if attached {JSON_STRING} a_jo.item("title") as l_val and then attached {STRING} l_val.item as l_r then l_r else Void end),
-			l_completed_ref,
-			l_order_ref
-		]
-	ensure
-		instance_free: class
-	end
-
 	to_json_object: JSON_OBJECT
       do
          create Result.make_with_capacity(5)
@@ -111,6 +101,28 @@ feature -- convertible_with_json
          
       end
 
+	tuple_from_json_object(a_jo:JSON_OBJECT): like Patch_ds
+	local
+		l_completed_ref: detachable BOOLEAN_REF
+		l_order_ref: detachable INTEGER_REF
+	do
+		if attached {JSON_BOOLEAN} a_jo.item("completed") as l_val and then attached {BOOLEAN} l_val.item as l_r then
+			create l_completed_ref
+			l_completed_ref.set_item(l_r)
+		end
+		if attached {JSON_NUMBER} a_jo.item("order") as l_val then
+			create l_order_ref
+			l_order_ref.set_item(l_val.item.to_integer_64.to_integer)
+		end
+		Result := [
+			(if attached {JSON_STRING} a_jo.item("title") as l_val and then attached {STRING} l_val.item as l_r then l_r else Void end),
+			l_completed_ref,
+			l_order_ref
+		]
+	end
+
+
+      
 feature -- convertible_with_json_value
 	make_from_json_value(a_jv:JSON_VALUE)
 		-- JSON_VALUE is just an ancestor to a JSON_OBJECT
@@ -123,6 +135,6 @@ feature -- convertible_with_json_value
 
 	to_json_value:JSON_VALUE
 	do
-		Result := to_json_object
+   Result := to_json_object
 	end
 end

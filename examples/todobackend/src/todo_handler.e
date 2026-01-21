@@ -20,7 +20,7 @@ feature {NONE} -- Initialization
 
 feature {NONE} -- Backend implementation
 
-	backend: PICO_VERBS[TODO_ITEM, JSON_OBJECT]
+	backend: PICO_VERBS[TODO_ITEM]
 			-- The storage backend for resources
 
 	base_url: STRING
@@ -50,7 +50,7 @@ feature {NONE} -- HTTP Verbs implementation
 			jo: JSON_OBJECT
 		do
 			jo := extract_json (req)
-			backend.extend_from_patch (jo)
+			backend.extend_from_patch ([jo])
 			updated_item := backend.item (backend.last_modified_key)
 			Result := {WSF_JSON_RESPONSE}.created.with_body (
 				updated_item.to_json_value.representation
@@ -72,7 +72,7 @@ feature {NONE} -- HTTP Verbs implementation
 		do
 			id := extract_id (req)
 			partial := extract_json (req)
-			backend.patch (partial, id)
+			backend.patch ([partial], id)
 			l_res := backend.item (id)
 			Result := json_ok (l_res.to_json_value)
 		end

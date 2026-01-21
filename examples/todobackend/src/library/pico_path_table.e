@@ -15,7 +15,8 @@ inherit
 		linear_representation as hash_linear_representation,
 		has as hash_has,
 		force as hash_force,
-		remove as hash_remove
+		remove as hash_remove,
+		current_keys as hash_current_keys
 	export
 		{NONE} all
 		{ANY} hash_has
@@ -23,7 +24,7 @@ inherit
 		empty_duplicate
 	end
 
-	PICO_VERBS[R,P]
+	PICO_VERBS[R]
 	undefine
 		copy, is_equal
 	end
@@ -83,6 +84,27 @@ feature -- Query
 	remove (key: PATH)
 		do
 			hash_remove(path_to_string(key))
+		end
+
+	current_keys: ARRAY[PATH]
+			-- Get all current keys as PATH array
+		local
+			l_list: ARRAYED_LIST[PATH]
+			i: INTEGER
+		do
+			create l_list.make (count)
+			across hash_current_keys as ic loop
+				l_list.extend (create {PATH}.make_from_string (ic))
+			end
+			create Result.make_filled (create {PATH}.make_current, 1, l_list.count)
+			from
+				i := 1
+			until
+				i > l_list.count
+			loop
+				Result[i] := l_list[i]
+				i := i + 1
+			end
 		end
 
 feature {NONE} -- Implementation

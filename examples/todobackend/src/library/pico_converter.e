@@ -1,0 +1,103 @@
+deferred class PICO_CONVERTER[R,S]
+inherit
+PICO_VERBS[R]
+
+feature -- next state
+backend: PICO_VERBS[S]
+
+feature -- converters
+
+to_representation(s:S):R
+      deferred
+      end
+         
+to_storage(r:R):S
+      deferred
+      end
+         
+to_storage_patch(a_representation_patch: like Patch_ds): like backend.patch_ds
+      deferred
+      end
+  
+         
+feature -- Queries: http safe verbs
+
+	item alias "/" (a_key: PATH): R assign force
+			-- equivalent to http GET /{key}
+		do
+        Result:= to_representation(backend.item(a_key))
+		end
+
+	linear_representation:LIST[R]
+		do
+      create {ARRAYED_LIST[R]} Result.make(0)
+         across backend.current_keys as k loop
+             Result.append(item(k.item))
+         end
+		end
+
+
+	has (a_key: PATH): BOOLEAN
+			-- equivalent to http HEAD /{key}
+		do
+         Result := backend.has(a_key)
+		end
+
+feature -- Commands: http unsave verbs
+
+	force (a_r: R; a_key: PATH)
+		do
+         backend.force(to_storage(a_r),a_key)
+		end
+
+	extend (a_r: R)
+			-- equivalent to http POST /  the server must create the key
+		do
+         backend.extend(to_storage(a_r))
+		end
+
+	remove (a_key: PATH)
+			-- equivalent to http DELETE /{id}
+		do
+        backend.remove(a_key)
+		end
+
+	wipe_out
+			-- equvilante to http DELET /  everything
+		do
+        backend.wipe_out
+		end
+
+feature -- PATCH operations
+patch_ds : TUPLE
+        -- This is the datastructure of incomplete data that we will 
+        -- use to do operations on incomplete data
+      deferred
+      end
+
+         
+	patch (a_patch: like patch_ds; a_key: PATH)
+			-- equvilant to http PATCH /{key}
+		do
+         backend.patch(to_storage_patch(a_patch),a_key)
+		end
+
+	extend_from_patch (a_patch: like patch_ds)
+			-- equvilante to a POST with incomplete data
+		do
+        backend.extend_from_patch(to_storage_patch(a_patch))
+		end
+
+
+feature -- Extra verbs
+	last_modified_key: PATH
+
+	key_for (a_r: R): PATH
+			-- the server should know what the key for a new thing is
+		do
+        Result := backend.key_for(to_storage(a_r))
+		end
+
+end
+
+   
