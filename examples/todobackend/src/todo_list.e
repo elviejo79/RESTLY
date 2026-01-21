@@ -23,23 +23,31 @@ feature -- Initialization
 
 feature -- Implementation of PICO_VERBS
 
-
-	patch (a_jo: JSON_OBJECT; key: PATH)
-		local
-			l_item: TODO_ITEM
+	patch_ds : TUPLE[JSON_OBJECT]
 		do
-			l_item := item(key)
-			l_item.patch({TODO_ITEM}.tuple_from_json_object(a_jo))
-			last_modified_key := key
+			Result := [create {JSON_OBJECT}.make_empty]
 		end
 
-	extend_from_patch (a_jo: JSON_OBJECT)
+	patch (a_patch: like patch_ds; key: PATH)
 		local
 			l_item: TODO_ITEM
 		do
-			create l_item.make_from_patch({TODO_ITEM}.tuple_from_json_object(a_jo))
-            extend(l_item)
-            l_item.key := last_modified_key
+			check attached {JSON_OBJECT} a_patch[1] as l_jo then
+				l_item := item(key)
+				l_item.patch({TODO_ITEM}.tuple_from_json_object(l_jo))
+				last_modified_key := key
+			end
+		end
+
+	extend_from_patch (a_patch: like patch_ds)
+		local
+			l_item: TODO_ITEM
+		do
+			check attached {JSON_OBJECT} a_patch[1] as l_jo then
+				create l_item.make_from_patch({TODO_ITEM}.tuple_from_json_object(l_jo))
+	            extend(l_item)
+	            l_item.key := last_modified_key
+			end
 		end
 
 	key_for (v: TODO_ITEM): PATH

@@ -18,7 +18,7 @@ inherit
 
 feature {NONE} -- Backend (deferred)
 
-	backend: PICO_VERBS[R, JSON_OBJECT]
+	backend: PICO_VERBS[R]
 			-- The storage backend for resources
 		deferred
 		end

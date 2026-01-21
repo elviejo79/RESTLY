@@ -10,7 +10,7 @@ note
 	revision: "$Revision$"
 
 deferred class
-	PICO_VERBS [R -> attached ANY, P]
+	PICO_VERBS [R -> attached ANY]
 
 feature -- Queries: http safe verbs
 
@@ -25,7 +25,10 @@ feature -- Queries: http safe verbs
 		deferred
 		end
 
-
+   current_keys: ARRAY[PATH]
+      deferred
+      end
+         
 	has (key: PATH): BOOLEAN
 			-- equivalent to http HEAD /{key}
 		deferred
@@ -46,17 +49,7 @@ feature -- Commands: http unsave verbs
 			-- equivalent to http POST /  the server must create the key
 		deferred
 		ensure
-			new_value_is_set_or_erro_500: v ~ item (last_modified_key)
-		end
-
-	patch (a_patch: P; key: PATH)
-			-- equvilant to http PATCH /{key}
-		deferred
-		end
-
-	extend_from_patch (a_patch: P)
-			-- equvilante to a POST with incomplete data
-		deferred
+			new_value_is_set_or_error_500: v ~ item (last_modified_key)
 		end
 
 	remove (key: PATH)
@@ -66,6 +59,24 @@ feature -- Commands: http unsave verbs
 
 	wipe_out
 			-- equvilante to http DELET /  everything
+		deferred
+		end
+
+
+feature -- PATCH operations
+patch_ds : TUPLE
+        -- This is the datastructure of incomplete data that we will 
+        -- use to do operations on incomplete data
+      deferred
+      end
+         
+	patch (a_patch: like patch_ds; key: PATH)
+			-- equvilant to http PATCH /{key}
+		deferred
+		end
+
+	extend_from_patch (a_patch: like patch_ds)
+			-- equvilante to a POST with incomplete data
 		deferred
 		end
 
