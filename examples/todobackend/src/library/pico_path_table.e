@@ -1,10 +1,10 @@
 note
-	description: "Summary description for {PICO_PATH_TABLE}."
+	description: "Generic in-memory table for PATCHABLE items with automatic key generation"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
 
-deferred class
+class
 	PICO_PATH_TABLE[R -> {PATCHABLE} create make_empty, make_from_patch end]
 
 inherit
@@ -25,6 +25,8 @@ inherit
 		copy, is_equal
 	end
 
+create
+	make
 
 feature -- Query
 
@@ -82,10 +84,19 @@ feature -- PATCH operations
 			extend (l_item)
 		end
 
+feature -- Key generation
+
+	key_for (v: R): PATH
+			-- Auto-increment key generation
+		do
+			create Result.make_from_string (count.out)
+		end
+
 feature {NONE} -- Implementation
 
 	empty_duplicate (n: INTEGER): like Current
-		deferred
+		do
+			create Result.make (n)
 		end
 
 end

@@ -22,7 +22,7 @@ create
 
 feature {NONE} -- Initialization
 
-	db: PICO_MEMORY_TABLE[TODO_ITEM]
+	db: PICO_PATH_TABLE[TODO_ITEM]
 			-- Storage layer
 		once ("PROCESS")
 			create Result.make (10)
