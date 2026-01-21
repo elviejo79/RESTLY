@@ -22,10 +22,10 @@ create
 
 feature {NONE} -- Initialization
 
-	db: TODO_LIST
+	db: PICO_MEMORY_TABLE[TODO_ITEM]
 			-- Storage layer
 		once ("PROCESS")
-			create Result.make_default
+			create Result.make (10)
 		end
 
 	decorator: TODO_JSON_DECORATOR
