@@ -22,15 +22,23 @@ create
 
 feature {NONE} -- Initialization
 
-db : TODO_LIST
-	once ("PROCESS")
-		create Result.make_default
-	end
+	db: TODO_LIST
+			-- Storage layer
+		once ("PROCESS")
+			create Result.make_default
+		end
 
-  todo_handler : TODO_HANDLER
-      once ("PROCESS")
-        create Result.make_with_backend(db, "http://localhost:8080/todos/")
-      end
+	decorator: TODO_JSON_DECORATOR
+			-- Adds URL field to JSON representations
+		once ("PROCESS")
+			create Result.make_with_backend (db, "http://localhost:8080/todos")
+		end
+
+	handler: PICO_JSON_HANDLER
+			-- Generic JSON handler
+		once ("PROCESS")
+			create Result.make_with_backend (decorator)
+		end
 
 
 feature -- Filter
@@ -65,8 +73,8 @@ feature -- Router
 			fhdl: WSF_FILE_SYSTEM_HANDLER
 		do
 
-			-- Map /todos{/id} to TODO_HANDLER
-		map_uri_template ("/todos{/id}", todo_handler, methods_GET_POST_PATCH_DELETE)
+			-- Map /todos{/id} to PICO_JSON_HANDLER
+		map_uri_template ("/todos{/id}", handler, methods_GET_POST_PATCH_DELETE)
 
 			-- CORS preflight handling for OPTIONS on the same URI template
 		map_uri_template_agent ("/todos{/id}", agent options_filter.execute, methods_OPTIONS)

@@ -1,5 +1,5 @@
 note
-	description: "Summary description for {TODO_LIST}."
+	description: "Application-specific storage for TODO_ITEMs"
 	author: ""
 	date: "$Date$"
 	revision: "$Revision$"
@@ -8,7 +8,7 @@ once class
 	TODO_LIST
 
 inherit
-	PICO_PATH_TABLE[TODO_ITEM, JSON_OBJECT]
+	PICO_PATH_TABLE[TODO_ITEM, TUPLE]
 
 
 create
@@ -23,43 +23,34 @@ feature -- Initialization
 
 feature -- Implementation of PICO_VERBS
 
-	patch_ds : TUPLE[JSON_OBJECT]
+	patch_ds: TUPLE[title: detachable STRING; completed: detachable BOOLEAN_REF; order: detachable INTEGER_REF]
 		do
-			Result := [create {JSON_OBJECT}.make_empty]
+			Result := [Void, Void, Void]
 		end
 
 	patch (a_patch: like patch_ds; key: PATH)
 		local
 			l_item: TODO_ITEM
 		do
-			check attached {JSON_OBJECT} a_patch[1] as l_jo then
-				l_item := item(key)
-				l_item.patch({TODO_ITEM}.tuple_from_json_object(l_jo))
-				last_modified_key := key
-			end
+			l_item := item(key)
+			l_item.patch(a_patch)
+			last_modified_key := key
 		end
 
 	extend_from_patch (a_patch: like patch_ds)
 		local
 			l_item: TODO_ITEM
 		do
-			check attached {JSON_OBJECT} a_patch[1] as l_jo then
-				create l_item.make_from_patch({TODO_ITEM}.tuple_from_json_object(l_jo))
-	            extend(l_item)
-	            l_item.key := last_modified_key
-			end
+			create l_item.make_from_patch(a_patch)
+			extend(l_item)
 		end
 
 	key_for (v: TODO_ITEM): PATH
 		local
 			l_count_string: STRING_8
 		do
-			if attached v.key as l_key and then not l_key.is_empty then
-				Result := l_key
-			else
-				l_count_string := count.out.to_string_8
-				create Result.make_from_string(l_count_string)
-			end
+			l_count_string := count.out.to_string_8
+			create Result.make_from_string(l_count_string)
 		end
 
 feature {NONE} -- Implementation

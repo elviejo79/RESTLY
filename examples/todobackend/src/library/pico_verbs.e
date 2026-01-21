@@ -64,8 +64,8 @@ feature -- Commands: http unsave verbs
 
 
 feature -- PATCH operations
-patch_ds : TUPLE
-        -- This is the datastructure of incomplete data that we will 
+patch_ds: detachable ANY
+        -- This is the datastructure of incomplete data that we will
         -- use to do operations on incomplete data
       deferred
       end

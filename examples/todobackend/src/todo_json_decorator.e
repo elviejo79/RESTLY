@@ -1,31 +1,56 @@
-class TODO_JSON_DECORATOR
+note
+	description: "Decorator that adds URL field to TODO_ITEM JSON representations"
+
+class
+	TODO_JSON_DECORATOR
 
 inherit
-PICO_CONVERTER_JSON[TODO_ITEM]
-      redefine
-      item
-      end
+	PICO_CONVERTER_JSON[TODO_ITEM]
+		redefine
+			item,
+			linear_representation
+		end
 
-feature -- state
-base_url : STRING
+create
+	make_with_backend
 
-feature -- Initialize
-make(a_base_url: like base_url)
-      do
-      base_url := a_base_url
-      end
-feature --converters
+feature -- Initialization
 
-to_storage_patch(a_patch_jo: JSON_OBJECT): like backend.patch_ds
-      do
-      Result := {TODO_ITEM}.tuple_from_json_object(a_patch_jo)
-      end
+	make_with_backend (a_backend: like backend; a_base_url: STRING)
+		do
+			backend := a_backend
+			base_url := a_base_url
+			create last_modified_key.make_from_string ("")
+		end
+
+feature -- State
+
+	base_url: STRING
+
+	backend: PICO_VERBS[TODO_ITEM]
 
 feature -- Queries
-item alias "/" (a_key: PATH):JSON_OBJECT assign force
-      do
-      Result := Precursor(a_key)
-         
-         Result.put_string(base_url+"/"+ a_key.to_string_8, "url")
-      end
+
+	item alias "/" (a_key: PATH): JSON_OBJECT assign force
+		do
+			Result := Precursor (a_key)
+			Result.put_string (base_url + "/" + a_key.name.to_string_8, "url")
+		end
+
+	linear_representation: LIST[JSON_OBJECT]
+		local
+			l_key: PATH
+		do
+			create {ARRAYED_LIST[JSON_OBJECT]} Result.make (0)
+			across backend.current_keys as k loop
+				l_key := k
+				Result.extend (item (l_key))
+			end
+		end
+
+	current_keys: ARRAY[PATH]
+		do
+			Result := backend.current_keys
+		end
+
 end

@@ -33,15 +33,6 @@ convert
 
 feature -- fields
 
-   key: detachable PATH assign set_key
-
-      set_key(v: detachable PATH)
-      do
-      check attached v then
-         key := v
-      end
-      end
-      
 title: STRING
 completed: BOOLEAN
 order: INTEGER
@@ -90,15 +81,10 @@ feature -- convertible_with_json
 
 	to_json_object: JSON_OBJECT
       do
-         create Result.make_with_capacity(5)
-         if attached key as l_key then
-            Result.put_string(l_key.out, "key")
-            Result.put_string("http://localhost:8080/todos/"+l_key.out, "url")
-         end
+         create Result.make_with_capacity(3)
          Result.put_string(title, "title")
          Result.put_boolean(completed, "completed")
          Result.put_integer(order, "order")
-         
       end
 
 	tuple_from_json_object(a_jo:JSON_OBJECT): like Patch_ds
