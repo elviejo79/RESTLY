@@ -21,7 +21,7 @@ feature -- Queries: http safe verbs
 		deferred
 		end
 
-	linear_representation:LIST[R]
+	linear_representation:ARRAYED_LIST[R]
 		deferred
 		end
 
@@ -81,7 +81,10 @@ patch_ds: detachable ANY
 		end
 
 feature -- Extra verbs
-	last_modified_key: PATH
+   last_modified_key: PATH
+      attribute
+        create Result.make_from_string ("")
+      end
 
 	key_for (v: R): PATH
 			-- the server should know what the key for a new thing is

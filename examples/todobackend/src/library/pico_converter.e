@@ -30,14 +30,18 @@ feature -- Queries: http safe verbs
         Result:= to_representation(backend.item(a_key))
 		end
 
-	linear_representation:LIST[R]
+	linear_representation: ARRAYED_LIST[R]
 		do
-			create {ARRAYED_LIST[R]} Result.make(0)
+			create Result.make(0)
 			across backend.current_keys as k loop
 				Result.extend(item(k))
 			end
 		end
 
+	current_keys: ARRAY[PATH]
+		do
+			Result := backend.current_keys
+		end
 
 	has (a_key: PATH): BOOLEAN
 			-- equivalent to http HEAD /{key}

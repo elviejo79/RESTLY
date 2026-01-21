@@ -5,23 +5,19 @@ note
 	revision: "$Revision$"
 
 deferred class
-	PICO_PATH_TABLE[R -> attached ANY, P]
+	PICO_PATH_TABLE[R -> {PATCHABLE} create make_empty, make_from_patch end]
 
 inherit
-	HASH_TABLE [R, STRING]
+	HASH_TABLE [R, PATH]
 	rename
-		item as hash_item,
 		extend as hash_extend,
-		linear_representation as hash_linear_representation,
-		has as hash_has,
-		force as hash_force,
-		remove as hash_remove,
-		current_keys as hash_current_keys
+		item as hash_item
 	export
 		{NONE} all
-		{ANY} hash_has
 	undefine
 		empty_duplicate
+	redefine
+		force
 	end
 
 	PICO_VERBS[R]
@@ -29,91 +25,64 @@ inherit
 		copy, is_equal
 	end
 
+
 feature -- Query
 
 	item alias "/" (key: PATH): R assign force
-		local
-			l_key: STRING
-			l_result: detachable R
 		do
-			l_key := path_to_string(key)
-			l_result := hash_item(l_key)
-			if attached l_result as l_item then
+			check attached hash_item(key) as l_item then
 				Result := l_item
-			else
-				-- This should not happen if precondition is checked
-				check False then
-					-- Will fail here with precondition message
-				end
 			end
-		end
-
-	has (key: PATH): BOOLEAN
-		do
-			Result := hash_has(path_to_string(key))
-		end
-
-	linear_representation: LIST[R]
-		local
-			l_list: ARRAYED_LIST[R]
-		do
-			create l_list.make (count)
-			across hash_linear_representation as ic loop
-				l_list.extend (ic)
-			end
-			Result := l_list
-		end
+      end
 
 	extend (v: R)
 		local
 			l_key: PATH
-			l_string_key: STRING
 		do
 			l_key := key_for(v)
-			l_string_key := path_to_string(l_key)
-			put(v, l_string_key)
+			put(v, l_key)
 			last_modified_key := l_key
 		end
 
 	force (v: R; key: PATH)
 		do
-			hash_force(v, path_to_string(key))
+			Precursor(v, key)
 			last_modified_key := key
 		end
 
-	remove (key: PATH)
+feature -- PATCH operations
+
+	patch_ds: TUPLE
+			-- Patch data structure descriptor
+		local
+			l_r: R
 		do
-			hash_remove(path_to_string(key))
+			create l_r.make_empty
+			check attached {TUPLE} l_r.Patch_ds as l_patch_ds then
+				Result := l_patch_ds
+			end
 		end
 
-	current_keys: ARRAY[PATH]
-			-- Get all current keys as PATH array
+	patch (a_patch: like patch_ds; key: PATH)
+			-- Apply patch to item at key
 		local
-			l_list: ARRAYED_LIST[PATH]
-			i: INTEGER
+			l_item: R
 		do
-			create l_list.make (count)
-			across hash_current_keys as ic loop
-				l_list.extend (create {PATH}.make_from_string (ic))
-			end
-			create Result.make_filled (create {PATH}.make_current, 1, l_list.count)
-			from
-				i := 1
-			until
-				i > l_list.count
-			loop
-				Result[i] := l_list[i]
-				i := i + 1
-			end
+			l_item := item (key)
+			l_item.patch (a_patch)
+			force (l_item, key)
+		end
+
+	extend_from_patch (a_patch: like patch_ds)
+			-- Create new item from patch
+		local
+			l_item: R
+		do
+			create l_item.make_from_patch (a_patch)
+			extend (l_item)
 		end
 
 feature {NONE} -- Implementation
-
-	path_to_string (a_path: PATH): STRING
-			-- Convert PATH to STRING for hash table operations
-		do
-			Result := a_path.name.to_string_8
-		end
 
 	empty_duplicate (n: INTEGER): like Current
 		deferred

@@ -37,20 +37,15 @@ feature -- Queries
 			Result.put_string (base_url + "/" + a_key.name.to_string_8, "url")
 		end
 
-	linear_representation: LIST[JSON_OBJECT]
+	linear_representation: ARRAYED_LIST[JSON_OBJECT]
 		local
 			l_key: PATH
 		do
-			create {ARRAYED_LIST[JSON_OBJECT]} Result.make (0)
+			create Result.make (0)
 			across backend.current_keys as k loop
 				l_key := k
 				Result.extend (item (l_key))
 			end
-		end
-
-	current_keys: ARRAY[PATH]
-		do
-			Result := backend.current_keys
 		end
 
 end
