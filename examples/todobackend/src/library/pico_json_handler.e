@@ -1,40 +1,42 @@
 note
-	description: "TODO-specific REST resource handler implementation"
+	description: "Generic REST resource handler for JSON-based PICO backends"
 
 class
-	TODO_HANDLER
+	PICO_JSON_HANDLER
 
 inherit
-	PICO_RESOURCE_HANDLER[TODO_ITEM]
+	PICO_RESOURCE_HANDLER[JSON_OBJECT]
 
 create
 	make_with_backend
 
 feature {NONE} -- Initialization
 
-	make_with_backend (a_backend: like backend; a_base_url: STRING)
+	make_with_backend (a_backend: like backend)
 		do
 			backend := a_backend
-			base_url := a_base_url
 		end
 
 feature {NONE} -- Backend implementation
 
-	backend: PICO_VERBS[TODO_ITEM]
+	backend: PICO_VERBS[JSON_OBJECT]
 			-- The storage backend for resources
 
 	base_url: STRING
-			-- Base URL for building resource URLs
+			-- Not used in generic handler - decorator adds URLs
+		do
+			Result := ""
+		end
 
 feature {NONE} -- HTTP Verbs implementation
 
 	do_get (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- GET /resource/{id} - retrieve single resource
 		local
-			item: TODO_ITEM
+			item: JSON_OBJECT
 		do
 			item := backend.item (extract_id (req))
-			Result := json_ok (item.to_json_value)
+			Result := json_ok (item)
 		end
 
 	do_get_all (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -46,14 +48,14 @@ feature {NONE} -- HTTP Verbs implementation
 	do_post (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- POST /resource - create new resource
 		local
-			updated_item: TODO_ITEM
+			updated_item: JSON_OBJECT
 			jo: JSON_OBJECT
 		do
 			jo := extract_json (req)
-			backend.extend_from_patch ([jo])
+			backend.extend_from_patch (jo)
 			updated_item := backend.item (backend.last_modified_key)
 			Result := {WSF_JSON_RESPONSE}.created.with_body (
-				updated_item.to_json_value.representation
+				updated_item.representation
 			)
 		end
 
@@ -68,13 +70,13 @@ feature {NONE} -- HTTP Verbs implementation
 		local
 			id: PATH
 			partial: JSON_OBJECT
-			l_res: TODO_ITEM
+			l_res: JSON_OBJECT
 		do
 			id := extract_id (req)
 			partial := extract_json (req)
-			backend.patch ([partial], id)
+			backend.patch (partial, id)
 			l_res := backend.item (id)
-			Result := json_ok (l_res.to_json_value)
+			Result := json_ok (l_res)
 		end
 
 	do_delete (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -108,14 +110,8 @@ feature {NONE} -- Helpers
 		do
 			create Result.make_empty
 			across backend.linear_representation as item loop
-				Result.extend (item.to_json_value)
+				Result.extend (item)
 			end
-		end
-
-	build_url_for (id: PATH): STRING
-			-- Build full URL for a resource
-		do
-			Result := base_url + id.out
 		end
 
 end

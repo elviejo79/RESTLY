@@ -1,9 +1,11 @@
-deferred class PICO_CONVERTER[R,S]
+deferred class PICO_CONVERTER[R -> attached ANY, S -> attached ANY]
 inherit
-PICO_VERBS[R]
+	PICO_VERBS[R]
 
-feature -- next state
+feature -- Backend
 backend: PICO_VERBS[S]
+	deferred
+	end
 
 feature -- converters
 
@@ -28,14 +30,18 @@ feature -- Queries: http safe verbs
         Result:= to_representation(backend.item(a_key))
 		end
 
-	linear_representation:LIST[R]
+	linear_representation: ARRAYED_LIST[R]
 		do
-      create {ARRAYED_LIST[R]} Result.make(0)
-         across backend.current_keys as k loop
-             Result.append(item(k.item))
-         end
+			create Result.make(0)
+			across backend.current_keys as k loop
+				Result.extend(item(k))
+			end
 		end
 
+	current_keys: ARRAY[PATH]
+		do
+			Result := backend.current_keys
+		end
 
 	has (a_key: PATH): BOOLEAN
 			-- equivalent to http HEAD /{key}
@@ -47,13 +53,15 @@ feature -- Commands: http unsave verbs
 
 	force (a_r: R; a_key: PATH)
 		do
-         backend.force(to_storage(a_r),a_key)
+			backend.force(to_storage(a_r),a_key)
+			last_modified_key := backend.last_modified_key
 		end
 
 	extend (a_r: R)
 			-- equivalent to http POST /  the server must create the key
 		do
-         backend.extend(to_storage(a_r))
+			backend.extend(to_storage(a_r))
+			last_modified_key := backend.last_modified_key
 		end
 
 	remove (a_key: PATH)
@@ -69,8 +77,8 @@ feature -- Commands: http unsave verbs
 		end
 
 feature -- PATCH operations
-patch_ds : TUPLE
-        -- This is the datastructure of incomplete data that we will 
+patch_ds: detachable ANY
+        -- This is the datastructure of incomplete data that we will
         -- use to do operations on incomplete data
       deferred
       end
@@ -79,23 +87,24 @@ patch_ds : TUPLE
 	patch (a_patch: like patch_ds; a_key: PATH)
 			-- equvilant to http PATCH /{key}
 		do
-         backend.patch(to_storage_patch(a_patch),a_key)
+			backend.patch(to_storage_patch(a_patch),a_key)
+			last_modified_key := backend.last_modified_key
 		end
 
 	extend_from_patch (a_patch: like patch_ds)
 			-- equvilante to a POST with incomplete data
 		do
-        backend.extend_from_patch(to_storage_patch(a_patch))
+			backend.extend_from_patch(to_storage_patch(a_patch))
+			last_modified_key := backend.last_modified_key
 		end
 
 
 feature -- Extra verbs
-	last_modified_key: PATH
 
 	key_for (a_r: R): PATH
 			-- the server should know what the key for a new thing is
 		do
-        Result := backend.key_for(to_storage(a_r))
+			Result := backend.key_for(to_storage(a_r))
 		end
 
 end

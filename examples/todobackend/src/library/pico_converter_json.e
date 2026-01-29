@@ -1,42 +1,34 @@
-deferred class PICO_CONVERTER_JSON[S -> {CONVERTIBLE_WITH_JSON, PATCHABLE}]
+deferred class PICO_CONVERTER_JSON[S -> {CONVERTIBLE_WITH_JSON, PATCHABLE} create make_empty, make_from_json_object end]
 inherit
-PICO_CONVERTER[JSON_OBJECT,S]
-      undefine
-      extend, force
-      redefine
-      linear_representation
-      end
+	PICO_CONVERTER[JSON_OBJECT, S]
       
-feature -- next state
-backend: PICO_VERBS[S]
+feature -- Patch descriptor
 
-   Patch_ds: TUPLE
-      local
-      l_s : S
-      do
-        create l_s.make_empty
-        Result :=  l_s.Patch_ds
-      end
-      
-feature -- converters
-
-to_representation(a_s:S):JSON_OBJECT
+	Patch_ds: JSON_OBJECT
 		do
-      Result := a_s.to_json_object
-      end
+			create Result.make_empty
+		end
 
-to_storage(a_r:JSON_OBJECT):S
-      do
-      create Result.make_from_json_object(a_r)
-      end
-         
-      to_storage_patch(a_patch_jo:JSON_OBJECT): TUPLE
-      local
-      l_s:S
-      do
-      create l_s.make_empty
-      Result := l_s.tuple_from_json_object(a_patch_jo)
-      end
-  
+feature -- Converters
+
+	to_representation (a_s: S): JSON_OBJECT
+		do
+			Result := a_s.to_json_object
+		end
+
+	to_storage (a_r: JSON_OBJECT): S
+		do
+			create Result.make_from_json_object (a_r)
+		end
+
+	to_storage_patch (a_representation_patch: like Patch_ds): like backend.patch_ds
+		local
+			l_s: S
+		do
+			create l_s.make_empty
+			Result := l_s.tuple_from_json_object (a_representation_patch)
+		end
+
+
 end
    

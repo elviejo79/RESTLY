@@ -21,7 +21,7 @@ feature -- Queries: http safe verbs
 		deferred
 		end
 
-	linear_representation:LIST[R]
+	linear_representation:ARRAYED_LIST[R]
 		deferred
 		end
 
@@ -64,8 +64,8 @@ feature -- Commands: http unsave verbs
 
 
 feature -- PATCH operations
-patch_ds : TUPLE
-        -- This is the datastructure of incomplete data that we will 
+patch_ds: detachable ANY
+        -- This is the datastructure of incomplete data that we will
         -- use to do operations on incomplete data
       deferred
       end
@@ -81,7 +81,10 @@ patch_ds : TUPLE
 		end
 
 feature -- Extra verbs
-	last_modified_key: PATH
+   last_modified_key: PATH
+      attribute
+        create Result.make_from_string ("")
+      end
 
 	key_for (v: R): PATH
 			-- the server should know what the key for a new thing is
