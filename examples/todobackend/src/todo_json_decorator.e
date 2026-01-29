@@ -7,8 +7,7 @@ class
 inherit
 	PICO_CONVERTER_JSON[TODO_ITEM]
 		redefine
-			item,
-			linear_representation
+			item
 		end
 
 create
@@ -37,15 +36,5 @@ feature -- Queries
 			Result.put_string (base_url + "/" + a_key.name.to_string_8, "url")
 		end
 
-	linear_representation: ARRAYED_LIST[JSON_OBJECT]
-		local
-			l_key: PATH
-		do
-			create Result.make (0)
-			across backend.current_keys as k loop
-				l_key := k
-				Result.extend (item (l_key))
-			end
-		end
 
 end

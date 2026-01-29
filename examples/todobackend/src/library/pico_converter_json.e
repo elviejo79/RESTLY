@@ -1,7 +1,7 @@
 deferred class PICO_CONVERTER_JSON[S -> {CONVERTIBLE_WITH_JSON, PATCHABLE} create make_empty, make_from_json_object end]
 inherit
 	PICO_CONVERTER[JSON_OBJECT, S]
-
+      
 feature -- Patch descriptor
 
 	Patch_ds: JSON_OBJECT
@@ -28,6 +28,7 @@ feature -- Converters
 			create l_s.make_empty
 			Result := l_s.tuple_from_json_object (a_representation_patch)
 		end
+
 
 end
    
