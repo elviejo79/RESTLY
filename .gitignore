@@ -7,3 +7,9 @@ tests/temp/
 *#
 # Ignored by gitless cli
 HTTPico/EIFDATA
+
+# Ignored by gitless cli
+./library/.gobo/
+
+# Ignored by gitless cli
+./library/.gobo
