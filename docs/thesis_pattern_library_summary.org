@@ -1,0 +1,323 @@
+#+TITLE: From Patterns to Components — Summary for Claude Code
+#+AUTHOR: Summary of Arnout 2004, ETH Zürich Diss. No. 15500
+#+PROPERTY: header-args :lang eiffel
+
+* Overview
+
+This thesis (Karine Arnout, ETH Zürich, 2004, supervised by Bertrand Meyer) answers
+one question: /can GoF design patterns be turned into reusable Eiffel library classes?/
+
+The central claim: *design patterns are good, components are better*.  Patterns are
+reusable as design but not as code — every programmer reimplements them from scratch.
+"Componentization" is the process of transforming a pattern description into a reusable
+library class (or cluster of classes) that clients can use without reimplementing it.
+
+The outcome is three artifacts:
+- A *Pattern Library* — Eiffel classes for the 15 componentizable patterns
+- A *Pattern Componentizability Classification* — which of the 23 GoF patterns can be
+  componentized, and how completely
+- A *Pattern Wizard* — code generator for skeleton classes for non-componentizable patterns
+
+The RESTLY library uses this approach to build a composable REST resource abstraction in
+Eiffel.
+
+* Key Definitions
+
+- *Componentization* :: designing and implementing a reusable component (library classes)
+  from a design pattern (its intent, motivation, use cases, and typical architecture).
+- *Componentizable pattern* :: one for which a reusable library can be written that gives
+  the same facilities as the original pattern.
+- *Non-componentizable pattern* :: one where no reusable library can capture the full
+  intent; context-specific code is unavoidable.
+- *Component (Meyer's definition)* :: a reusable software element (library classes,
+  typically in source form) that (a) can be used by clients, (b) does not need to know
+  who those clients are, and (c) clients can use on the sole basis of its official
+  (exported) information.
+
+* Pattern Componentizability Classification
+
+** Quick Reference Table
+
+| GoF Pattern        | Category               | Library name / approach              |
+|--------------------+------------------------+--------------------------------------|
+| Prototype          | 1.1 Built-in           | ~ANY.clone~ / ~ANY.deep_clone~       |
+| Observer           | 1.3.1 Fully            | Event Library                        |
+| Mediator           | 1.3.1 Fully            | Mediator Library (uses Event Library) |
+| Abstract Factory   | 1.3.1 Fully            | Factory Library                      |
+| Factory Method     | 1.3.1 Fully            | Factory Library                      |
+| Visitor            | 1.3.1 Fully            | Visitor Library (~VISITOR[G]~)       |
+| Composite          | 1.3.1 Fully            | Composite Library                    |
+| Flyweight          | 1.3.1 Fully            | Flyweight Library                    |
+| Command            | 1.3.1 Fully            | Command Library                      |
+| Chain of Resp.     | 1.3.1 Fully            | Chain Library                        |
+| Builder            | 1.3.2 Not comprehensive| Builder Library (partial)            |
+| Proxy              | 1.3.2 Not comprehensive| Proxy Library (partial)              |
+| State              | 1.3.2 Not comprehensive| State Library (partial)              |
+| Strategy           | 1.3.3 Unfaithful       | Strategy Library (via agents)        |
+| Memento            | 1.3.4 Useless          | Memento Library (feasible but overkill) |
+| Decorator          | 2.1.1 Skeleton+method  | Skeleton classes only (Pattern Wizard) |
+| Adapter            | 2.1.1 Skeleton+method  | Skeleton classes only (Pattern Wizard) |
+| Template Method    | 2.1.2 Skeleton no method| Skeleton classes only               |
+| Bridge             | 2.1.2 Skeleton no method| Skeleton classes only               |
+| Singleton          | 2.2 Possible skeleton  | ~once~ creation procedures           |
+| Iterator           | 2.3 Library supported  | EiffelBase ~V_TABLE_ITERATOR~ etc.   |
+| Facade             | 2.4 Design idea only   | Must implement fully from scratch    |
+| Interpreter        | 2.4 Design idea only   | Must implement fully from scratch    |
+
+** Category Meanings
+
+- *1.1 Built-in* :: Already provided by the Eiffel Kernel Library.  No special design
+  needed; just use the built-in feature.
+- *1.3.1 Fully componentizable* :: A library class (or cluster) fully captures the intent
+  of the pattern.  Clients inherit from or use these classes directly.
+- *1.3.2 Not comprehensive* :: Library covers some but not all cases described in Design
+  Patterns.  Use the library where it applies; implement remaining cases manually.
+- *1.3.3 Unfaithful* :: Library works but changes the spirit of the original pattern
+  slightly (e.g., Strategy uses Eiffel agents — effectively first-class routines).
+- *1.3.4 Useless* :: Library is feasible but too heavyweight to be worth using in practice.
+- *2.1 Skeleton* :: Pattern cannot be fully componentized; Pattern Wizard generates
+  skeleton classes with empty bodies that the programmer fills in.
+- *2.3 Some library support* :: Pattern already handled by existing Eiffel structure
+  libraries (EiffelBase, SmartEiffel, etc.).
+- *2.4 Design idea* :: Too context-dependent to help even with skeleton classes.
+
+* Key Language Mechanisms Used
+
+The componentization of nearly all fully-componentizable patterns relies on:
+
+1. *Unconstrained genericity* — parameterize on element type (~[G]~, ~[K, V]~)
+2. *Constrained genericity* — restrict type parameters (~[G -> HASHABLE]~, ~[G -> COMPARABLE]~)
+3. *Agents (Eiffel first-class routines)* — pass behavior as data, essential for Visitor,
+   Command, Flyweight, Strategy, Observer
+4. *Design by Contract™* — preconditions, postconditions, invariants make components
+   trustworthy; they are active at runtime and catch misuse
+5. *Multiple inheritance* — combine deferred interfaces cleanly
+
+* How to Use the Pattern Library
+
+** General Rule
+
+For a *fully-componentizable* pattern:
+1. Inherit from or use the provided library class — do *not* reimplement the pattern.
+2. Fill in only the application-specific parts (your concrete types and behaviors).
+
+For a *non-componentizable* pattern:
+1. Use the Pattern Wizard to generate skeleton classes, or follow the skeleton structure.
+2. Fill in the deferred features with application logic.
+
+For *Facade* and *Interpreter*: no library or skeleton helps — design from scratch.
+
+** Visitor Library Example (~VISITOR[G]~)
+
+The Visitor Library solves the key pain point of the raw pattern: you no longer need
+to add an ~accept~ feature to every visited class.
+
+#+begin_src eiffel
+-- 1. Declare a visitor for your element type
+maintenance_visitor: VISITOR [BORROWABLE]
+
+-- 2. Create it and register actions per concrete type
+create maintenance_visitor.make
+maintenance_visitor.append (<<
+    agent maintain_dictionary,   -- called when element is a DICTIONARY
+    agent maintain_textbook,     -- called when element is a TEXTBOOK
+    agent maintain_book,         -- called when element is a BOOK
+    agent maintain_video_recorder
+>>)
+
+-- 3. Visit an element (the library dispatches to the right agent)
+maintenance_visitor.visit (some_borrowable)
+#+end_src
+
+Actions are registered in *descendants-first, parents-last* order so subtype dispatch
+works correctly.  The ~VISITOR[G]~ class interface:
+- ~make~ — initialize the actions list
+- ~visit (an_element: G)~ — dispatch to the right action
+- ~extend (an_action: PROCEDURE [ANY, TUPLE [G]])~ — add one action
+- ~append (some_actions: ARRAY [...])~ — add multiple actions
+
+** Event Library / Observer (Observer pattern)
+
+The Event Library wraps the Observer pattern.  Instead of a SUBJECT keeping a list of
+OBSERVERs and calling ~update~, you use typed events:
+
+#+begin_src eiffel
+-- Subject side: publish an event
+temperature_changed: EVENT_TYPE [TUPLE [REAL]]
+    -- fire it:
+temperature_changed.publish ([new_temp])
+
+-- Observer side: subscribe
+a_subject.temperature_changed.subscribe (agent on_temp_change)
+#+end_src
+
+No need to inherit from SUBJECT or OBSERVER.  The Event Library covers the Mediator
+pattern too: a mediator is simply an object that subscribes to events from multiple
+sources and re-fires them.
+
+** Factory Library (~FACTORY[G]~)
+
+Replaces both Abstract Factory and Factory Method patterns:
+
+#+begin_src eiffel
+-- Declare a factory parameterized on the product type
+book_factory: FACTORY [BOOK]
+
+-- Create a product
+new_book := book_factory.new_instance
+#+end_src
+
+No need for separate ConcreteFactory subclasses.
+
+** Composite Library
+
+Two variants:
+- *Transparent Composite* — clients cannot distinguish leaf from composite (same interface)
+- *Safe Composite* — composite-specific operations (add/remove child) are visible only on
+  composites
+
+Inherit your leaf and composite classes from the appropriate library base class.
+
+** Chain of Responsibility Library
+
+Replaces the manual linked-list of handlers.  Each handler is a generic class;
+the library routes requests down the chain and stops at the first handler that can handle it.
+
+* RESTLY Library — Pattern Mapping
+
+The RESTLY library in this project applies the componentization approach to REST resources.
+
+** Class Hierarchy
+
+#+begin_example
+V_TABLE[K,V]  (EiffelBase — Iterator pattern already library-supported)
+  └── RESTLY_VERBS_BASIC_MUTABLE[K,V]   -- raw mutable store (item = direct ref)
+        └── RESTLY_VERBS_BASIC[K,V]     -- immutable-by-default (item = deep_twin)
+              ├── RESTLY_VERBS[K,V]     -- full HTTP-like protocol (GET/PUT/DELETE/POST/PATCH)
+              │     └── RESTLY_RESOURCE[K,V]   -- named REST resource
+              │           └── RESTLY_RESOURCE_BASIC_HASH[K->HASHABLE, V]  (concrete)
+              └── RESTLY_COMBINATOR_MONADIC[K,V]   -- wraps one backend
+              │     └── RESTLY_COMBINATOR_FORWARDER[K,V]  (concrete, transparent proxy)
+              └── RESTLY_COMBINATOR_DIADIC[FK,FV,BK,BV]  -- wraps frontend + backend
+                    └── RESTLY_COMBINATOR_CACHE[FK,FV,BK,BV]  (deferred, subclass it)
+#+end_example
+
+** Which Thesis Patterns Are Used
+
+| RESTLY class                    | Thesis pattern            | Notes                                              |
+|---------------------------------+---------------------------+----------------------------------------------------|
+| ~RESTLY_VERBS_*~ hierarchy      | Strategy (1.3.3)          | Pluggable verb sets via inheritance                |
+| ~RESTLY_COMBINATOR_MONADIC~     | Proxy (1.3.2)             | Transparent forwarder to backend                   |
+| ~RESTLY_COMBINATOR_DIADIC~      | Composite / Decorator     | Combines two typed stores                          |
+| ~RESTLY_COMBINATOR_CACHE~       | Proxy + Chain (1.3.2/1.1) | Cache check → backend miss → populate              |
+| ~RESTLY_RESOURCE_BASIC_HASH~    | Built-in Prototype (1.1)  | ~item~ returns ~deep_twin~ (immutability guarantee) |
+| ~V_TABLE~ base (EiffelBase)     | Iterator (2.3)            | Already library-supported, used as-is              |
+
+** Concrete Usage Patterns
+
+*** Using a basic hash resource
+#+begin_src eiffel
+local
+    store: RESTLY_RESOURCE_BASIC_HASH [STRING, MY_VALUE]
+do
+    create store.with_object_equality   -- always use with_object_equality for STRING keys
+    store.extend (some_value, "my-key")
+    -- item returns a deep_twin -- safe to hand to callers
+    my_val := store ["my-key"]
+end
+#+end_src
+
+*** Creating a cache combinator (subclass ~RESTLY_COMBINATOR_CACHE~)
+#+begin_src eiffel
+class MY_CACHE [K -> HASHABLE, V]
+inherit
+    RESTLY_COMBINATOR_CACHE [K, V, K, V]
+create
+    make
+feature
+    to_backend_key (fk: K): K   do Result := fk   end
+    to_frontend_key (bk: K): K  do Result := bk   end
+    to_backend_value (fv: V): V do Result := fv    end
+    to_frontend_value (bv: V): V do Result := bv   end
+end
+
+-- Usage:
+local
+    cache: MY_CACHE [STRING, MY_DATA]
+    fast_store: RESTLY_RESOURCE_BASIC_HASH [STRING, MY_DATA]
+    slow_store: MY_SLOW_BACKEND
+do
+    create fast_store.with_object_equality
+    create slow_store.make (...)
+    create cache.make (fast_store, slow_store)
+
+    -- Reads check fast_store first, fall back to slow_store on miss
+    val := cache ["key"]
+    -- Writes go to both
+    cache.extend (new_val, "key")
+end
+#+end_src
+
+*** Using a forwarder (transparent proxy)
+#+begin_src eiffel
+local
+    fwd: RESTLY_COMBINATOR_FORWARDER [STRING, MY_VALUE]
+do
+    create fwd.make (actual_backend)
+    -- all calls are delegated transparently to actual_backend
+end
+#+end_src
+
+* Design Contracts in RESTLY
+
+Every library class has active contracts.  Key invariants and postconditions to know:
+
+- ~RESTLY_VERBS_BASIC.item~: result is ~deep_equal~ to ~mutable_item~ (but a different
+  object) — callers cannot mutate the store through the returned value.
+- ~RESTLY_COMBINATOR_CACHE.item~: on a cache miss, the backend is queried and the result
+  is populated into the frontend before returning.
+- ~RESTLY_RESOURCE_BASIC_HASH~: use ~with_object_equality~ creation when key type is
+  ~STRING~; the default creation uses reference equality and ~STRING~ keys will not match.
+- Never modify pre/postconditions — only the repository owner does that (per project rules).
+
+* Non-Componentizable Patterns in RESTLY Context
+
+If you need these in RESTLY, implement them manually:
+
+- *Decorator* :: To add behavior to a single resource instance without changing others,
+  implement a wrapper class that holds the original resource and overrides only the
+  methods you need.  There is no reusable ~DECORATOR~ library class.
+- *Facade* :: If you need to simplify a complex subsystem behind a single object,
+  design and implement it from scratch; no skeleton is useful.
+- *Singleton* :: Use Eiffel ~once~ creation procedures.  Note this is an approximation
+  (not fully correct Singleton semantics), but is the standard Eiffel idiom.
+- *Template Method* :: Define a deferred class with the template method calling deferred
+  steps.  Concrete subclasses fill in the steps.
+
+* Key Rules for Claude Code
+
+1. *Check componentizability first*: before writing pattern code, check the table above.
+   If a library class exists, use it — do not reimplement the pattern manually.
+
+2. *Design by Contract is enforced at runtime*: the ~ensure~ and ~require~ clauses in
+   library classes are checked at runtime.  If a contract fires, fix the calling code —
+   not the contracts.  Never change pre/postconditions.
+
+3. *STRING keys require ~with_object_equality~*: ~V_HASH_TABLE~ (and therefore
+   ~RESTLY_RESOURCE_BASIC_HASH~) defaults to reference equality.  Always create with
+   ~with_object_equality~ when using ~STRING~ keys.
+
+4. *~item~ vs ~mutable_item~*: ~RESTLY_VERBS_BASIC.item~ returns a ~deep_twin~
+   (defensive copy).  Use it when handing values to external callers.  Use
+   ~mutable_item~ only internally when you need to avoid the copy overhead and will not
+   expose the reference.
+
+5. *Command/Query separation*: In Eiffel, procedures that change state do not return
+   values.  Call the command first, then query for the new state separately.
+
+6. *Void-safety*: Modern Eiffel is void-safe — you do not need ~if x /= Void then~
+   guards for attached types.  The compiler enforces non-voidness.
+
+7. *~extend~ vs ~put~*: ~extend~ inserts a new key (precondition: key must not yet
+   exist).  ~put~ / ~force~ updates an existing key or inserts if absent.
+   Using ~extend~ on a key that already exists violates its precondition.

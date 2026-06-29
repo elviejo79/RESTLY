@@ -1,0 +1,271 @@
+#+TITLE: Factory Library — How and When to Use It
+#+AUTHOR: Summary of Chapter 8, Arnout 2004, ETH Zürich Diss. No. 15500
+#+PROPERTY: header-args :lang eiffel
+
+* Purpose
+
+The Factory Library (Chapter 8 of the thesis) componentizes both the *Abstract Factory*
+and *Factory Method* GoF patterns into a single reusable class: ~FACTORY[G]~.
+
+*Core idea*: instead of writing a new factory class for every product type, you create
+one instance of ~FACTORY[G]~ and hand it an *agent* (a first-class routine object) that
+wraps whatever creation procedure your product type needs.
+
+* Classification
+
+| Pattern          | Classification    | Library          |
+|------------------+-------------------+------------------|
+| Abstract Factory | 1.3.1 Fully       | ~FACTORY[G]~     |
+| Factory Method   | 1.3.1 Fully       | ~FACTORY[G]~     |
+
+Both patterns are fully componentizable and share the same library class.
+
+* When to Use the Factory Library
+
+Use ~FACTORY[G]~ whenever you need to:
+
+1. *Defer object creation* — decide at runtime which concrete type to instantiate, without
+   the caller knowing the concrete type.
+2. *Decouple creation from use* — a client receives a ~FACTORY[BOOK]~ and calls
+   ~new~; it never mentions ~BOOK~ creation procedures.
+3. *Replace an Abstract Factory hierarchy* — you have (or would have) a parallel set of
+   factory classes mirroring a product class hierarchy.  A ~FACTORY[G]~ per product type
+   replaces each concrete factory subclass.
+4. *Replace a Factory Method* — a class that defines a deferred ~make_product~ feature
+   just to let subclasses override it can instead hold a ~FACTORY[G]~ and call ~new~.
+
+Do *not* use it when:
+- Factories for different product types share behavior that must be factored into a
+  common superclass — the Factory Library gives you no shared factory hierarchy
+  (one ~FACTORY[G]~ is one product type; there is no ~FACTORY[BOOK]~ inheriting from
+  ~FACTORY[BORROWABLE]~).
+- You need the factory itself to carry mutable configuration state between calls (the
+  library factory holds only the agent, nothing more).
+
+* The ~FACTORY[G]~ Class Interface
+
+#+begin_src eiffel
+class FACTORY [G]
+
+create
+    make
+
+feature -- Initialization
+
+    make (a_function: like factory_function)
+        require
+            a_function_not_void: a_function /= Void
+        ensure
+            factory_function_set: factory_function = a_function
+        end
+
+feature -- Status report
+
+    valid_args (args: TUPLE): BOOLEAN
+        -- Are `args` valid operands for the factory function?
+
+feature -- Factory functions
+
+    new: G
+        require
+            valid_args: valid_args ([])
+        ensure
+            new_not_void: Result /= Void
+        end
+
+    new_with_args (args: TUPLE): G
+        require
+            valid_args: valid_args (args)
+        ensure
+            new_not_void: Result /= Void
+        end
+
+feature -- Access
+
+    factory_function: FUNCTION [ANY, TUPLE [], G]
+
+invariant
+    factory_function_not_void: factory_function /= Void
+
+end
+#+end_src
+
+Key points:
+- ~G~ is *unconstrained* — any type works; no ~CREATABLE~ interface required.
+- The agent ~factory_function~ holds all the type and argument knowledge.
+- ~new~ calls the agent with an empty tuple (no-arg construction).
+- ~new_with_args~ passes the caller's tuple to the agent.
+- ~valid_args~ lets you guard before calling if you're unsure about arguments.
+
+* How to Declare and Create a Factory
+
+** Step 1 — Write an implementation feature (the agent target)
+
+The implementation feature is the real creation procedure.  Name it with an ~_imp~
+suffix to distinguish it from the factory accessor.  Put it in ~feature {NONE}~.
+
+#+begin_src eiffel
+feature {NONE} -- Factory implementation
+
+    new_book_imp (a_title, some_authors: STRING): BOOK
+        require
+            a_title_not_void:  a_title /= Void
+            a_title_not_empty: not a_title.is_empty
+        do
+            create Result.make (a_title, some_authors)
+        ensure
+            new_not_void:  Result /= Void
+            title_set:     Result.title = a_title
+            authors_set:   Result.authors = some_authors
+        end
+#+end_src
+
+** Step 2 — Expose the factory as a ~once~ function
+
+Use a ~once~ function so the ~FACTORY~ object is created exactly once
+(memory efficiency; same object returned on every call).
+
+#+begin_src eiffel
+feature -- Factories
+
+    book_factory: FACTORY [BOOK]
+        once
+            create Result.make (agent new_book_imp)
+        ensure
+            book_factory_not_void: Result /= Void
+        end
+#+end_src
+
+* How to Use a Factory
+
+** No-argument product
+
+Use ~new~ when the agent was set up with a no-arg creation procedure.
+
+#+begin_src eiffel
+local
+    b: BOOK
+do
+    b := book_factory.new
+    -- b is a fresh BOOK; caller does not know or care how it was created
+end
+#+end_src
+
+** Product with arguments
+
+Use ~new_with_args~ and pass a ~TUPLE~ with the required arguments.
+
+#+begin_src eiffel
+local
+    b: BOOK
+do
+    b := book_factory.new_with_args (["Clean Code", "Robert Martin"])
+end
+#+end_src
+
+The tuple must match the signature of ~new_book_imp~.  If unsure, check first:
+
+#+begin_src eiffel
+if book_factory.valid_args (["Clean Code", "Robert Martin"]) then
+    b := book_factory.new_with_args (["Clean Code", "Robert Martin"])
+end
+#+end_src
+
+* Abstract Factory Pattern — How the Library Replaces It
+
+The raw Abstract Factory pattern requires:
+
+#+begin_example
+AbstractFactory   →   ConcreteFactory1, ConcreteFactory2, …
+AbstractProduct   →   ConcreteProduct1, ConcreteProduct2, …
+#+end_example
+
+Every new product type requires a new factory class.  The Factory Library eliminates
+the factory side of this parallel hierarchy:
+
+#+begin_example
+AbstractProduct   →   ConcreteProduct1, ConcreteProduct2, …
+FACTORY[Product1], FACTORY[Product2], …  (no inheritance among factories)
+#+end_example
+
+Each concrete factory is now an *instance* of ~FACTORY[G]~, created with a different
+agent.  The client holds a ~FACTORY[BOOK]~ or ~FACTORY[DVD]~; it does not know or care
+about the factory class.
+
+* Factory Method Pattern — How the Library Replaces It
+
+The raw Factory Method pattern requires a deferred class with an abstract creation
+feature that subclasses override.  The Factory Library replaces this:
+
+- Before: subclass overrides ~make_product: PRODUCT~ in the creator class.
+- After: creator class holds a ~factory: FACTORY[PRODUCT]~ and calls ~factory.new~.
+
+The "method" is now the agent inside the factory.  No subclassing is needed to switch
+the product; just supply a different agent.
+
+#+begin_src eiffel
+-- Old way (Factory Method)
+class MY_CREATOR
+    make_product: PRODUCT deferred end
+    operate
+        local p: PRODUCT
+        do  p := make_product; … end
+end
+
+class CONCRETE_CREATOR inherit MY_CREATOR
+    make_product: PRODUCT do create Result.make (…) end
+end
+
+-- New way (Factory Library)
+class MY_CREATOR
+    factory: FACTORY [PRODUCT]
+    operate
+        local p: PRODUCT
+        do  p := factory.new; … end
+end
+-- No subclass needed; just pass a different factory to MY_CREATOR.
+#+end_src
+
+* Why Agents Were Chosen (Design Rationale)
+
+The thesis tried two earlier designs before agents:
+
+1. *Cloning a prototype* — factory stores a prototype and returns ~clone (prototype)~.
+   Rejected: ~clone~ copies state but does not run creation procedures; newly cloned
+   objects may have invalid invariants.
+
+2. *Constrained genericity + ~default_create~* — ~FACTORY[G -> CREATABLE]~.
+   Rejected: classes that require arguments at creation to satisfy their invariants
+   cannot implement ~default_create~ without violating those invariants.
+
+3. *Agents (final)* — unconstrained ~FACTORY[G]~ + ~FUNCTION[ANY, TUPLE, G]~.
+   Accepted: the agent captures any creation procedure with any arguments, imposes
+   no constraint on ~G~, and is checked at runtime via ~valid_args~.
+
+* Limitations
+
+- *No shared factory hierarchy* — you cannot express "a factory that produces any
+  kind of ~BORROWABLE~" in a single typed object.  ~FACTORY[BOOK]~ and
+  ~FACTORY[DVD]~ are unrelated types.  If the client needs to work with any
+  borrowable factory, it must accept ~FACTORY[BORROWABLE]~ and the agents must
+  return conforming types.
+
+- *Runtime tuple checking* — argument mismatches between the tuple passed to
+  ~new_with_args~ and the agent signature are caught at runtime (via ~valid_args~
+  precondition), not at compile time.
+
+- *One product type per factory* — ~FACTORY[G]~ produces exactly one concrete type
+  per instance.  To produce different subtypes conditionally, you need multiple factory
+  instances or a wrapping feature that selects among them.
+
+* Quick Reference
+
+| I want to…                              | What to write                                    |
+|-----------------------------------------+--------------------------------------------------|
+| Create a factory for ~BOOK~             | ~create my_factory.make (agent new_book_imp)~    |
+| Create product without args             | ~my_factory.new~                                 |
+| Create product with args                | ~my_factory.new_with_args ([arg1, arg2])~        |
+| Ensure factory created only once        | Declare it as a ~once~ function                  |
+| Avoid creating new factory class        | Use ~FACTORY[G]~ with a different agent instead  |
+| Replace a Factory Method                | Hold ~FACTORY[G]~; call ~new~ instead of method  |
+| Guard against wrong argument tuple      | Check ~valid_args (args)~ before ~new_with_args~ |

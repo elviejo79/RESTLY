@@ -1,0 +1,304 @@
+#+TITLE: RESTLY Pipe Operator — Three Design Philosophies
+#+AUTHOR: Design comparison
+
+* Scenario
+
+All three philosophies are shown with the same concrete stack:
+
+#+begin_example
+Client
+  └── Forwarder          (transparent proxy)
+        └── L2 Cache     (frontend = l2_store, backend = L1 Cache)
+              └── L1 Cache  (frontend = l1_store, backend = DB)
+                    └── DB Backend
+#+end_example
+
+Common setup across all three:
+
+#+begin_src eiffel
+db_backend: RESTLY_RESOURCE_BASIC_HASH [STRING, MY_DATA]
+l1_store:   RESTLY_RESOURCE_BASIC_HASH [STRING, MY_DATA]   -- fast in-memory store
+l2_store:   RESTLY_RESOURCE_BASIC_HASH [STRING, MY_DATA]   -- second-level store
+#+end_src
+
+Each philosophy requires building ~cache1_stage~ (uses ~l1_store~ as frontend),
+~cache2_stage~ (uses ~l2_store~ as frontend), and ~forwarder_stage~.
+How those are declared and chained differs.
+
+* Philosophy 1 — Left-to-Right Dynamic (~|>~)
+
+** Concept
+
+~|>~ is defined on ~RESTLY_VERBS_BASIC [K, V]~ and returns a non-generic box
+(~RESTLY_PIPE_BOX~) that also carries ~|>~.  The pipe boundary uses ~ANY~
+internally.  Type checking is deferred to runtime via Design by Contract.
+
+** Key classes
+
+#+begin_src eiffel
+deferred class RESTLY_PIPE_STAGE
+    wrap (source: ANY): ANY deferred end     -- contract checks source type
+end
+
+class RESTLY_PIPE_BOX
+    value: ANY
+    pipe alias "|>" (stage: RESTLY_PIPE_STAGE): RESTLY_PIPE_BOX
+        do create Result; Result.value := stage.wrap (value) end
+end
+
+-- RESTLY_VERBS_BASIC [K, V] gains:
+pipe alias "|>" (stage: RESTLY_PIPE_STAGE): RESTLY_PIPE_BOX
+    do create Result; Result.value := stage.wrap (Current) end
+
+class RESTLY_CACHE_PIPE_STAGE [K, V] inherit RESTLY_PIPE_STAGE
+    make (a_frontend: RESTLY_VERBS_BASIC [K, V])
+    wrap (source: ANY): ANY
+        require valid_source: attached {RESTLY_VERBS_BASIC [K, V]} source
+        -- creates RESTLY_CACHE [K, V] with frontend + source as backend
+
+class RESTLY_FORWARDER_PIPE_STAGE [K, V] inherit RESTLY_PIPE_STAGE
+    wrap (source: ANY): ANY
+        require valid_source: attached {RESTLY_VERBS_BASIC [K, V]} source
+        -- creates RESTLY_COMBINATOR_FORWARDER [K, V] wrapping source
+#+end_src
+
+** Setup and chain
+
+#+begin_src eiffel
+-- Setup
+create cache1_stage.make (l1_store)
+create cache2_stage.make (l2_store)
+create forwarder_stage
+
+-- Chain: left to right, no parentheses
+box := db_backend |> cache1_stage |> cache2_stage |> forwarder_stage
+-- parses as: ((db_backend |> cache1) |> cache2) |> forwarder   ← left-assoc ✓
+
+-- Recover typed result at the end
+if attached {RESTLY_VERBS_BASIC [STRING, MY_DATA]} box.value as store then
+    my_val := store ["some-key"]
+end
+#+end_src
+
+** Type mismatch behaviour
+
+#+begin_src eiffel
+-- Compiles fine. Fails at runtime with a contract violation in wrap:
+box := integer_backend |> cache1_stage    -- cache1 expects STRING keys
+#+end_src
+
+** Summary
+
+|                      |                                     |                            |        |       |
+|----------------------+-------------------------------------+----------------------------+--------+-------|
+| Syntax               | ~db \                               | > s1 \                     | > s2 \ | > s3~ |
+| Type errors caught   | Runtime — contract violation        |                            |        |       |
+| Cast needed at end   | Yes (~attached {T} box.value as x~) |                            |        |       |
+| Type-changing stages | Yes — dynamic, no extra classes     |                            |        |       |
+| Adds ~\              | >~ to core class                    | Yes (~RESTLY_VERBS_BASIC~) |        |       |
+
+* Philosophy 2 — Right-to-Left Static (~<|~)
+
+** Concept
+
+~<|~ is defined on ~RESTLY_PIPE_STAGE [SK, SV, RK, RV]~.  The return type
+~RESTLY_VERBS_BASIC [RK, RV]~ references only the stage's own class parameters,
+so Eiffel can express it statically.  Because Eiffel is left-associative, inline
+chains require explicit parentheses.
+
+** Key classes
+
+#+begin_src eiffel
+deferred class RESTLY_PIPE_STAGE [SK, SV, RK, RV]
+    receive alias "<|" (source: RESTLY_VERBS_BASIC [SK, SV]): RESTLY_VERBS_BASIC [RK, RV]
+        deferred end
+end
+
+class RESTLY_CACHE_STAGE [K, V]           -- same-type: SK=RK=K, SV=RV=V
+inherit RESTLY_PIPE_STAGE [K, V, K, V]
+    make (a_frontend: RESTLY_VERBS_BASIC [K, V])
+    receive alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        -- creates RESTLY_CACHE [K, V] with frontend + source as backend
+
+class RESTLY_FORWARDER_STAGE [K, V]
+inherit RESTLY_PIPE_STAGE [K, V, K, V]
+    receive alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        -- creates RESTLY_COMBINATOR_FORWARDER [K, V] wrapping source
+#+end_src
+
+** Setup and chain
+
+#+begin_src eiffel
+-- Setup
+create cache1_stage.make (l1_store)
+create cache2_stage.make (l2_store)
+create forwarder_stage
+
+-- Inline chain: parentheses required (left-assoc would mis-parse without them)
+store := forwarder_stage <| (cache2_stage <| (cache1_stage <| db_backend))
+-- store: RESTLY_VERBS_BASIC [STRING, MY_DATA] — fully typed, no cast
+#+end_src
+
+Alternatively, step-by-step with named intermediates (more readable for long chains):
+
+#+begin_src eiffel
+l1    := cache1_stage    <| db_backend   -- RESTLY_VERBS_BASIC [STRING, MY_DATA]
+l2    := cache2_stage    <| l1           -- RESTLY_VERBS_BASIC [STRING, MY_DATA]
+store := forwarder_stage <| l2           -- RESTLY_VERBS_BASIC [STRING, MY_DATA]
+#+end_src
+
+** Type mismatch behaviour
+
+#+begin_src eiffel
+-- Compile error — types do not conform:
+store := forwarder_stage <| (integer_cache <| db_backend)
+-- Compiler: RESTLY_VERBS_BASIC [INTEGER, INTEGER] does not conform to
+--           RESTLY_VERBS_BASIC [STRING, MY_DATA]
+#+end_src
+
+** Summary
+
+|                             |                                                         |
+|-----------------------------+---------------------------------------------------------|
+| Syntax                      | ~s3 <\vert  (s2 <\vert (s1 <\vert db))~ or step-by-step |
+| Type errors caught          | Compile time                                            |
+| Cast needed at end          | No                                                      |
+| Type-changing stages        | Yes — fully static with 4 type params                   |
+| Adds operator to core class | No                                                      |
+
+* Philosophy 3 — Compose Then Apply (~>>~ and ~<|~)
+
+** Concept
+
+Two operators with distinct roles:
+
+- ~>>~ composes stages left-to-right into a reusable *pipeline object* (no source
+  yet — purely a description of transformations).
+- ~<|~ applies a fully-composed pipeline to a concrete source.
+
+The pipeline is a first-class value that can be stored, passed around, and applied
+to different backends.  For same-type stages both operators are fully static.
+
+** Key classes
+
+#+begin_src eiffel
+deferred class RESTLY_PIPE_STAGE [K, V]
+    compose alias ">>" (next: RESTLY_PIPE_STAGE [K, V]): RESTLY_PIPE_STAGE [K, V]
+        do create {RESTLY_PIPE_COMPOSED [K, V]} Result.make (Current, next) end
+    apply alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        deferred end
+end
+
+class RESTLY_PIPE_COMPOSED [K, V] inherit RESTLY_PIPE_STAGE [K, V]
+    -- holds first: RESTLY_PIPE_STAGE [K, V], second: RESTLY_PIPE_STAGE [K, V]
+    apply alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        do Result := second <| (first <| source) end
+end
+
+class RESTLY_CACHE_STAGE [K, V] inherit RESTLY_PIPE_STAGE [K, V]
+    make (a_frontend: RESTLY_VERBS_BASIC [K, V])
+    apply alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        -- creates RESTLY_CACHE [K, V] with frontend + source as backend
+
+class RESTLY_FORWARDER_STAGE [K, V] inherit RESTLY_PIPE_STAGE [K, V]
+    apply alias "<|" (source: RESTLY_VERBS_BASIC [K, V]): RESTLY_VERBS_BASIC [K, V]
+        -- creates RESTLY_COMBINATOR_FORWARDER [K, V] wrapping source
+#+end_src
+
+** Setup and chain
+
+#+begin_src eiffel
+-- Setup
+create cache1_stage.make (l1_store)
+create cache2_stage.make (l2_store)
+create forwarder_stage
+
+-- Compose pipeline (left to right, no parentheses needed)
+pipeline := cache1_stage >> cache2_stage >> forwarder_stage
+-- pipeline: RESTLY_PIPE_STAGE [STRING, MY_DATA]
+
+-- Apply to backend
+store := pipeline <| db_backend
+-- store: RESTLY_VERBS_BASIC [STRING, MY_DATA] — fully typed, no cast
+#+end_src
+
+** Pipeline reuse — the unique advantage of this philosophy
+
+#+begin_src eiffel
+pipeline := cache1_stage >> cache2_stage >> forwarder_stage
+
+store_prod := pipeline <| production_db
+store_test := pipeline <| test_db          -- same pipeline, different source
+store_slow := pipeline <| slow_remote_db   -- same pipeline again
+#+end_src
+
+** Type mismatch behaviour
+
+#+begin_src eiffel
+-- Compile error on >>:
+bad_pipeline := integer_cache_stage >> string_forwarder_stage
+-- Compiler: RESTLY_PIPE_STAGE [INTEGER, MY_DATA] does not conform to
+--           RESTLY_PIPE_STAGE [STRING, MY_DATA]
+#+end_src
+
+** Limitation: type-changing stages
+
+Same-type ~RESTLY_PIPE_STAGE [K, V]~ handles the common case.  For stages
+that change key or value types (FK ≠ BK), ~>>~ would need to carry 4 type
+parameters across composition — which runs into the same Eiffel limitation.
+Options for that case:
+- Use explicit step-by-step variables (as in Philosophy 2).
+- Add a parallel ~RESTLY_PIPE_STAGE_X [SK, SV, RK, RV]~ hierarchy for
+  type-changing stages and compose them manually.
+
+** Summary
+
+| | |
+|---+---|
+| Syntax | ~(s1 >> s2 >> s3) <\| db~ |
+| Type errors caught | Compile time (same-type stages) |
+| Cast needed at end | No |
+| Type-changing stages | Only with extra classes or step-by-step |
+| Pipeline reusable | Yes — unique to this approach |
+| Operators to learn | Two (~>>~ and ~<\|~) |
+
+* Side-by-Side Comparison
+
+#+begin_example
+Philosophy 1 (dynamic |>):
+    db_backend |> cache1_stage |> cache2_stage |> forwarder_stage
+    -- then: attached {RESTLY_VERBS_BASIC [STRING, MY_DATA]} box.value as store
+
+Philosophy 2 (static <|):
+    forwarder_stage <| (cache2_stage <| (cache1_stage <| db_backend))
+    -- store is already RESTLY_VERBS_BASIC [STRING, MY_DATA]
+
+Philosophy 3 (>> compose, <| apply):
+    pipeline := cache1_stage >> cache2_stage >> forwarder_stage
+    store    := pipeline <| db_backend
+    -- store is already RESTLY_VERBS_BASIC [STRING, MY_DATA]
+#+end_example
+
+| Criterion             | 1. Dynamic ~\|>~    | 2. Static ~<\|~       | 3. Compose ~>>~ + Apply ~<\|~ |
+|-----------------------+---------------------+-----------------------+-------------------------------|
+| Syntax direction      | Left to right       | Right to left         | Left to right                 |
+| Parentheses needed    | No                  | Yes (inline chains)   | No                            |
+| Type errors           | Runtime (contracts) | Compile time          | Compile time (same-type)      |
+| Cast at end           | Yes                 | No                    | No                            |
+| Type-changing stages  | Yes (dynamic)       | Yes (fully static)    | Partial (needs extra work)    |
+| Pipeline reusable     | No                  | No                    | Yes                           |
+| Eiffel philosophy fit | Against the grain   | Fully aligned         | Aligned                       |
+| New classes required  | 4                   | 3                     | 4 (~RESTLY_PIPE_COMPOSED~)    |
+| Modifies core class   | Yes (~VERBS_BASIC~) | No                    | No                            |
+
+* Recommendation Guidance
+
+- Choose *Philosophy 1* if syntax ergonomics and left-to-right reading are the
+  priority, and runtime contract checking is an acceptable safety net.
+
+- Choose *Philosophy 2* if compile-time safety is paramount and the team is
+  comfortable reading right-to-left or using step-by-step variables.
+
+- Choose *Philosophy 3* if pipelines will be built once and applied to multiple
+  backends (testing vs production, different data sources), and type-changing
+  stages are rare enough to handle manually.

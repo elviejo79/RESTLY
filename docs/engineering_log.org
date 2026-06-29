@@ -1,0 +1,27 @@
+#+TITLE: My literate programming journal to develop the RESTLY interface
+#+SUBTITLE: Notes that only I can understand.
+#+AUTHOR: Alejandro Garcia
+
+This will be my daily journal of the implementation.
+This notes are only meant for me.
+
+* My GOAL:
+I want to implement storage compbinators as Marcel P. Weiher did on his papers.
+But this version should be specified using Eiffel Design By Contract.
+
+* 2026-06-24 Another clean start
+I'm going to base this version of top of Eiffel Base 2 because I think is closer to what HTTP Protocol means.
+
+the HTTP Verbs I'm trying to emulate are, remember which ones are safe a and idempotont.
+
+get
+put
+post
+delete
+options
+head
+patch
+trace
+
+Marcel P. Weiher said that the protocol Storage protocol is inspired by Dictionary.
+ls

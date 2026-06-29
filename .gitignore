@@ -13,3 +13,13 @@ HTTPico/EIFDATA
 
 # Ignored by gitless cli
 ./library/.gobo
+
+# Ignored by gitless cli
+library/.gobo/restly.h
+library/.gobo/restly.sh
+library/.gobo/restly_1.c
+library/.gobo/restly_1.o
+library/.gobo/restly_2.c
+library/.gobo/restly_2.o
+library/.gobo/restly_3.c
+library/.gobo/restly_3.o
