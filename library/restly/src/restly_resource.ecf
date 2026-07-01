@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<system xmlns="http://www.eiffel.com/developers/xml/configuration-1-23-0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.eiffel.com/developers/xml/configuration-1-23-0 http://www.eiffel.com/developers/xml/configuration-1-23-0.xsd" name="restly_resource" uuid="AAB9D8C8-D77D-4548-9ADF-68630B2D28E1">
+	<target name="restly_resource">
+		<root class="DEMO_RESTLY_RESOURCE" feature="make"/>
+		<setting name="console_application" value="true"/>
+		<capability>
+			<concurrency support="none"/>
+		</capability>
+		<library name="base" location="$ISE_LIBRARY\library\base\base.ecf"/>
+		<library name="base2" location="/home/agarciafdz/Eiffel_25.12/unstable/library/base2/base2.ecf"/>
+		<cluster name="restly_resource" location=".\"/>
+	</target>
+</system>
