@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 deferred class
-	RESTLY_PROTOCOL [K -> HASHABLE, B]
+	RESTLY_PROTOCOL [K -> HASHABLE, V]
 
 inherit
 	ANY
@@ -18,7 +18,7 @@ inherit
 
 feature -- REST verbs
 
-	item alias "[]" (k: K): B assign force
+	item alias "[]" (k: K): V assign force
 			-- GET: value associated with `k`.
 		require
 			error_404_not_found: has_key (k)
@@ -30,7 +30,7 @@ feature -- REST verbs
 		deferred
 		end
 
-	extend (v: B; k: K)
+	extend (v: V; k: K)
 			-- POST: create new resource with key `k`; must not already exist.
 		require
 			error_403_must_use_fresh_key: not has_key (k)
@@ -39,14 +39,14 @@ feature -- REST verbs
 			error_500_didnt_actually_update: has_key(k) and then item(k) ~ v 
 		end
 
-	force (v: B; k: K)
+	force (v: V; k: K)
 			-- PUT: upsert resource; creates or replaces.
 		deferred
 		ensure
          error_500_didnt_actually_insert: has_key(k) and then item(k) ~ v 
 		end
 
-	put (v: B; k: K)
+	put (v: V; k: K)
 			-- PUT with exists: update existing resource; `k` must already exist.
 		note
 			modify: table

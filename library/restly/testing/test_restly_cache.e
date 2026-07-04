@@ -39,6 +39,23 @@ feature {NONE} -- Fixtures
 			          <| {RESTLY_CACHE [STRING, INTEGER]}.new_with_front (back2_ht)
 		end
 
+	pipeline_verbose: RESTLY_CACHE [STRING, INTEGER]
+		attribute
+      Result := {RESTLY_CACHE [STRING, INTEGER]}.new_with_front (front_ht)
+      .backed_by({RESTLY_CACHE [STRING, INTEGER]}.new_with_front (middle_ht))
+      .backed_by({RESTLY_CACHE [STRING, INTEGER]}.new_with_front (back2_ht))
+		end
+
+	pipeline_compact: RESTLY_CACHE [STRING, INTEGER]
+			-- `-` is an operator alias, so it needs a receiver expression;
+			-- `{CLASS} - x` is not valid (only `{CLASS}.feature` is).
+			-- `new_with_front` is instance-free, so any instance works as seed.
+		attribute
+			Result := (cache - front_ht)
+			          <| (cache - middle_ht)
+			          <| (cache - back2_ht)
+		end
+
 feature -- Step 1: front-only
 
 	test_s1_extend_then_item

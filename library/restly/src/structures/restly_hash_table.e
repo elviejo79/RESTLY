@@ -5,12 +5,12 @@ note
 	revision: "$Revision$"
 
 class
-	RESTLY_HASH_TABLE [K -> HASHABLE, B]
+	RESTLY_HASH_TABLE [K -> HASHABLE, V]
 
 inherit
-	RESTLY_PROTOCOL [K, B]
+	RESTLY_PROTOCOL [K, V]
 
-	V_HASH_TABLE [K, B]
+	V_HASH_TABLE [K, V]
 
 create
 	default_create,
