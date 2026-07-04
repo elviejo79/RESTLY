@@ -181,7 +181,7 @@ more combinator.
    at the pipeline front (RFC 7386: absent field = unchanged).
    The original TUPLE/=copy_from_tuple= domain-level design is kept
    available via =RESTLY_MERGEABLE= but unused in v1.
-7. *Collections*: =RESTLY_COLLECTION_PROTOCOL= — iteration + =wipe_out=,
+7. *Collections*: =RESTLY_TRAVERSABLE= — iteration + =wipe_out=,
    kept separate from =RESTLY_PROTOCOL=, mimicking EiffelBase2's
    container/iterator separation.
 8. *Errors from contracts*: precondition tags encode status codes
@@ -211,12 +211,12 @@ more combinator.
     (=restly_ewf=) so core RESTLY never depends on EWF.
 12. *Mixin style* (superseded in part by decision 16, round 3):
     =RESTLY_EXTENDABLE=, =RESTLY_PATCHABLE= and
-    =RESTLY_COLLECTION_PROTOCOL= are deferred capability interfaces —
+    =RESTLY_TRAVERSABLE= are deferred capability interfaces —
     not wrapper combinators. Round-3 refinement: they are concerns of
     the FRONT of a pipeline ONLY (=RESTLY_PIPELINE_FRONT=, decision
     16); every other combinator and storage stays pure
     =RESTLY_PROTOCOL=. One piece survives from round 2 §5:
-    =RESTLY_HASH_TABLE= gains =RESTLY_COLLECTION_PROTOCOL=
+    =RESTLY_HASH_TABLE= gains =RESTLY_TRAVERSABLE=
     conformance — nearly free (=V_HASH_TABLE= already provides
     =new_cursor= / =count= / =wipe_out=), and the front's converting
     cursor needs an iterable INNER storage to wrap.
@@ -287,7 +287,7 @@ more combinator.
       because the front itself conforms.
     - GET-list: the front's =new_cursor= WRAPS the inner table's
       cursor, converting each key and value; requires the inner
-      storage to conform to =RESTLY_COLLECTION_PROTOCOL= at store
+      storage to conform to =RESTLY_TRAVERSABLE= at store
       types (=RESTLY_HASH_TABLE= does, decision 12); a
       non-conforming inner storage → 405 via contract tag.
     - =RESTLY_KEY_CONVERTING_COMBINATOR= is off the v1 path
@@ -303,7 +303,7 @@ more combinator.
 | =RESTLY_PIPELINE_FRONT=     | heads a pipeline; the ONE home of the capability interfaces (decision 16) |
 | =RESTLY_EXTENDABLE=         | =extend_new= + =extend_requests= (server-minted keys) |
 | =RESTLY_PATCHABLE=          | =merge (a_patch: V; a_k: K)= — representation-level partial update |
-| =RESTLY_COLLECTION_PROTOCOL= | iteration + =wipe_out=                              |
+| =RESTLY_TRAVERSABLE=          | iteration + =wipe_out=                              |
 | =RESTLY_KEY_CONVERTING_COMBINATOR= | key-type-changing stage — OPTIONAL, off the v1 path (decision 16) |
 
 *** Signatures (agreed 2026-07-03; owner may adjust names)
@@ -385,7 +385,7 @@ feature -- Components
 #+end_src
 
 #+begin_src eiffel
-deferred class RESTLY_COLLECTION_PROTOCOL [K -> HASHABLE, V]
+deferred class RESTLY_TRAVERSABLE [K -> HASHABLE, V]
     -- Separate from RESTLY_PROTOCOL, EiffelBase2-style
     -- container/iterator separation.
 
@@ -418,7 +418,7 @@ inherit
     RESTLY_PROTOCOL [K_REPRESENTATION, V_REPRESENTATION]
     RESTLY_EXTENDABLE [K_REPRESENTATION, V_REPRESENTATION]
     RESTLY_PATCHABLE [K_REPRESENTATION, V_REPRESENTATION]
-    RESTLY_COLLECTION_PROTOCOL [K_REPRESENTATION, V_REPRESENTATION]
+    RESTLY_TRAVERSABLE [K_REPRESENTATION, V_REPRESENTATION]
 
 create
     make
@@ -438,7 +438,7 @@ feature -- Components (explicit wiring at creation, decision 16)
     -- merge: deferred (representation-level; JSON impl in bridge).
     -- new_cursor / count / wipe_out: converting wrapper over the
     --   INNER storage's cursor — requires
-    --   attached {RESTLY_COLLECTION_PROTOCOL [K_STORE, V_STORE]}
+    --   attached {RESTLY_TRAVERSABLE [K_STORE, V_STORE]}
     --   inner (RESTLY_HASH_TABLE conforms, decision 12); a
     --   non-conforming inner → 405 via contract tag
     --   (error_405_..., owner writes it).
@@ -481,9 +481,9 @@ mount_resource (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJ
 | =mount_element=       | GET one    | =RESTLY_PROTOCOL.item= / =has_key=       |
 | =mount_element=       | PATCH      | =RESTLY_PATCHABLE.merge=                 |
 | =mount_element=       | DELETE one | =RESTLY_PROTOCOL.remove=                 |
-| =mount_collection=    | GET list   | =RESTLY_COLLECTION_PROTOCOL.new_cursor=  |
+| =mount_collection=    | GET list   | =RESTLY_TRAVERSABLE.new_cursor=          |
 | =mount_collection=    | POST       | =RESTLY_EXTENDABLE.extend_new=           |
-| =mount_collection=    | DELETE all | =RESTLY_COLLECTION_PROTOCOL.wipe_out=    |
+| =mount_collection=    | DELETE all | =RESTLY_TRAVERSABLE.wipe_out=            |
 
 Anything else (e.g. POST on an element route, PUT anywhere in v1)
 → 405.
@@ -572,14 +572,14 @@ library/restly/src/
   protocol/restly_extendable.e
   protocol/restly_patchable.e
   protocol/restly_mergeable.e
-  protocol/restly_collection_protocol.e
+  protocol/restly_traversable.e
   converter/restly_key_converter.e
   combinator/restly_pipeline_front.e
 library/restly/testing/
   sample_item.e                (plain domain object for the inner storage)
   sample_front.e               (concrete RESTLY_PIPELINE_FRONT for tests)
   test_restly_extendable.e
-  test_restly_collection_protocol.e
+  test_restly_traversable.e
   test_restly_key_converter.e
   test_restly_pipeline_front.e
 library/restly_ewf/            (new cluster, own ECF)
@@ -620,7 +620,7 @@ Rule for an implementing agent (decided Q1, 2026-07-03):
    =RESTLY_PROTOCOL= and =RESTLY_HASH_TABLE= renamed =[K, B]= →
    =[K, V]=; library target compiles clean.
 2. Core protocol extensions (=RESTLY_EXTENDABLE=, =RESTLY_PATCHABLE=,
-   =RESTLY_COLLECTION_PROTOCOL=, =RESTLY_KEY_CONVERTER=,
+   =RESTLY_TRAVERSABLE=, =RESTLY_KEY_CONVERTER=,
    =RESTLY_PIPELINE_FRONT=) — pure Eiffel, contract-tested, no
    server needed.
 3. =WSF_JSON_RESPONSE= port + fixes — small, independent.
@@ -697,7 +697,7 @@ All through =SAMPLE_FRONT= (the v1-style implementor, decision 16).
 level and its only v1 implementor is the JSON front — merge
 semantics are tested in step 4 on =RESTLY_JSON_PIPELINE_FRONT=.)
 
-*** TEST_RESTLY_COLLECTION_PROTOCOL
+*** TEST_RESTLY_TRAVERSABLE
 Directly on =RESTLY_HASH_TABLE= (which now conforms, decision 12).
 - Iteration yields exactly the inserted items (count and membership).
 - Iteration exposes KEYS: for every cursor position,
@@ -728,10 +728,10 @@ Directly on =RESTLY_HASH_TABLE= (which now conforms, decision 12).
   decision 16)
 - [ ] =protocol/restly_patchable.e= (=merge (a_patch: V; a_k: K)=,
   no MERGEABLE constraint — decision 16)
-- [ ] =protocol/restly_collection_protocol.e=
+- [ ] =protocol/restly_traversable.e=
   (=new_cursor: V_MAP_ITERATOR [K, V]= — keys reachable during
   iteration)
-- [ ] =RESTLY_HASH_TABLE= gains =RESTLY_COLLECTION_PROTOCOL=
+- [ ] =RESTLY_HASH_TABLE= gains =RESTLY_TRAVERSABLE=
   conformance (decision 12: =V_HASH_TABLE= already provides
   =new_cursor= / =count= / =wipe_out=)
 - [ ] =converter/restly_key_converter.e= (inherits =RESTLY_CONVERTER=)
@@ -740,7 +740,7 @@ Directly on =RESTLY_HASH_TABLE= (which now conforms, decision 12).
 - [ ] Contract placeholders per the handoff protocol
   (=same_request_means_same_value= transcribed verbatim)
 - [ ] Four test classes written (=TEST_RESTLY_EXTENDABLE=,
-  =_COLLECTION_PROTOCOL=, =_KEY_CONVERTER=, =_PIPELINE_FRONT=)
+  =_TRAVERSABLE=, =_KEY_CONVERTER=, =_PIPELINE_FRONT=)
 - [ ] Clean compile of =restly_tests=; all tests green
 - [ ] HANDOFF: owner fills the contract placeholders (not the
   agent's box to tick)
