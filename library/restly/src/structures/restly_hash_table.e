@@ -5,7 +5,7 @@ note
 	revision: "$Revision$"
 
 class
-	RESTLY_VERBS_HASH_TABLE [K -> HASHABLE, B]
+	RESTLY_HASH_TABLE [K -> HASHABLE, B]
 
 inherit
 	RESTLY_PROTOCOL [K, B]

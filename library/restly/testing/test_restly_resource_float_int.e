@@ -12,10 +12,12 @@ inherit
 
 feature {NONE} -- Fixture
 
-   conv: CONVERTER_FLOAT_INT
-      attribute create Result end
+  conv: RESTLY_CONVERTER_AGENT[REAL_32, INTEGER_32]
+     attribute
+     create Result.make(agent (a_r: REAL_32): INTEGER_32 do Result := a_r.truncated_to_integer end, agent (a_s: INTEGER_32): REAL_32 do Result := a_s end)
+     end
 
-   store: RESTLY_VERBS_HASH_TABLE [STRING, INTEGER_32]
+   store: RESTLY_HASH_TABLE [STRING, INTEGER_32]
       attribute create Result.with_object_equality end
 
    res: RESTLY_RESOURCE [STRING, REAL_32, INTEGER_32]

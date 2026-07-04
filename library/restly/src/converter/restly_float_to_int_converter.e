@@ -1,6 +1,6 @@
 note
 	description: "[
-                {CONVERTER_FLOAT_INT} Converts between REAL_32 (representation)
+                {RESTLY_FLOAT_TO_INT_CONVERTER} Converts between REAL_32 (representation)
                 and INTEGER_32 (store). Truncates on to_store.
                 ]"
 	author: "agarciafdz@gmail.com"
@@ -8,7 +8,7 @@ note
 	revision: "$Revision$"
 
 class
-   CONVERTER_FLOAT_INT
+   RESTLY_FLOAT_TO_INT_CONVERTER
 
 inherit
    RESTLY_CONVERTER [REAL_32, INTEGER_32]
