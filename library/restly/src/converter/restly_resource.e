@@ -27,20 +27,20 @@ feature -- Store
      -- Anything that follows the {RESTLY_PROTOCOL} can be a store
 
 feature {NONE} -- Implementation
-   turn: RESTLY_CONVERTER[R,S]
+   converter: RESTLY_CONVERTER[R,S]
 
 feature -- Creation
    make(a_store:RESTLY_PROTOCOL[K,S]; a_converter: RESTLY_CONVERTER[R,S])
       do
          store := a_store
-         turn := a_converter
+         converter := a_converter
       end
 
 feature -- REST 
 
 	item alias "[]" (k: K): R assign force
 		do
-      Result := turn.to_representation(store.item(k))
+      Result := converter.to_representation(store.item(k))
 		end
 
 	has_key (k: K): BOOLEAN
@@ -50,17 +50,17 @@ feature -- REST
 
 	extend (a_r: R; k: K)
 		do
-      store.extend(turn.to_store(a_r), k)
+      store.extend(converter.to_store(a_r), k)
 		end
 
 	force (a_r: R; k: K)
       do
-        store.force(turn.to_store(a_r), k)
+        store.force(converter.to_store(a_r), k)
 		end
 
 	put (a_r: R; k: K)
 		do
-        store.put(turn.to_store(a_r), k)
+        store.put(converter.to_store(a_r), k)
 		end
 
 	remove (k: K)

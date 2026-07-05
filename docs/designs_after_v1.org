@@ -1,0 +1,91 @@
+* Designs After v1
+
+** Collapse RESTLY_RESOURCE into RESTLY_PIPELINE_FRONT
+
+RESTLY_RESOURCE [K, R, S] is the special case of RESTLY_PIPELINE_FRONT [K, R, K, S]
+where the key type does not change (identity key conversion).
+
+RESOURCE has: ~store~, ~converter~.
+PIPELINE_FRONT has: ~store~, ~converter~, ~key_converter~.
+
+The only structural difference is that PIPELINE_FRONT adds key conversion
+and the capability mixins (EXTENDABLE, PATCHABLE, TRAVERSABLE).
+
+*** Approach
+
+Introduce an identity key converter (RESTLY_IDENTITY_KEY_CONVERTER [K])
+whose ~to_store~ and ~to_representation~ both return the argument unchanged.
+Then RESTLY_RESOURCE becomes a type alias or thin heir:
+
+#+begin_src eiffel
+class RESTLY_RESOURCE [K -> HASHABLE, R, S]
+inherit
+    RESTLY_PIPELINE_FRONT [K, R, K, S]
+create
+    make
+end
+#+end_src
+
+With ~make~ supplying the identity key converter automatically.
+
+*** When
+
+After v1 ships and the EWF bridge is stable. No urgency — the current
+duplication is two small classes doing the same convert-and-delegate pattern.
+
+** Rename protocol classes to HTTP verbs
+
+Naming convention: class names use HTTP terminology for the capability,
+feature names use EiffelBase terminology for the operations.
+
+| Current               | Becomes             | HTTP verb        |
+|-----------------------+---------------------+------------------|
+| RESTLY_EXTENDABLE     | RESTLY_POSTABLE     | POST             |
+| RESTLY_PATCHABLE      | stays               | PATCH            |
+| RESTLY_MERGEABLE      | stays               | (value-level)    |
+| RESTLY_TRAVERSABLE    | RESTLY_LISTABLE     | GET on collection|
+
+Features inside keep EiffelBase names: ~extend~, ~merge~, ~new_cursor~,
+~count~, ~wipe_out~.
+
+*** When
+
+After v1 is stable. Pure rename — no logic changes.
+
+** Clarify RESTLY_PATCHABLE vs RESTLY_MERGEABLE
+
+These two classes address PATCH at different layers:
+
+- RESTLY_PATCHABLE [K, V] — container-level interface.
+  "This resource/pipeline supports PATCH by key."
+  Inherits RESTLY_PROTOCOL, adds ~merge (a_patch: V; a_k: K)~ with a 404
+  precondition. The /container/ is responsible for finding the item and
+  applying the patch.
+
+- RESTLY_MERGEABLE — value-level interface.
+  "This domain object can patch itself from a TUPLE."
+  The /stored object/ knows how to apply a partial update to its own fields
+  via ~copy_from_tuple (a_patch: TUPLE)~. Void fields mean "absent from
+  PATCH, leave unchanged".
+
+In practice, MERGEABLE would be called /inside/ a PATCHABLE implementation:
+the container looks up the item by key, then delegates
+~item.copy_from_tuple(...)~.
+
+In v1 MERGEABLE is unused — SAMPLE_FRONT hardcodes the patch logic directly.
+
+*** Decision needed
+
+Probably one of them will need to change:
+- Option A: PATCHABLE's ~merge~ constrains V to conform to MERGEABLE, then
+  the default implementation becomes: look up item, call ~copy_from_tuple~.
+- Option B: Keep them fully decoupled. PATCHABLE stays deferred and each
+  pipeline front decides how to merge (JSON diff, TUPLE copy, direct setter).
+- Option C: Remove MERGEABLE entirely if JSON-level merge at the front
+  turns out to be sufficient for all cases.
+
+*** When
+
+After the EWF bridge is working with real JSON payloads. The right answer
+depends on whether domain objects ever need to know about patching themselves
+or whether the pipeline front always handles it externally.
