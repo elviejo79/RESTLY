@@ -31,6 +31,11 @@
 		</option>
 		<setting name="console_application" value="true"/>
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<cluster name="restly_testing" location="..\restly\testing\" recursive="true">
+			<file_rule>
+				<exclude>/application\.e$</exclude>
+			</file_rule>
+		</cluster>
 		<cluster name="test" location=".\testing\" recursive="true"/>
 	</target>
 </system>

@@ -89,3 +89,29 @@ Probably one of them will need to change:
 After the EWF bridge is working with real JSON payloads. The right answer
 depends on whether domain objects ever need to know about patching themselves
 or whether the pipeline front always handles it externally.
+
+** Replace WSF_JSON_RESPONSE factories with a single ~response~ feature
+
+WSF_JSON_RESPONSE has 11 factory features (~not_found~, ~ok~, ~created~, ...)
+that each do ~create Result.make_with_status ({HTTP_STATUS_CODE}.xxx)~.
+All 11 are identical except for the integer constant — ~55 lines of boilerplate.
+
+Replace them with one class-level feature:
+
+#+begin_src eiffel
+response (a_status: INTEGER): WSF_JSON_RESPONSE
+    do
+        create Result.make_with_status (a_status)
+    ensure
+        instance_free: class
+    end
+#+end_src
+
+Call site: ~{WSF_JSON_RESPONSE}.response (404).with_detail ("gone")~
+or ~{WSF_JSON_RESPONSE}.response ({HTTP_STATUS_CODE}.not_found)~.
+
+*** When
+
+After v1 ships. The named factories work fine for now and the handler
+(step 4) will mostly use ~make_with_status~ with a dynamic status code
+from the tag parser anyway.
