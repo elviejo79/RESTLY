@@ -1,0 +1,159 @@
+#+TITLE: Learnings for Stage 4 — Mount Component + Handlers
+#+DATE: 2026-07-05
+#+STARTUP: overview
+
+* What was done
+
+- =RESTLY_JSON_PIPELINE_FRONT [KS, S]= — concrete front with JSON
+  merge (RFC 7386) and auto-increment STRING =fresh_key=.
+- =RESTLY_EWF_HANDLER= — deferred base for verb handlers.
+- =RESTLY_EWF_COLLECTION_HANDLER= — GET list, POST, DELETE all.
+- =RESTLY_EWF_ELEMENT_HANDLER= — GET one, PATCH, DELETE one.
+- =RESTLY_EWF_SERVER= — mounts pipelines onto =WSF_ROUTER=.
+- Tag parser, unit tests, JSON front tests — 82 tests green.
+
+* Key decision: two handler classes, not one
+
+The original old handler (=RESTLY_EWF_HANDLER= in RESTLY_251021) used
+a single class with =requested_path= to distinguish collection vs
+element requests. The new design uses two concrete classes:
+
+- =RESTLY_EWF_COLLECTION_HANDLER= — only carries collection verbs
+  (GET list, POST, DELETE all).
+- =RESTLY_EWF_ELEMENT_HANDLER= — only carries element verbs
+  (GET one, PATCH, DELETE one).
+
+Shared logic (rescue/retry, tag parsing, JSON body parsing, CORS,
+url patching) lives in a deferred parent =RESTLY_EWF_HANDLER=.
+
+Benefits:
+- The 405 boundary IS the class — no =is_collection= flag, no
+  branching.
+- Each class is shorter and only has the verbs it handles.
+- =element_uri= is the one deferred helper that differs: the
+  collection handler appends ="/" + key= to the request URI; the
+  element handler uses the request URI as-is (the key is already
+  in the template match).
+
+* EWF quirks encountered
+
+** No =is_patch_request_method=
+
+=WSF_REQUEST= has =is_get_request_method=, =is_post_request_method=,
+=is_put_request_method=, =is_delete_request_method=, but NOT
+=is_patch_request_method=. Use =req.is_request_method ("PATCH")=.
+
+** =request_uri= returns =READABLE_STRING_8=, not =STRING=
+
+Must call =.to_string_8= when assigning to a =STRING= local or
+concatenating with =STRING= values.
+
+** =request_time= is detachable
+
+Must guard with =if attached req.request_time as l_time=.
+
+** =WSF_URI_TEMPLATE_RESPONSE_HANDLER= interface
+
+One deferred feature: =response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE=.
+The framework calls =execute (req, res)= which sends =response (req)=.
+You never touch =res= directly.
+
+** =WSF_ROUTER.handle= takes a handler that IS its own mapping factory
+
+#+begin_src eiffel
+router.handle ("/todos/{id}", my_handler, Void)
+#+end_src
+
+Third argument =Void= = accept any HTTP method (dispatch inside handler).
+
+* rescue/retry pattern
+
+Same as the old handler:
+
+#+begin_src eiffel
+response (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
+    do
+        if attached Result then
+            -- retry path: Result was set by handle_rescue
+        else
+            Result := dispatch (req)
+        end
+    rescue
+        Result := handle_rescue
+        retry
+    end
+#+end_src
+
+On first entry =Result= is Void, so dispatch runs. If a contract
+violation fires, =rescue= sets =Result= to an error response, =retry=
+jumps back, =attached Result= is true, we skip dispatch and return
+the error.
+
+* Tag parser: =error_NNN_description= grammar
+
+=status_from_tag= extracts the integer from tags like
+=error_404_not_found=. Fallback chain:
+1. Tag matches =error_<NNN>_*= → use NNN.
+2. =PRECONDITION_VIOLATION= with no parseable tag → 412.
+3. Anything else → 500.
+
+* CORS
+
+Added to EVERY response (not just OPTIONS) via =add_cors_headers=
+on the deferred handler. OPTIONS returns a 204 No Content with the
+CORS headers.
+
+* url patching
+
+=patch_url= adds/replaces the ="url"= field in a JSON object with
+the absolute URL for that element. Uses
+=req.absolute_script_url (element_uri (key, req))=.
+
+=element_uri= is deferred — the collection handler builds
+=request_uri + "/" + key=, the element handler returns =request_uri=
+as-is.
+
+* ECF: restly_ewf_tests reuses core testing cluster
+
+The =restly_ewf_tests= target includes the core =restly/testing/=
+cluster (to reuse =SAMPLE_KEY_CONVERTER= etc.), with a file rule
+excluding =application.e= to avoid the root class name clash.
+
+#+begin_src xml
+<cluster name="restly_testing" location="..\restly\testing\" recursive="true">
+    <file_rule>
+        <exclude>/application\.e$</exclude>
+    </file_rule>
+</cluster>
+#+end_src
+
+* Test helper: exposing =status_from_tag=
+
+=status_from_tag= lives in ={NONE}= on the handler. To test it:
+=TEST_TAG_PARSER_HELPER= inherits =RESTLY_EWF_COLLECTION_HANDLER=
+with =export {ANY} status_from_tag=. No wrapper method needed — the
+test calls =status_from_tag= directly on the helper object.
+
+Attempted to inline via multiple inheritance into the test class, but
+=EQA_TEST_SET.default_create= cannot initialize
+=RESTLY_EWF_HANDLER.storage= — the composition approach is the right
+one here.
+
+* JSON merge (RFC 7386)
+
+=RESTLY_JSON_PIPELINE_FRONT.merge= iterates the patch object's keys
+and calls =JSON_OBJECT.replace= on the current stored object. Absent
+keys stay unchanged, present keys are replaced.
+
+#+begin_src eiffel
+across a_patch as ic loop
+    l_current.replace (ic, @ ic.key)
+end
+#+end_src
+
+* Remaining work (step 4 checklist)
+
+- [ ] Mount-matching unit tests (URI_TEMPLATE matching)
+- [ ] =mount_resource= sugar unit test
+- [ ] url patching unit test
+- [ ] Smoke test script against a running server

@@ -1,0 +1,137 @@
+#+TITLE: Learnings for Stage 5 — Todobackend Acceptance
+#+DATE: 2026-07-05
+#+STARTUP: overview
+
+* What was done
+
+- =TODOBACKEND_EXECUTION= — inherits =RESTLY_EWF_SERVER=, maps two
+  explicit routes via =map_uri_template_response=.
+- =TODOBACKEND_CONVERTER= — adds =completed: false= default on
+  retrieval (the only business rule not owned by a domain object).
+- =RESTLY_IDENTITY_CONVERTER [V]= — generic identity converter (library level).
+- =RESTLY_INT_KEY_CONVERTER= — STRING ↔ INTEGER key converter (library level).
+- =TODOBACKEND_SERVER= — =WSF_DEFAULT_SERVICE [TODOBACKEND_EXECUTION]=,
+  port 8080.
+- All 16/16 npm acceptance tests pass.
+
+* Design document is stale — delta from reality
+
+The design document (=restly_ewf_design_document.org=) was written
+before implementation and several sections no longer match. These are
+the discrepancies discovered during stage 5.
+
+** Decision 4 (Mounting) — mount features removed
+
+Design says: =RESTLY_EWF_SERVER= owns =WSF_ROUTER= and offers
+=mount_collection= / =mount_element= / =mount_resource=.
+
+Reality: =RESTLY_EWF_SERVER= is a deferred execution mixin inheriting
+=WSF_ROUTED_EXECUTION= + =WSF_ROUTED_URI_TEMPLATE_HELPER=. It has no
+mount features — the app calls =map_uri_template_response= directly:
+
+#+begin_src eiffel
+setup_router
+    local
+        l_collection: RESTLY_EWF_COLLECTION_HANDLER
+        l_element: RESTLY_EWF_ELEMENT_HANDLER
+    do
+        create l_collection.make (front)
+        map_uri_template_response ("/todos", l_collection, Void)
+        create l_element.make (front)
+        map_uri_template_response ("/todos/{id}", l_element, Void)
+    end
+#+end_src
+
+The mount signatures section and the EWF bridge cluster table both
+refer to the old mount features and need updating.
+
+** No TODO_ITEM domain object
+
+Design says: =examples/todobackend/src/todo_item.e=.
+
+Reality: the pipeline is =JSON_OBJECT= end to end. Business defaults
+(=completed: false=) live in =TODOBACKEND_CONVERTER=. A domain object
+is deferred to post-v1 (recorded in =designs_after_v1.org=).
+
+** File layout — missing and extra files
+
+Design lists =todo_item.e= which does not exist. Missing from the
+layout:
+
+| File                             | Purpose                         |
+|----------------------------------+---------------------------------|
+| =restly_identity_converter.e=   | generic identity converter      |
+| =restly_int_key_converter.e=    | STRING ↔ INTEGER key converter  |
+| =todobackend_converter.e=       | adds =completed: false= default |
+
+** Runbook — npm test needs TEST_SERVER_URL
+
+Design says: =cd ... && npm test=.
+
+Reality: the test suite defaults to =http://localhost:8080= (root),
+but routes are at =/todos=. Correct command:
+
+#+begin_example
+TEST_SERVER_URL=http://localhost:8080/todos npm test
+#+end_example
+
+** Checklists — all functionally done, none ticked
+
+All five step checklists show =[0/N]= but the work is complete:
+- Step 1: 4/4
+- Step 2: 11/12 (HANDOFF item is the owner's)
+- Step 3: 6/6
+- Step 4: 10/10
+- Step 5: 5/5 (with the caveat that =TODO_ITEM= was replaced by
+  =TODOBACKEND_CONVERTER=)
+
+* Key learnings
+
+** WSF_ROUTED_SERVICE does not exist in EWF 25.12
+
+The official video tutorial references =WSF_ROUTED_SERVICE= but it is
+absent from Eiffel 25.12. The actual hierarchy:
+
+#+begin_example
+WSF_ROUTED (deferred: router)
+  ├── WSF_ROUTED_EXECUTION (effective router, deferred setup_router)
+  │     └── WSF_ROUTED_SKELETON_EXECUTION (adds proxy/unavailable checks)
+  └── WSF_ROUTED_URI_TEMPLATE_HELPER (map_uri_template, map_uri_template_response)
+#+end_example
+
+=WSF_ROUTED_EXECUTION= is the modern equivalent — simpler than the
+skeleton, no proxy/policy boilerplate needed.
+
+** EWF standalone creates a new execution per request
+
+State does not persist between requests unless stored in a =once=
+feature. The old RESTLY_251021 used =once ("PROCESS")= for this.
+Our =front= feature is =once= to share the pipeline across requests.
+
+** Connection: close header required for single-threaded server
+
+EWF standalone with =concurrency="none"= is single-threaded. Without
+=Connection: close=, jsdom (used by the npm test suite) holds
+connections open and the server blocks. All responses now include
+this header via =add_cors_headers=.
+
+** Preconditions may not fire across library boundaries
+
+EiffelStudio assertion checking may not propagate into library code
+at runtime. The =error_404_not_found= precondition on
+=RESTLY_PROTOCOL.item= was not checked. Fix: explicit =has_key=
+guards in the element handler before calling =storage [key]=.
+
+** URI template extraction handles {id} automatically
+
+=WSF_URI_TEMPLATE_MAPPING_I.try= matches the path, extracts
+variables, and populates =req.path_parameters=. The handler reads
+=req.path_parameter ("id")= — no manual string parsing needed.
+The value is always a string; type conversion happens in
+=RESTLY_INT_KEY_CONVERTER=.
+
+** Router-level verb filtering would increase code, not reduce it
+
+Two routes with verb dispatch inside the handler (current approach)
+beats six =map_uri_template_response= calls with per-verb filtering.
+OPTIONS handling is cleaner inside the handler too.

@@ -1,0 +1,133 @@
+g[fn:1]g#+TITLE: Spike Combinators as Lists.
+
+On the past spike branch/literate programming.
+I could succusfully create a test of chain.
+A chain for cache mechains.
+and even a log one. [fn:2]
+
+However there were two big problems:
+1. the combinators threw valitadion errors because combinators didn't actually story anything.
+   2. the chaining mechanism looked clumsy.
+      although it was possible to mix entities and combinators.
+      I think hat could lead to confusion.
+
+So on this iteration we are going to do
+* Goals
+
+** The type of RESTLY_VERBS
+Restly verbs must use the same interface as V_TABLE but not inherit from it, since the V_TABLE has storage.
+
+** The design of tho combinators and the pipeline
+There are two ways to design this:
+
+- Strict
+  - Represent combinators as operations on a list. So a combinator is a list that only has one element.
+    CACHE.resources : V_sequence[RESOSURCE]
+    PIPELINE.combinators : V_sequence [COMBINATOR] A pipeline can only include combinators?
+  - A pipeline is like combinator where the elements of the list are combinators themselves.
+- Less strict
+  - Everything can be a list of RESOURCES (and a resource can be a single thing or a combinator)
+
+*** Maybe the same way RESTLY_VERBS inherits from V_TABLE, combintors could inherit from V_SEQUENCE
+So that we can append to a combinator like naturally.
+The types are going to be problem.
+unless I have a coversion from ANY to Represention and
+
+
+Mmhh it seems that a list is a dead-end
+because now I would need to translate from ANY-> to Representation and from representation to Store.
+and all the verbs now are kind of unsafe.
+I would need to implement.
+a converter from ANY->R for each stage
+that would be the intermediary for each stage.
+
+maybe the intermediary could be:
+
+
+#+Begin_example
+deferred class COMBINATOR [K,F,B]
+
+feature -- implemnetation
+
+frontend: RESOURCE[K,F]
+backend: Detachable RESOURCE[K,F]
+
+create
+   make
+feature --creation
+  make(a_frontend:RESOURCE[K,F])
+  do
+  front := a_frontend
+  end
+
+feature --fluent interface
+  new_incomplete alias "()" (a_front:RESOURCE[K,F]):COMBINATOR [K,F,B]
+  -- this will create an object that might be incomplete. with an incomplete backend.
+  -- it's intended to be called like this {CACHE}(
+  do
+  create Result.make(a_front)
+  end
+
+  backed_by alias "<-" (a_backend:COMBINATOR[K,B,ANY]):COMBINATOR [K,F,B]
+  -- this could receive a combinator that could have void backend.
+  -- but from here there is always a complete COMBINATOR
+  do
+
+    check attached a_backend.backend  then
+       create Result.make(Curernt.frontend, a_backend)
+    else
+       create Result.make(Current.frontend,a_backend.frontend )
+    end
+  end
+
+class CACHE [K,F,B]
+inherit
+  COMBINATOR [K,F,B]
+
+end
+
+class LOG [K,F,B]
+inherit
+  COMBINATOR [K,F,B]
+
+feature --creation
+  make(a_frontend:RESOURCE[K,F])
+  do
+  front := a_frontend
+  end
+
+feture --implementation
+
+  log: RESOURCE[INT,STRING] -- this just logs the events. in data strucutre, it could be a file or ram doesn't matter.
+
+end
+#+END_EXAMPLE
+
+The fluent intreface could look like this
+
+#+BEGIN_EXAMPLE
+
+DB, RemoteH,RemoteLg Local : RESOURCE_HASH
+pipeline1, pipeline2, pipeline3 : COMBINATOR
+pipeline1 := {CACHE}(Remote) <- DB
+pipeline2 := {LOG}(RemoteL) <- {CACHE}(RemoteH) <- DB
+pipeline3 := {CACHE}(Loca1) <- {LOG}(RemoteLg) <- {CACHE}(RemoteH) <- DB
+
+#+END_EXAMPLE
+
+But Maybe it's Ok for combinators to be Unary or Binary Tops.
+The way they are now.
+
+* Questions that I intend to solve.
+
+1. How would fluid chains look, given that combintars and pipelines are sequences c?
+2. Will types work? in a chain of elements
+
+
+
+* Footnotes
+[fn:2] That is in the file testing/log_chaining.e
+
+[fn:1]
+*************** TODO Add link to the literate-programming branch.
+*************** END

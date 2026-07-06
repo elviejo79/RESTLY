@@ -1,0 +1,135 @@
+#+TITLE: Learnings for Stage 3 — WSF_JSON_RESPONSE Port
+#+DATE: 2026-07-04
+#+STARTUP: overview
+
+* What was done
+
+- Created =library/restly_ewf/= directory with =src/= and =testing/=.
+- Created =library/restly_ewf/restly_ewf.ecf= (both targets).
+- Created =library/restly_ewf/testing/application.e= (test root).
+- Created =library/restly_ewf/src/wsf_json_response.e= — DRAFT,
+  has a bug (see "JSON_OBJECT keys" below), needs fix before compile.
+
+* Critical: JSON_OBJECT keys are JSON_STRING, not STRING
+
+=JSON_OBJECT.put_string= signature:
+
+#+begin_src eiffel
+put_string (a_value: READABLE_STRING_GENERAL; a_key: JSON_STRING)
+#+end_src
+
+The VALUE is a plain string, but the KEY must be a =JSON_STRING=.
+Same for =put_integer=, =put=, =item=, =has_key= — all keyed by
+=JSON_STRING=.
+
+The current draft of =wsf_json_response.e= passes plain strings
+as keys — must wrap with =create {JSON_STRING}.make_from_string ("key")=.
+
+Affects: =default_json_for_status= and =with_detail=.
+
+* WSF_PAGE_RESPONSE anatomy (what we inherit)
+
+| Feature          | What it does                                    |
+|------------------+-------------------------------------------------|
+| =make=           | sets =status_code= to 200, creates =header=    |
+| =make_with_body= | calls =make=, then =body := a_body=             |
+| =set_status_code=| sets status                                     |
+| =set_body=       | sets body                                       |
+| =body=           | =detachable STRING_8=                           |
+| =header=         | =HTTP_HEADER=                                   |
+| =send_to=        | writes status + headers + body to =WSF_RESPONSE= |
+
+BUG in old code: =make_with_body= calls =make= (via Precursor),
+so the content-type IS set on that path in WSF_PAGE_RESPONSE.
+But the OLD =WSF_JSON_RESPONSE= only overrode =make=, not
+=make_with_body= — so =make_with_body= called the PARENT's =make=
+(which does NOT set JSON content-type), then set body. Our port
+redefines =make_with_body= to add the JSON content-type header
+after Precursor.
+
+* Three fixes applied in the draft
+
+1. *Escaping* (=with_detail=): builds JSON via =JSON_OBJECT= instead
+   of string concatenation. =JSON_STRING.make_from_string= handles
+   escaping of quotes, backslashes, control chars.
+
+2. *204 No Content*: =make_with_status= skips =set_default_json_body=
+   when status is 204.
+
+3. *make_with_body content-type*: redefined to call Precursor then
+   set =application/json; charset=utf-8=.
+
+* JSON_PARSER usage (for tests)
+
+#+begin_src eiffel
+local
+    l_parser: JSON_PARSER
+do
+    create l_parser.make_with_string (some_json_string)
+    l_parser.parse_content
+    assert ("valid json", l_parser.is_valid)
+    if attached l_parser.parsed_json_object as l_obj then
+        -- l_obj is a JSON_OBJECT
+        -- access: l_obj.item (create {JSON_STRING}.make_from_string ("key"))
+        -- typed: l_obj.string_item (json_key) -> detachable JSON_STRING
+        -- typed: l_obj.number_item (json_key) -> detachable JSON_NUMBER
+    end
+end
+#+end_src
+
+Key features:
+- =make_with_string (a_json: READABLE_STRING_8)=
+- =parse_content= — must call before accessing results
+- =is_valid: BOOLEAN=
+- =parsed_json_object: detachable JSON_OBJECT=
+- =parsed_json_value: detachable JSON_VALUE=
+
+* HTTP_STATUS_CODE constants used
+
+| Constant               | Value |
+|------------------------+-------|
+| =ok=                   |   200 |
+| =created=              |   201 |
+| =no_content=           |   204 |
+| =bad_request=          |   400 |
+| =unauthorized=         |   401 |
+| =forbidden=            |   403 |
+| =not_found=            |   404 |
+| =method_not_allowed=   |   405 |
+| =conflict=             |   409 |
+| =precondition_failed=  |   412 |
+| =internal_server_error= |   500 |
+
+=HTTP_STATUS_CODE_MESSAGES= inherits =HTTP_STATUS_CODE= and adds
+=http_status_code_message (a_code: INTEGER): detachable STRING=.
+
+Both come transitively via the =wsf= ECF (which depends on =http=).
+
+* ECF dependencies (verified paths)
+
+| Name           | Location                                                                    |
+|----------------+-----------------------------------------------------------------------------|
+| =restly=       | =..\restly\restly.ecf=                                                     |
+| =wsf=          | =$ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\wsf.ecf=               |
+| =json=         | =$ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf=            |
+| =uri_template= | =$ISE_LIBRARY\contrib\library\text\parser\uri_template\uri_template.ecf=    |
+
+* Remaining work
+
+1. Fix =wsf_json_response.e=: wrap key strings in =JSON_STRING=.
+2. Write =TEST_WSF_JSON_RESPONSE= (test plan is in the design doc,
+   Step 3 section).
+3. Clean compile =restly_ewf_tests=.
+4. Run tests green.
+
+* Test plan summary (from design doc)
+
+- Each factory sets correct status code.
+- Default bodies are valid JSON (parse back with =JSON_PARSER=).
+- Content-type is =application/json= on all three creation paths
+  (=make=, =make_with_body=, =make_with_status=).
+- Escaping regression: =with_detail= with quotes, backslashes,
+  newline round-trips through =JSON_PARSER=.
+- 204 =no_content= has no body.
+- =with_location= sets header and returns Current.
+- =send_to= is NOT unit-tested — covered in step 4.

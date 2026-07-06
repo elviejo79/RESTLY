@@ -1,0 +1,233 @@
+* Designs After v1
+
+** Collapse RESTLY_RESOURCE into RESTLY_PIPELINE_FRONT
+
+RESTLY_RESOURCE [K, R, S] is the special case of RESTLY_PIPELINE_FRONT [K, R, K, S]
+where the key type does not change (identity key conversion).
+
+RESOURCE has: ~store~, ~converter~.
+PIPELINE_FRONT has: ~store~, ~converter~, ~key_converter~.
+
+The only structural difference is that PIPELINE_FRONT adds key conversion
+and the capability mixins (EXTENDABLE, PATCHABLE, TRAVERSABLE).
+
+*** Approach
+
+Introduce an identity key converter (RESTLY_IDENTITY_KEY_CONVERTER [K])
+whose ~to_store~ and ~to_representation~ both return the argument unchanged.
+Then RESTLY_RESOURCE becomes a type alias or thin heir:
+
+#+begin_src eiffel
+class RESTLY_RESOURCE [K -> HASHABLE, R, S]
+inherit
+    RESTLY_PIPELINE_FRONT [K, R, K, S]
+create
+    make
+end
+#+end_src
+
+With ~make~ supplying the identity key converter automatically.
+
+*** When
+
+After v1 ships and the EWF bridge is stable. No urgency — the current
+duplication is two small classes doing the same convert-and-delegate pattern.
+
+** Rename protocol classes to HTTP verbs
+
+Naming convention: class names use HTTP terminology for the capability,
+feature names use EiffelBase terminology for the operations.
+
+| Current               | Becomes             | HTTP verb        |
+|-----------------------+---------------------+------------------|
+| RESTLY_EXTENDABLE     | RESTLY_POSTABLE     | POST             |
+| RESTLY_PATCHABLE      | stays               | PATCH            |
+| RESTLY_MERGEABLE      | stays               | (value-level)    |
+| RESTLY_TRAVERSABLE    | RESTLY_LISTABLE     | GET on collection|
+
+Features inside keep EiffelBase names: ~extend~, ~merge~, ~new_cursor~,
+~count~, ~wipe_out~.
+
+*** When
+
+After v1 is stable. Pure rename — no logic changes.
+
+** Clarify RESTLY_PATCHABLE vs RESTLY_MERGEABLE
+
+These two classes address PATCH at different layers:
+
+- RESTLY_PATCHABLE [K, V] — container-level interface.
+  "This resource/pipeline supports PATCH by key."
+  Inherits RESTLY_PROTOCOL, adds ~merge (a_patch: V; a_k: K)~ with a 404
+  precondition. The /container/ is responsible for finding the item and
+  applying the patch.
+
+- RESTLY_MERGEABLE — value-level interface.
+  "This domain object can patch itself from a TUPLE."
+  The /stored object/ knows how to apply a partial update to its own fields
+  via ~copy_from_tuple (a_patch: TUPLE)~. Void fields mean "absent from
+  PATCH, leave unchanged".
+
+In practice, MERGEABLE would be called /inside/ a PATCHABLE implementation:
+the container looks up the item by key, then delegates
+~item.copy_from_tuple(...)~.
+
+In v1 MERGEABLE is unused — SAMPLE_FRONT hardcodes the patch logic directly.
+
+*** Decision needed
+
+Probably one of them will need to change:
+- Option A: PATCHABLE's ~merge~ constrains V to conform to MERGEABLE, then
+  the default implementation becomes: look up item, call ~copy_from_tuple~.
+- Option B: Keep them fully decoupled. PATCHABLE stays deferred and each
+  pipeline front decides how to merge (JSON diff, TUPLE copy, direct setter).
+- Option C: Remove MERGEABLE entirely if JSON-level merge at the front
+  turns out to be sufficient for all cases.
+
+*** When
+
+After the EWF bridge is working with real JSON payloads. The right answer
+depends on whether domain objects ever need to know about patching themselves
+or whether the pipeline front always handles it externally.
+
+** Generalize RESTLY_PROTOCOL key type to reduce string mangling in EWF bridge
+
+The EWF bridge hardcodes ~RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ everywhere:
+handlers, server, mount signatures. But EWF itself returns
+~READABLE_STRING_GENERAL~ from ~path_parameter~ and ~READABLE_STRING_8~ from
+~request_uri~. Every handler call site needs ~.to_string_8~ or
+~.string_representation.to_string_8~ to bridge the gap.
+
+String mangling inventory in restly_ewf:
+
+| Location              | Conversion                                      |
+|-----------------------+-------------------------------------------------|
+| ~element_key~         | ~WSF_STRING~ → ~.string_representation.to_string_8~ |
+| ~element_uri~         | ~req.request_uri.to_string_8~                   |
+| ~patch_url~           | ~req.absolute_script_url(...)~ + ~replace_with_string~ |
+| ~parse_json_body~     | ~read_input_data_into~ → JSON_PARSER → extract  |
+| ~status_from_tag~     | Substring parsing of ~"error_NNN_description"~  |
+
+*** Options
+
+- Option A: Make the EWF bridge generic on K and V instead of hardcoding
+  ~[STRING, JSON_OBJECT]~. Handlers become ~RESTLY_EWF_HANDLER [K, V]~,
+  mount takes a key-extractor agent. Removes the string assumption from
+  the bridge entirely.
+
+- Option B: Use ~READABLE_STRING_GENERAL~ as the key type in the bridge
+  signatures. Fewer ~.to_string_8~ calls but still string-typed.
+
+- Option C: Keep ~STRING~ but move ~patch_url~ out of the handlers. The
+  "url" field is an HTTP-layer concern — inject it at POST time or via a
+  decorator on the pipeline front, not per-request in every handler.
+
+Options A and C are not mutually exclusive.
+
+*** When
+
+After the smoke tests pass and the EWF bridge is stable. The current
+string mangling works but adds noise to every handler method.
+
+** Introduce domain objects (e.g. TODO_ITEM) to own defaults and validation
+
+The current pipeline is ~JSON_OBJECT~ end to end: the EWF handler
+receives JSON, the pipeline stores JSON, the converter injects defaults
+(~completed: false~) on the way out. There is no domain object.
+
+This works but pushes business rules into converters. A domain object
+like ~TODO_ITEM~ would own its defaults, validation, and patch logic
+natively. The converter would then map between ~JSON_OBJECT~ and the
+domain type, and the pipeline would store typed objects instead of raw
+JSON.
+
+*** Approach
+
+- Define ~TODO_ITEM~ (or a generic pattern) with attributes (~title~,
+  ~completed~, ~order~) and sensible defaults in the constructor.
+- The converter maps ~JSON_OBJECT ↔ TODO_ITEM~ instead of
+  ~JSON_OBJECT ↔ JSON_OBJECT~.
+- The pipeline becomes ~RESTLY_PIPELINE_FRONT [INTEGER, JSON_OBJECT, TODO_ITEM]~
+  — representation is JSON, store is the domain type.
+- Patch logic moves from the handler's raw JSON merge into the domain
+  object (connects to the MERGEABLE discussion above).
+
+*** When
+
+After v1 ships. The current converter-based default injection works
+and is tested (16/16 acceptance tests). The domain object becomes
+valuable when a second resource appears or validation rules grow
+beyond a single boolean default.
+
+** Generalize restly_ewf beyond [STRING, JSON_OBJECT]
+
+The entire EWF bridge is hardcoded to ~[STRING, JSON_OBJECT]~:
+
+| Class                           | Hardcoded assumption                        |
+|---------------------------------+---------------------------------------------|
+| ~RESTLY_EWF_HANDLER~            | ~storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_COLLECTION_HANDLER~ | casts to ~RESTLY_TRAVERSABLE [STRING, JSON_OBJECT]~, ~RESTLY_EXTENDABLE [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_ELEMENT_HANDLER~    | casts to ~RESTLY_PATCHABLE [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_SERVER~             | just two inherits, no type assumptions (OK)  |
+| ~RESTLY_JSON_PIPELINE_FRONT~    | auto-increment INTEGER keys, JSON merge      |
+
+A second resource with UUID keys, XML values, or a different key
+minting strategy cannot reuse any handler or the pipeline front.
+
+*** Approach
+
+- Make handlers generic: ~RESTLY_EWF_HANDLER [K, V]~ with a
+  key-extractor and a body-parser injected at creation (agents or
+  deferred features). The current ~parse_json_body~ and ~element_key~
+  become the JSON-specific implementations.
+- Extract ~fresh_key~ minting from ~RESTLY_JSON_PIPELINE_FRONT~ into a
+  strategy (agent or deferred). The auto-increment integer is just one
+  policy; UUIDs, slugs, and database sequences are others.
+- The current classes become the JSON specializations:
+  ~RESTLY_EWF_JSON_HANDLER~, ~RESTLY_JSON_PIPELINE_FRONT~ (already
+  named correctly).
+
+*** Relationship to other items
+
+This overlaps with "Generalize RESTLY_PROTOCOL key type" (above) and
+"Introduce domain objects" (above). All three address the same root
+issue: v1 baked ~[STRING, JSON_OBJECT]~ into every layer to ship
+fast. Fixing one without the others leaves half the bridge still
+hardcoded.
+
+Suggested order: domain objects first (gives a concrete second type
+to test against), then generalize the handlers, then clean up the
+key type.
+
+*** When
+
+After v1 ships and a second resource type appears. The current
+hardcoding works for any JSON REST API with auto-increment keys,
+which covers the common case. Generalizing before a second consumer
+exists is speculative.
+
+** Replace WSF_JSON_RESPONSE factories with a single ~response~ feature
+
+WSF_JSON_RESPONSE has 11 factory features (~not_found~, ~ok~, ~created~, ...)
+that each do ~create Result.make_with_status ({HTTP_STATUS_CODE}.xxx)~.
+All 11 are identical except for the integer constant — ~55 lines of boilerplate.
+
+Replace them with one class-level feature:
+
+#+begin_src eiffel
+response (a_status: INTEGER): WSF_JSON_RESPONSE
+    do
+        create Result.make_with_status (a_status)
+    ensure
+        instance_free: class
+    end
+#+end_src
+
+Call site: ~{WSF_JSON_RESPONSE}.response (404).with_detail ("gone")~
+or ~{WSF_JSON_RESPONSE}.response ({HTTP_STATUS_CODE}.not_found)~.
+
+*** When
+
+After v1 ships. The named factories work fine for now and the handler
+(step 4) will mostly use ~make_with_status~ with a dynamic status code
+from the tag parser anyway.

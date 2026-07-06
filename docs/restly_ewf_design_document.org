@@ -1,0 +1,921 @@
+#+TITLE: RESTLY–EWF Bridge Design Document
+#+AUTHOR: Alejandro Garcia
+#+DATE: 2026-07-03
+#+STARTUP: overview
+
+* Goal
+
+Build a component that connects EWF (Eiffel Web Framework) applications
+with the RESTLY framework, so that a resource subtree can be exposed
+over HTTP with one =mount= call per route.
+
+Concrete success criterion: the [[https://www.todobackend.com][todobackend.com]] =npm test= suite passes
+against a RESTLY-backed server.
+
+* Research findings
+
+** EWF has no JSON response class
+
+The =WSF_RESPONSE_MESSAGE= hierarchy covers HTML, files, redirections and
+errors, but JSON is a gap:
+
+| Class                             | Purpose                                    |
+|-----------------------------------+--------------------------------------------|
+| =WSF_PAGE_RESPONSE=               | generic body + status + headers (workhorse) |
+| =WSF_HTML_PAGE_RESPONSE=          | text/html, set_title/set_body              |
+| =WSF_REDIRECTION_RESPONSE=        | 302                                        |
+| =WSF_NOT_FOUND_RESPONSE=          | 404 with suggested items                   |
+| =WSF_METHOD_NOT_ALLOWED_RESPONSE= | 405/501                                    |
+| =WSF_FILE_RESPONSE= / =WSF_DOWNLOAD_RESPONSE= | file streaming                 |
+| =WSF_CORS_OPTIONS_RESPONSE=       | OPTIONS + CORS given a router              |
+
+JSON in EWF examples (restbucks CRUD) is done by hand:
+=res.header.put_content_type_application_json=, manual
+=JSON_OBJECT= construction, =res.put_string (jv.representation)=.
+
+The ROC project has =JSON_WEBAPI_RESPONSE= (field helpers, HAL =_links=),
+the closest official thing to a JSON response helper — but it lives in
+the CMS, not EWF core.
+
+** Swagger/OpenAPI in the EWF ecosystem
+
+- =EiffelWebFramework/swagger= — WIP protocol implementation (2022).
+- =EiffelWebFramework/eiffel_to_swagger= — ETH student project (2015):
+  generates =swagger.json= from Eiffel =note= annotations
+  (=sa_spec=, =sa_operation=, =sa_response= ...) via AST visitors.
+  Swagger 2.0, incomplete, but the annotation approach could be adapted.
+- The EWF workbook has no Swagger coverage; the README claim is
+  aspirational.
+
+** URI_TEMPLATE (EWF, =library/text/parser/uri_template=)
+
+RFC-6570-style templates. Relevant features:
+- =hash_code= — usable as hash table key
+- =match (a_uri): detachable URI_TEMPLATE_MATCH_RESULT= — extracts path
+  and query variables
+- =expanded_string (ht)= — the inverse; builds a URL from variables
+  (needed for =Location= headers and todobackend's =url= field)
+
+* Map of the existing code
+
+Verified against branch =combinators-as-lists=. An implementing agent
+should read =library/restly/testing/test_restly_cache.e= FIRST — it
+demonstrates the current pipeline style (commit =2934bb3=: "Los
+pipelines funcionan como se usa en testing/test_restly_cache.e").
+
+| Existing class              | Path                                                       | Role                                                |
+|-----------------------------+------------------------------------------------------------+-----------------------------------------------------|
+| =RESTLY_PROTOCOL=           | =library/restly/src/restly_protocol.e=                    | the core storage protocol                           |
+| =RESTLY_BASIC_COMBINATOR=   | =library/restly/src/combinator/restly_basic_combinator.e= | base combinator (front/back, =-= and =<|= aliases)  |
+| =RESTLY_CACHE=              | =library/restly/src/combinator/restly_cache.e=            | cache combinator                                    |
+| =RESTLY_CONVERTER=          | =library/restly/src/converter/restly_converter.e=         | value conversion; exactly two features: =to_store=, =to_representation= |
+| =RESTLY_CONVERTER_AGENT=    | =library/restly/src/converter/restly_converter_agent.e=   | agent-based converter                               |
+| =RESTLY_REPRESENTATION=     | =library/restly/src/converter/restly_representation.e=    | representation layer                                |
+| =RESTLY_RESOURCE=           | =library/restly/src/converter/restly_resource.e=          | resource; converter injected at creation            |
+| =RESTLY_HASH_TABLE=         | =library/restly/src/structures/restly_hash_table.e=       | concrete storage                                    |
+
+* Lessons from RESTLY_251021 (the old attempt)
+
+Old checkout: =/home/agarciafdz/r/gh/elv79/RESTLY_251021/RESTFUL/src/=
+— contains =wsf_json_response.e= (to port, step 3) and
+=restly_ewf_handler.e= (the rescue/retry mechanism cited in
+decision 8).
+
+** Worth keeping: WSF_JSON_RESPONSE
+
+Inherits =WSF_PAGE_RESPONSE=, adds:
+- auto =application/json; charset=utf-8=
+- class-side status factories: ={WSF_JSON_RESPONSE}.not_found=,
+  =.created=, =.no_content=, =.conflict=, ...
+- default JSON bodies: ={"error":"Not Found","status":404}=
+- fluent chainable setters:
+  #+begin_src eiffel
+  {WSF_JSON_RESPONSE}.created
+      .with_json_object (json_data)
+      .with_location ("/todos/42")
+  #+end_src
+
+Must be fixed during the port:
+- =with_detail= builds JSON by string concatenation — no escaping;
+  quotes/backslashes in the detail break the JSON (injection risk).
+- 204 No Content must not carry a body.
+- =make_with_body= (inherited creation) bypasses =make=, so the
+  content-type header is never set on that path.
+
+** Clumsy parts to avoid
+
+- =URL_PATH= inherited the /filesystem/ =PATH= class; needed a
+  =hash_code= hack. Wrong abstraction.
+- =requested_path (req)= reassembled the path manually from
+  =WSF_TABLE=/=WSF_STRING= path parameters. String surgery.
+- =extend= peeked into the JSON body (=json_data ["name"]=) to mint the
+  key — resource-specific policy inside a generic handler.
+- =last_inserted_key= in the protocol — a CQS workaround that leaked.
+- =DNS= once-class with weak references — global registry mixing
+  lifetime management with routing.
+
+* Design decisions
+
+** The central insight
+
+The router itself is a table: URI templates → pipelines. Lookup uses
+/template matching/ as the equivalence relation — the stored key
+=/todos/{id}= "equals" the query key =/todos/42=. This is the
+=V_GENERAL_HASH_TABLE= idea (custom equivalence) applied to routing.
+Storage combinators all the way down; the EWF component is just one
+more combinator.
+
+** Decisions (Q&A, 2026-07-03)
+
+1. *Boundary shape*: the handler accepts any =[K, V]=; converters turn
+   JSON into domain objects (e.g. =TODO_ITEM=).
+2. *Keys*: =URI_TEMPLATE= at the router level; inner storage keyed by
+   domain id (auto-increment =INTEGER= for =TODO_ITEM=).
+3. *Key conversion*: new =RESTLY_KEY_CONVERTER= mirrors
+   =RESTLY_CONVERTER= but for keys ("42" → 42).
+   Wiring point (decided 2026-07-03, round 2): a NEW combinator
+   =RESTLY_KEY_CONVERTING_COMBINATOR= carries it in the pipeline —
+   =RESTLY_BASIC_COMBINATOR [K, R, S]= has a single =K= and cannot
+   change key type across a stage. Symmetric with value conversion;
+   core combinators untouched.
+   Round-3 update: the pipeline front (decision 16) holds the key
+   converter DIRECTLY, so the combinator is no longer on the v1
+   path — parked as optional future tooling.
+4. *Mounting* (refined 2026-07-03, round 2): =RESTLY_EWF_SERVER=
+   owns the =WSF_ROUTER= and offers two EXPLICIT features — one
+   =mount= with type-driven dispatch was rejected (Eiffel has no
+   overloading, and both interfaces usually live on the /same/
+   storage object):
+   #+begin_src eiffel
+   server.mount_collection ("/todos",      todos)
+   server.mount_element    ("/todos/{id}", todos)
+   #+end_src
+   Both share one storage; the sharing is explicit wiring
+   (newbie readability is the design priority). The 405 rule reads
+   off the call site: a verb not wired for that kind of mount — or
+   whose required interface the storage does not conform to (see
+   the verb table in Architecture) — answers 405.
+   ON TOP of the two primitives, one convenience feature
+   (Rails-=resources= style):
+   #+begin_src eiffel
+   server.mount_resource ("/todos", todos)
+   -- = mount_collection ("/todos", todos)
+   --   + mount_element ("/todos" + "/{id}", todos)
+   #+end_src
+   The sugar hard-codes the ={id}= variable name and the
+   "element = collection + =/{id}=" convention — fine for v1.
+   Nested routes (=/users/{uid}/todos=) or collection-only
+   resources drop down to the two primitives, which stay public.
+5. *POST id minting*: =RESTLY_EXTENDABLE= (mixin) adds the command
+   =extend_new (a_v: V; client_request_id: HASHABLE)= which generates
+   the key and records it in
+   =extend_requests: HASH_TABLE [new_key, request_id]=.
+   The caller then queries =extend_requests [client_request_id]=.
+   CQS-compliant; replaces =last_inserted_key=; idempotency-key
+   semantics gives safe retries and a path to concurrency.
+   The HTTP POST handler mints its own request_id when the client
+   sends none (todobackend sends none).
+6. *PATCH* (revised by decision 16, round 3): =RESTLY_PATCHABLE=
+   (mixin) adds =merge (a_patch: V; a_k: K)= — the patch is a
+   PARTIAL VALUE of the representation type. v1 merges JSON-on-JSON
+   at the pipeline front (RFC 7386: absent field = unchanged).
+   The original TUPLE/=copy_from_tuple= domain-level design is kept
+   available via =RESTLY_MERGEABLE= but unused in v1.
+7. *Collections*: =RESTLY_TRAVERSABLE= — iteration + =wipe_out=,
+   kept separate from =RESTLY_PROTOCOL=, mimicking EiffelBase2's
+   container/iterator separation.
+8. *Errors from contracts*: precondition tags encode status codes
+   (=error_404_not_found=). The handler parses the violated tag first;
+   falls back to exception type when the tag carries no code.
+   Mechanism (proven in the old =RESTLY_EWF_HANDLER=): the handler
+   inherits =EXCEPTION_MANAGER=; the dispatch feature has a =rescue=
+   clause that builds the response from =last_exception= and =retry=-s
+   (the retry path sees =Result= already attached and returns it).
+   Tag grammar: =error_<NNN>_<description>= where =NNN= is the HTTP
+   status code. Mapping table, in order:
+   | condition                                  | status |
+   |--------------------------------------------+--------|
+   | violated tag matches =error_<NNN>_*=       | =NNN=  |
+   | =PRECONDITION_VIOLATION=, tag has no code  | 412    |
+   | anything else                              | 500    |
+9. *The =url= field*: converters stay pure (domain ↔ JSON, no web
+   concepts); the EWF handler patches todobackend's =url= field in
+   after conversion. "The web layer adds web things."
+10. *CORS*: handled automatically by the component. Two parts:
+    =WSF_CORS_OPTIONS_RESPONSE= covers the OPTIONS verb ONLY; for
+    regular responses the mount component's dispatch adds the
+    =Access-Control-Allow-*= headers to every response before
+    sending (the spec runner is a browser and checks them on GET/
+    POST/PATCH/DELETE too).
+11. *Dependencies*: the bridge lives in its own cluster/ecf
+    (=restly_ewf=) so core RESTLY never depends on EWF.
+12. *Mixin style* (superseded in part by decision 16, round 3):
+    =RESTLY_EXTENDABLE=, =RESTLY_PATCHABLE= and
+    =RESTLY_TRAVERSABLE= are deferred capability interfaces —
+    not wrapper combinators. Round-3 refinement: they are concerns of
+    the FRONT of a pipeline ONLY (=RESTLY_PIPELINE_FRONT=, decision
+    16); every other combinator and storage stays pure
+    =RESTLY_PROTOCOL=. One piece survives from round 2 §5:
+    =RESTLY_HASH_TABLE= gains =RESTLY_TRAVERSABLE=
+    conformance — nearly free (=V_HASH_TABLE= already provides
+    =new_cursor= / =count= / =wipe_out=), and the front's converting
+    cursor needs an iterable INNER storage to wrap.
+13. *Concurrency*: ignored for v1; =extend_new= is designed to be
+    SCOOP-friendly later.
+14. *=extend_new= idempotency* (decided 2026-07-03): calling
+    =extend_new= twice with the same =client_request_id= is legal and
+    a no-op — the original key is preserved, the table unchanged.
+    Rationale:
+    - The idempotency-key pattern exists precisely to /repair/ HTTP
+      POST's non-idempotence (cf. Stripe's =Idempotency-Key=); RESTLY
+      offers the stronger guarantee so client retries are safe.
+    - A =not_a_duplicate= precondition would be uncheckable by the
+      caller under SCOOP (check-then-call race) — a DbC anti-pattern.
+      Idempotency removes the obligation entirely.
+    The one precondition kept: a duplicate request_id must carry the
+    /same value/ (a differing value is a client bug, not a retry):
+    #+begin_src eiffel
+    same_request_means_same_value:
+        extend_requests.has (request_id) implies
+            item (extend_requests [request_id]) ~ v
+    #+end_src
+    Postcondition guarantees: on the duplicate path the original key
+    is preserved and the store is unchanged; on the fresh path a new
+    key exists with =item (new_key) ~ v=.
+    (Exact contract wording is the owner's to write.)
+15. *Generic parameter naming* (decided 2026-07-03, DONE): one letter,
+    one meaning —
+    - =K= = key, everywhere (=K -> HASHABLE=);
+    - =V= = value, in pipeline-position-agnostic classes
+      (=RESTLY_PROTOCOL [K, V]=, =RESTLY_HASH_TABLE [K, V]=,
+      =RESTLY_CACHE [K, V]=, and the new mixins) — a standalone
+      container doesn't know whether it holds representations or
+      stores, so V is honest;
+    - =R=, =S= = Fielding's Representation/Store, only where a class
+      /relates the two/ (=RESTLY_CONVERTER [R, S]=, combinators like
+      =RESTLY_BASIC_COMBINATOR [K, R, S]=);
+    - =F=, =B= as type parameters: banned — front/back are component
+      /roles/, already named by the =front=/=back= fields.
+    Rule in one sentence: "V when the class doesn't care, R/S when
+    conversion gives them meaning."
+    Applied: =RESTLY_PROTOCOL [K, B]= → =[K, V]= and
+    =RESTLY_HASH_TABLE [K, B]= → =[K, V]= (compiled clean 2026-07-03).
+16. *Pipeline front* (decided 2026-07-03, round 3 — closes the
+    round-3 §1 hole: capabilities didn't survive the pipeline): the
+    three capability interfaces are concerns of the FRONT of a
+    pipeline ONLY; the rest of the combinators remain pure
+    =RESTLY_PROTOCOL=. New core class =RESTLY_PIPELINE_FRONT=
+    (named "front" because it must head the pipeline; "edge" was
+    rejected as ambiguous — it could mean either end) holds the
+    inner storage AND both converters as explicit creation
+    arguments (round-3 Option B packaged as a class; mirrors
+    =RESTLY_RESOURCE='s converter-injected-at-creation precedent).
+    Consequences:
+    - =RESTLY_PATCHABLE= drops the =V -> RESTLY_MERGEABLE=
+      constraint; =merge= becomes representation-level:
+      =merge (a_patch: V; a_k: K)= — the patch is a PARTIAL VALUE
+      of the same representation type. For JSON that is JSON-on-JSON
+      merge (RFC-7386 semantics: absent field = unchanged).
+    - =RESTLY_MERGEABLE= / =copy_from_tuple= stay in the design
+      (kept available) but are UNUSED in v1 — no implementor, no
+      tests; a future domain-level merge may use them.
+    - The bridge provides the concrete v1 front:
+      =RESTLY_JSON_PIPELINE_FRONT= (=merge= = JSON merge;
+      =fresh_key= = auto-increment INTEGER rendered as STRING).
+    - Mount's attached-tests are checked against the mounted front
+      at web types (=[STRING, JSON_OBJECT]=) — they now succeed,
+      because the front itself conforms.
+    - GET-list: the front's =new_cursor= WRAPS the inner table's
+      cursor, converting each key and value; requires the inner
+      storage to conform to =RESTLY_TRAVERSABLE= at store
+      types (=RESTLY_HASH_TABLE= does, decision 12); a
+      non-conforming inner storage → 405 via contract tag.
+    - =RESTLY_KEY_CONVERTING_COMBINATOR= is off the v1 path
+      (see decision 3).
+
+* Architecture
+
+** Core RESTLY additions (no EWF dependency)
+
+| Class                       | Responsibility                                       |
+|-----------------------------+------------------------------------------------------|
+| =RESTLY_KEY_CONVERTER=      | key conversion between pipeline stages               |
+| =RESTLY_PIPELINE_FRONT=     | heads a pipeline; the ONE home of the capability interfaces (decision 16) |
+| =RESTLY_EXTENDABLE=         | =extend_new= + =extend_requests= (server-minted keys) |
+| =RESTLY_PATCHABLE=          | =merge (a_patch: V; a_k: K)= — representation-level partial update |
+| =RESTLY_TRAVERSABLE=          | iteration + =wipe_out=                              |
+| =RESTLY_KEY_CONVERTING_COMBINATOR= | key-type-changing stage — OPTIONAL, off the v1 path (decision 16) |
+
+*** Signatures (agreed 2026-07-03; owner may adjust names)
+
+#+begin_src eiffel
+deferred class RESTLY_EXTENDABLE [K -> HASHABLE, V]
+    -- Mixin: inherit alongside RESTLY_PROTOCOL [K, V] (decision 12).
+
+    extend_new (a_v: V; a_request_id: HASHABLE)
+        -- Idempotent (decision 14). Generates `fresh_key` for an
+        -- unseen a_request_id; no-op for a duplicate.
+
+    extend_requests: HASH_TABLE [K, HASHABLE]
+        -- request_id -> generated key.
+        -- Concrete storages may use V_HASH_TABLE; see Glossary for
+        -- the STRING-key equality trap.
+
+    fresh_key: K
+        -- Next unused key. Deferred: the TODO example implements
+        -- auto-increment INTEGER; other storages may use UUIDs etc.
+      deferred
+#+end_src
+
+#+begin_src eiffel
+deferred class RESTLY_MERGEABLE
+    -- Contract for domain objects that accept partial updates.
+    -- KEPT AVAILABLE but UNUSED in v1 (decision 16): PATCH is a
+    -- JSON-on-JSON merge at the pipeline front.
+
+    copy_from_tuple (a_patch: TUPLE)
+        -- Labelled TUPLE with DETACHABLE fields;
+        -- Void field = "absent from PATCH, leave unchanged".
+        -- Note: BOOLEAN/INTEGER become BOOLEAN_REF/INTEGER_REF
+        -- to be detachable.
+      deferred
+
+deferred class RESTLY_PATCHABLE [K -> HASHABLE, V]
+    -- Mixin alongside RESTLY_PROTOCOL [K, V]. No RESTLY_MERGEABLE
+    -- constraint (decision 16): the patch is a PARTIAL VALUE of
+    -- the same representation type (for JSON_OBJECT: RFC 7386,
+    -- absent field = unchanged).
+
+    merge (a_patch: V; a_k: K)
+        -- Update item (a_k)'s parts named in a_patch; the rest
+        -- stays intact.
+      deferred
+#+end_src
+
+#+begin_src eiffel
+deferred class RESTLY_KEY_CONVERTER [K_REPRESENTATION, K_STORE]
+inherit
+    RESTLY_CONVERTER [K_REPRESENTATION, K_STORE]
+    -- Deliberately a distinct type although it adds no features:
+    -- a pipeline that says KEY_CONVERTER reads as "this converts
+    -- KEYS, not values" (decision Q2, readability over economy).
+    -- Inherits to_store / to_representation.
+#+end_src
+
+#+begin_src eiffel
+class RESTLY_KEY_CONVERTING_COMBINATOR
+        [K_REPRESENTATION -> HASHABLE, K_STORE -> HASHABLE, V]
+    -- Pipeline stage that changes the KEY type; values pass through.
+    -- Cannot inherit RESTLY_BASIC_COMBINATOR (its single K forbids
+    -- a key-type change), so it conforms to RESTLY_PROTOCOL directly.
+inherit
+    RESTLY_PROTOCOL [K_REPRESENTATION, V]
+        -- What the web side sees (e.g. STRING keys).
+
+feature -- Components
+
+    back: RESTLY_PROTOCOL [K_STORE, V]
+        -- What the storage side is (e.g. INTEGER keys).
+
+    key_converter: RESTLY_KEY_CONVERTER [K_REPRESENTATION, K_STORE]
+
+    -- Each verb delegates: item (k) = back.item
+    -- (key_converter.to_store (k)); same for has_key / extend /
+    -- force / put / remove.
+#+end_src
+
+#+begin_src eiffel
+deferred class RESTLY_TRAVERSABLE [K -> HASHABLE, V]
+    -- Separate from RESTLY_PROTOCOL, EiffelBase2-style
+    -- container/iterator separation.
+
+    new_cursor: V_MAP_ITERATOR [K, V]
+        -- GET on the collection (base2 map iterator, decision Q3).
+        -- MUST expose keys, not just values: the web layer builds
+        -- each item's `url` from its key (decisions 2 and 9), and
+        -- TODO_ITEM carries no id field. V_MAP_ITERATOR has both
+        -- `key` and `item`; V_HASH_TABLE's own new_cursor already
+        -- conforms (V_TABLE_ITERATOR [K, V]), so RESTLY_HASH_TABLE
+        -- gets this for free.
+      deferred
+
+    count: INTEGER
+      deferred
+
+    wipe_out
+        -- DELETE on the collection. Legal when already empty.
+      deferred
+#+end_src
+
+#+begin_src eiffel
+deferred class RESTLY_PIPELINE_FRONT
+        [K_REPRESENTATION -> HASHABLE, V_REPRESENTATION,
+         K_STORE -> HASHABLE, V_STORE]
+    -- The FRONT of a pipeline (decision 16): the ONE place the
+    -- capability interfaces live. Everything behind it is pure
+    -- RESTLY_PROTOCOL (which may itself be a combinator stack).
+inherit
+    RESTLY_PROTOCOL [K_REPRESENTATION, V_REPRESENTATION]
+    RESTLY_EXTENDABLE [K_REPRESENTATION, V_REPRESENTATION]
+    RESTLY_PATCHABLE [K_REPRESENTATION, V_REPRESENTATION]
+    RESTLY_TRAVERSABLE [K_REPRESENTATION, V_REPRESENTATION]
+
+create
+    make
+
+feature -- Components (explicit wiring at creation, decision 16)
+
+    inner: RESTLY_PROTOCOL [K_STORE, V_STORE]
+    key_converter: RESTLY_KEY_CONVERTER [K_REPRESENTATION, K_STORE]
+    value_converter: RESTLY_CONVERTER [V_REPRESENTATION, V_STORE]
+
+    -- REST verbs forward with conversion, e.g.
+    --   item (k) = value_converter.to_representation
+    --                (inner.item (key_converter.to_store (k)))
+    -- extend_new: implemented HERE (fresh_key + extend_requests +
+    --   forwarded extend); decision 5/14 semantics unchanged.
+    -- fresh_key: deferred (key-minting policy).
+    -- merge: deferred (representation-level; JSON impl in bridge).
+    -- new_cursor / count / wipe_out: converting wrapper over the
+    --   INNER storage's cursor — requires
+    --   attached {RESTLY_TRAVERSABLE [K_STORE, V_STORE]}
+    --   inner (RESTLY_HASH_TABLE conforms, decision 12); a
+    --   non-conforming inner → 405 via contract tag
+    --   (error_405_..., owner writes it).
+#+end_src
+
+** EWF bridge cluster (=restly_ewf=)
+
+| Class                 | Responsibility                                              |
+|-----------------------+-------------------------------------------------------------|
+| =WSF_JSON_RESPONSE=   | ported + fixed (escaping, 204 body, make_with_body)         |
+| =RESTLY_EWF_SERVER=   | owns =WSF_ROUTER=; =mount_collection= / =mount_element=; CORS wiring |
+| =RESTLY_EWF_HANDLER=  | per-route verb dispatch; tag→status mapping; =url= patching |
+| =RESTLY_JSON_PIPELINE_FRONT= | concrete v1 front: =[STRING, JSON_OBJECT]= web side; =merge= = JSON merge (RFC 7386); =fresh_key= = auto-increment as STRING |
+
+*** Mount signatures (decided 2026-07-03, round 2)
+
+#+begin_src eiffel
+mount_collection (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
+mount_element    (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
+
+mount_resource (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
+    -- Sugar: mount_collection (a_template, a_storage) +
+    -- mount_element (a_template + "/{id}", a_storage).
+#+end_src
+
+- =a_storage= is the FRONT of a pipeline (decision 16) — in v1 a
+  =RESTLY_JSON_PIPELINE_FRONT= instance: =STRING= keys and
+  =JSON_OBJECT= values on the web side, inner storage and both
+  converters wired in at creation.
+- Optional capabilities are discovered at dispatch time with
+  attached-tests at web types
+  (=attached {RESTLY_EXTENDABLE [STRING, JSON_OBJECT]} a_storage=);
+  they succeed because the front itself conforms (decision 16).
+  A verb whose interface the mounted object lacks answers 405.
+
+*** Verb → required conformance (doubles as the 405 spec)
+
+| Route kind (feature)  | Verb       | requires                                 |
+|-----------------------+------------+------------------------------------------|
+| =mount_element=       | GET one    | =RESTLY_PROTOCOL.item= / =has_key=       |
+| =mount_element=       | PATCH      | =RESTLY_PATCHABLE.merge=                 |
+| =mount_element=       | DELETE one | =RESTLY_PROTOCOL.remove=                 |
+| =mount_collection=    | GET list   | =RESTLY_TRAVERSABLE.new_cursor=          |
+| =mount_collection=    | POST       | =RESTLY_EXTENDABLE.extend_new=           |
+| =mount_collection=    | DELETE all | =RESTLY_TRAVERSABLE.wipe_out=            |
+
+Anything else (e.g. POST on an element route, PUT anywhere in v1)
+→ 405.
+
+Base URL for =url= patching and =Location= headers: derived
+/per-request/ from =req.absolute_script_url= (same approach as
+restbucks and the old handler) — NOT a config value.
+
+** TODO_ITEM shape (todobackend JSON schema)
+
+| Field       | JSON type | Eiffel type | Notes                               |
+|-------------+-----------+-------------+-------------------------------------|
+| =title=     | string    | =STRING=    |                                     |
+| =completed= | boolean   | =BOOLEAN=   | defaults to False on POST           |
+| =order=     | number    | =INTEGER=   | optional in POSTs                   |
+| =url=       | string    | (none)      | added by the web layer (decision 9) |
+
+PATCH is a JSON-on-JSON merge at the pipeline front (decision 16);
+=TODO_ITEM= does NOT implement =copy_from_tuple= in v1.
+(If a domain-level merge is ever wanted, =copy_from_tuple= would
+accept =TUPLE [title: detachable STRING; completed: detachable
+BOOLEAN_REF; order: detachable INTEGER_REF]= — absent field =
+=Void= = unchanged.)
+
+** Request flows
+
+- =POST /todos= → handler mints request_id → =extend_new (item,
+  request_id)= → =extend_requests [request_id]= → 201 + =Location= +
+  =url= field.
+- =PATCH /todos/42= → =front.merge (patch_json, "42")= (JSON-on-JSON,
+  RFC 7386: absent field = unchanged) → 200 + full item.
+- =GET /todos/42= → key conversion ("42" → 42) → =item (42)= →
+  200 + full item (unknown id → 404 via contract tag).
+- =GET /todos= → collection iteration (cursor exposes key + item;
+  =url= built from each key) → JSON array.
+- =DELETE /todos/42= → =remove (42)= → 204 No Content.
+- =DELETE /todos= → =wipe_out= → 200.
+  NOTE the intentional asymmetry: DELETE element → 204,
+  DELETE collection → 200 — do not "fix" one to match the other.
+- Contract violation anywhere in the pipeline → tag parsed → HTTP
+  status.
+
+* Build and ECF mechanics
+
+** Current facts (verified 2026-07-03)
+
+- The only ECF is =library/restly/restly.ecf=:
+  - target =restly= (library_target), depends on =base= and =base2=
+    (=$ISE_LIBRARY/unstable/library/base2/base2.ecf=);
+  - target =restly_tests= extends it, root =APPLICATION.make=,
+    adds the =testing= library and the =testing/= cluster;
+  - ALL assertions on (pre, post, check, invariant, loop,
+    supplier_precondition); concurrency support="none".
+- WARNING: the global CLAUDE.md compile examples use =httpico.ecf= —
+  that is a DIFFERENT project and does NOT apply to this repo.
+- There is NO =examples/= directory yet; step 5 creates it.
+
+** Commands
+
+Run core tests (from the repo root):
+#+begin_example
+ec -batch -config library/restly/restly.ecf -target restly_tests -tests -stop
+#+end_example
+
+** New ECF: =library/restly_ewf/restly_ewf.ecf= (step 3)
+
+Targets: =restly_ewf= (library_target) and =restly_ewf_tests=.
+Dependencies (paths verified in Eiffel 25.12):
+
+#+begin_example
+restly:       ..\restly\restly.ecf  (relative)
+wsf:          $ISE_LIBRARY\contrib\library\web\framework\ewf\wsf\wsf.ecf
+json:         $ISE_LIBRARY\contrib\library\text\parser\json\library\json.ecf
+uri_template: $ISE_LIBRARY\contrib\library\text\parser\uri_template\uri_template.ecf
+#+end_example
+
+The example app (step 5) additionally needs the standalone connector:
+=$ISE_LIBRARY\contrib\library\web\framework\ewf\ewsgi\connectors\standalone\=
+(EWF also ships =cgi=, =libfcgi=, =nino=, =null= connectors — we use
+standalone only).
+
+** File layout for new code
+
+#+begin_example
+library/restly/src/
+  protocol/restly_extendable.e
+  protocol/restly_patchable.e
+  protocol/restly_mergeable.e
+  protocol/restly_traversable.e
+  converter/restly_key_converter.e
+  combinator/restly_pipeline_front.e
+library/restly/testing/
+  sample_item.e                (plain domain object for the inner storage)
+  sample_front.e               (concrete RESTLY_PIPELINE_FRONT for tests)
+  test_restly_extendable.e
+  test_restly_traversable.e
+  test_restly_key_converter.e
+  test_restly_pipeline_front.e
+library/restly_ewf/            (new cluster, own ECF)
+  restly_ewf.ecf
+  src/wsf_json_response.e
+  src/restly_json_pipeline_front.e  (JSON merge + STRING fresh_key)
+  src/restly_ewf_server.e      (owns WSF_ROUTER; mount_* features)
+  src/restly_ewf_handler.e     (verb dispatch, tag→status, url patching)
+  testing/application.e         (root class of restly_ewf_tests,
+                                 like the core library's)
+  testing/test_wsf_json_response.e
+  testing/... (unit tests: tag parser, mount matching, url patching)
+examples/todobackend/          (step 5; to be created)
+  todobackend.ecf              (target: todobackend_standalone)
+  src/todo_item.e
+  src/... (converter, wiring, root class)
+#+end_example
+
+* Contract handoff protocol
+
+Rule for an implementing agent (decided Q1, 2026-07-03):
+
+- Write feature bodies normally.
+- In =require= / =ensure= blocks, write the /intended tag names/ with
+  a placeholder =True= expression and the comment
+  =-- TODO(owner): contract=. The owner replaces the placeholders.
+  Tags matter: the EWF handler parses them for status codes
+  (decision 8), so tag names like =error_404_not_found= are part of
+  the design, not decoration.
+- EXCEPTION: decision 14's =same_request_means_same_value=
+  precondition may be transcribed verbatim — the owner already
+  approved its wording.
+- Never modify existing pre/postconditions in the codebase.
+
+* Build order
+
+1. [DONE 2026-07-03] Generic parameter unification (decision 15):
+   =RESTLY_PROTOCOL= and =RESTLY_HASH_TABLE= renamed =[K, B]= →
+   =[K, V]=; library target compiles clean.
+2. Core protocol extensions (=RESTLY_EXTENDABLE=, =RESTLY_PATCHABLE=,
+   =RESTLY_TRAVERSABLE=, =RESTLY_KEY_CONVERTER=,
+   =RESTLY_PIPELINE_FRONT=) — pure Eiffel, contract-tested, no
+   server needed.
+3. =WSF_JSON_RESPONSE= port + fixes — small, independent.
+   - OWNER TASK (blocks step 4's 404 path, round-3 §2): retag the
+     404-relevant preconditions in =RESTLY_PROTOCOL= (the
+     key-must-exist tags on =item= / =put= / =remove=) to the
+     =error_<NNN>_*= grammar — contracts are the owner's alone,
+     so no agent will ever do this. Without it, unknown ids
+     surface as 412 (the =PRECONDITION_VIOLATION= fallback).
+4. Mount component + handlers — wires 2 and 3 together.
+5. Todobackend example app (=TODO_ITEM=, converter, wiring) — run
+   =npm test= against it.
+
+Each step is independently compilable and testable. Pre- and
+postconditions are written by the project owner, not generated.
+
+* Test plan
+
+General rules (from previous sessions):
+- Tests are =EQA_TEST_SET= classes in the =testing/= cluster; run with
+  the =restly_tests= target.
+- Test contracts, not internals: only set up states reachable through
+  the public interface. Postconditions are active at test time.
+- Hold direct references to collaborators (create them as locals, pass
+  into =make=, assert on the locals).
+
+** Step 1 — generic parameter unification
+
+*** Checklist [4/4]
+- [X] =RESTLY_PROTOCOL [K, B]= → =[K, V]=
+- [X] =RESTLY_HASH_TABLE [K, B]= → =[K, V]=
+- [X] Decision 15 written into this doc + Glossary
+- [X] =restly_tests= compiles clean and all tests pass
+  (41 tests, 2026-07-03)
+
+** Step 2 — core protocol extensions
+
+All pure Eiffel (no JSON — the JSON front is step 4's). Two support
+classes in the =testing/= cluster (decision 16):
+- =SAMPLE_ITEM= — =TODO_ITEM=-like domain object for the inner
+  storage (plain class; =RESTLY_MERGEABLE= is unused in v1);
+- =SAMPLE_FRONT= — concrete
+  =RESTLY_PIPELINE_FRONT [STRING, STRING, INTEGER, SAMPLE_ITEM]=
+  over a =RESTLY_HASH_TABLE [INTEGER, SAMPLE_ITEM]=; =fresh_key= =
+  auto-increment INTEGER rendered as STRING (mirrors step 4's
+  =RESTLY_JSON_PIPELINE_FRONT=); =merge= = simplest legal
+  implementation — real merge semantics are tested on the JSON
+  front in step 4.
+
+*** TEST_RESTLY_EXTENDABLE
+All through =SAMPLE_FRONT= (the v1-style implementor, decision 16).
+- =extend_new= stores the value: after the call, the key found in
+  =extend_requests [request_id]= satisfies =has_key= and
+  =item (key) ~ v=.
+- Auto-increment: two =extend_new= calls with different request_ids
+  produce two distinct, increasing keys.
+- Distinct request_ids map to their own keys in =extend_requests=.
+- Idempotency (decision 14): =extend_new= twice with the same
+  request_id and the same value —
+  - =extend_requests [request_id]= returns the /same/ key both times;
+  - =count= is unchanged after the second call (no duplicate stored);
+  - =item (key)= still =~ v=.
+- Retry after other traffic: extend_new (a, id_1); extend_new (b,
+  id_2); retry extend_new (a, id_1) — id_1 still maps to its original
+  key; the auto-increment sequence is not consumed by the retry
+  (next fresh insert gets the expected next key).
+- The =same_request_means_same_value= precondition is exercised
+  implicitly: all idempotency tests resend the /equal/ value.
+  (Sending a different value under the same request_id is a
+  contract violation — not reachable through a valid test setup,
+  per "test contracts, not internals".)
+
+(No =TEST_RESTLY_PATCHABLE= in step 2: =merge= is deferred at core
+level and its only v1 implementor is the JSON front — merge
+semantics are tested in step 4 on =RESTLY_JSON_PIPELINE_FRONT=.)
+
+*** TEST_RESTLY_TRAVERSABLE
+Directly on =RESTLY_HASH_TABLE= (which now conforms, decision 12).
+- Iteration yields exactly the inserted items (count and membership).
+- Iteration exposes KEYS: for every cursor position,
+  =cursor.key= / =cursor.item= is one of the extended pairs, and
+  every extended pair is visited exactly once (this is what =url=
+  patching relies on — see the =new_cursor= signature).
+- =wipe_out= on a populated table: afterwards =has_key= is false for
+  every old key and iteration yields nothing.
+- =wipe_out= on an empty table is legal (todobackend DELETEs an empty
+  collection).
+
+*** TEST_RESTLY_KEY_CONVERTER
+- Round trip: "42" → 42 → "42".
+
+*** TEST_RESTLY_PIPELINE_FRONT
+- Verb pass-through with conversion: =extend= / =item= / =has_key= /
+  =remove= on =SAMPLE_FRONT= (STRING keys/values), asserting against
+  the inner table's INTEGER keys and =SAMPLE_ITEM= values.
+- Keys and values convert independently (both converters exercised
+  in one call).
+- =new_cursor= wraps the inner cursor: iteration on the front
+  exposes STRING keys matching the inner INTEGER keys, and
+  converted values.
+
+*** Checklist [0/12]
+- [ ] =protocol/restly_extendable.e= (with =fresh_key= deferred)
+- [ ] =protocol/restly_mergeable.e= (kept available; UNUSED in v1 —
+  decision 16)
+- [ ] =protocol/restly_patchable.e= (=merge (a_patch: V; a_k: K)=,
+  no MERGEABLE constraint — decision 16)
+- [ ] =protocol/restly_traversable.e=
+  (=new_cursor: V_MAP_ITERATOR [K, V]= — keys reachable during
+  iteration)
+- [ ] =RESTLY_HASH_TABLE= gains =RESTLY_TRAVERSABLE=
+  conformance (decision 12: =V_HASH_TABLE= already provides
+  =new_cursor= / =count= / =wipe_out=)
+- [ ] =converter/restly_key_converter.e= (inherits =RESTLY_CONVERTER=)
+- [ ] =combinator/restly_pipeline_front.e= (decision 16)
+- [ ] =testing/sample_item.e= + =testing/sample_front.e=
+- [ ] Contract placeholders per the handoff protocol
+  (=same_request_means_same_value= transcribed verbatim)
+- [ ] Four test classes written (=TEST_RESTLY_EXTENDABLE=,
+  =_TRAVERSABLE=, =_KEY_CONVERTER=, =_PIPELINE_FRONT=)
+- [ ] Clean compile of =restly_tests=; all tests green
+- [ ] HANDOFF: owner fills the contract placeholders (not the
+  agent's box to tick)
+
+** Step 3 — WSF_JSON_RESPONSE port
+
+Lives in the =restly_ewf= cluster with its own test target (first
+compile of the EWF dependency). Everything except =send_to= is testable
+as a plain object: assert on =status_code=, =header=, =body=.
+
+*** TEST_WSF_JSON_RESPONSE
+- Each factory sets its status code (=not_found= → 404, =created= →
+  201, ... one assert per factory).
+- Default bodies are /valid JSON/: parse the body back with
+  =JSON_PARSER=; assert key is ="error"= for ≥400, ="message"= below,
+  and =status= matches.
+- Content-type is =application/json= on all three creation paths —
+  including =make_with_body= (regression test for the ported bug).
+- Escaping (regression for the injection bug): =with_detail= with a
+  detail containing ="=, =\=, and a newline still parses as valid JSON
+  and round-trips the detail text.
+- 204 =no_content= carries no body (regression for the ported bug).
+- Chaining: =with_location= sets the =Location= header and returns the
+  same object (=Result = Current=).
+- =send_to= is NOT unit-tested here — covered by step 4 integration.
+
+*** Checklist [0/6]
+- [ ] =library/restly_ewf/restly_ewf.ecf= created (targets
+  =restly_ewf= + =restly_ewf_tests=; deps per "Build and ECF
+  mechanics")
+- [ ] =src/wsf_json_response.e= ported
+- [ ] Fix 1: =with_detail= escapes JSON (build via =JSON_OBJECT=,
+  not string concatenation)
+- [ ] Fix 2: 204 =no_content= carries no body
+- [ ] Fix 3: =make_with_body= sets the content-type header
+- [ ] =TEST_WSF_JSON_RESPONSE= green (incl. the three regression
+  tests) on a clean compile
+
+** Step 4 — mount component
+
+Two layers: pure unit tests + a scripted smoke test against a running
+server.
+
+*** Unit (EQA, no server)
+- Tag parser: ="error_404_not_found"= → 404, ="error_403_x"= → 403,
+  tag without a code → fallback (=PRECONDITION_VIOLATION= → 412,
+  anything else → 500).
+- Mount table: mount =/todos= and =/todos/{id}=; matching "/todos/42"
+  selects the element pipeline and extracts =id = "42"=;
+  matching "/todos" selects the collection pipeline; "/nothing" matches
+  neither.
+- =mount_resource= sugar: after =mount_resource ("/todos", s)= the
+  mount table is identical to =mount_collection ("/todos", s)= +
+  =mount_element ("/todos/{id}", s)=.
+- =url= patching: item JSON + template + base URL → correct absolute
+  =url= field (uses =URI_TEMPLATE.expanded_string=).
+- JSON front (=TEST_RESTLY_JSON_PIPELINE_FRONT=): =merge= is
+  RFC-7386-like — absent field = unchanged, present field =
+  replaced; the merged JSON flows through the value converter
+  (i.e. still convertible to a domain object); =fresh_key= mints
+  "1", "2", ... as STRING.
+
+*** Smoke test (bash + curl against a minimal test app)
+Launch a tiny standalone server wired to an in-memory pipeline via
+=mount_resource= (so the sugar path is what integration exercises),
+then:
+- =POST /todos= → 201, =Location= header present, body has =url=.
+- Two identical =POST /todos= requests create /two/ items (the handler
+  mints a fresh request_id per request, so HTTP-level retries are NOT
+  deduplicated in v1; library-level idempotency is step 2's concern.
+  A client-supplied =Idempotency-Key= header is future work).
+- =GET /todos/{id}= → 200 with the item; unknown id → 404 with JSON
+  error body.
+- =PATCH= partial → 200, unchanged fields intact.
+- =DELETE /todos/{id}= → 204; =DELETE /todos= → empties collection.
+- =GET /todos= → JSON array.
+- 405 for an unmounted verb.
+- OPTIONS → CORS headers (=Access-Control-Allow-Origin=, =-Methods=,
+  =-Headers=) present on OPTIONS /and/ regular responses.
+
+*** Checklist [0/10]
+- [ ] =RESTLY_JSON_PIPELINE_FRONT= (JSON merge + STRING
+  =fresh_key=; decision 16) + its unit tests
+- [ ] Tag parser (=error_<NNN>_*= grammar + fallback table,
+  decision 8)
+- [ ] Mount table: =URI_TEMPLATE= keys, template matching as
+  equivalence, variable extraction
+- [ ] =mount_resource= sugar (= =mount_collection= +
+  =mount_element= with =/{id}=)
+- [ ] Verb dispatch with =rescue=/=retry= exception→status mapping
+- [ ] 405 path: unmounted verb (and missing-conformance mount)
+  answers 405 Method Not Allowed
+- [ ] =url= patching from =req.absolute_script_url= +
+  =expanded_string=
+- [ ] CORS on OPTIONS and regular responses
+- [ ] Unit tests green (tag parser, mount matching, url patching)
+- [ ] Smoke-test script passes every bullet above
+
+** Step 5 — todobackend acceptance
+
+- The acceptance test IS the todobackend suite (commands in the
+  Runbook below).
+- Before running npm, a quick curl checklist against =server.yaml=
+  semantics (the learning-guardrail spec) to fail fast with readable
+  errors.
+- Definition of done: full npm suite green.
+
+*** Checklist [0/5]
+- [ ] =examples/todobackend/= created (=todobackend.ecf= with
+  target =todobackend_standalone=, =TODO_ITEM=, converter, wiring,
+  root class)
+- [ ] Wiring: =RESTLY_JSON_PIPELINE_FRONT= over
+  =RESTLY_HASH_TABLE [INTEGER, TODO_ITEM]= with the TODO
+  key/value converters, mounted via =mount_resource= (no
+  =copy_from_tuple= — PATCH is JSON merge, decision 16)
+- [ ] Server starts on port 8080 (Runbook command)
+- [ ] Fail-fast curl checklist against =server.yaml= semantics passes
+- [ ] Full todobackend =npm test= suite green — DONE means DONE
+
+* Runbook (self-contained — do not rely on global CLAUDE.md)
+
+Server runs on port 8080; base URL =http://localhost:8080=.
+
+Restart the example server:
+#+begin_example
+cd examples/todobackend && \
+lsof -ti:8080 | xargs --no-run-if-empty kill -9 && sleep 20 && \
+ec -clean -batch -config ./todobackend.ecf -target todobackend_standalone -c_compile -stop && \
+./EIFGENs/todobackend_standalone/W_code/todobackend
+#+end_example
+
+Run the acceptance suite (external checkout):
+#+begin_example
+cd /home/agarciafdz/daily/2510oct21/third_party/go-todo-app-new/test/client && npm test
+#+end_example
+
+Compile hygiene: do a clean compile (=-clean=) after big refactorings
+and roughly every 5 fast compiles.
+
+* Non-goals (v1)
+
+Collected here so nobody scope-creeps:
+
+- Concurrency / SCOOP (decision 13) — single shared storage, races
+  accepted; =extend_new= is merely /designed/ to survive SCOOP later.
+- HTTP-level =Idempotency-Key= header — POST retries are NOT
+  deduplicated over HTTP in v1 (the handler mints a fresh request_id
+  per request); library-level idempotency only.
+- Authentication / authorization.
+- Content negotiation (JSON only).
+- Domain-level PATCH: =RESTLY_MERGEABLE= / =copy_from_tuple= are
+  designed but UNUSED — v1 merges JSON-on-JSON at the pipeline
+  front (decision 16).
+- =RESTLY_KEY_CONVERTING_COMBINATOR= — specced (round 2) but off
+  the v1 path: the pipeline front holds the key converter directly.
+- Swagger/OpenAPI generation — researched (see
+  =eiffel_to_swagger='s annotation approach) but future work.
+
+* Glossary of repo idioms (step-2 tests exercise these)
+
+- =extend= vs =put= (V_TABLE/base2 semantics): =extend= INSERTS a new
+  key (precondition: key absent); =put= UPDATES an existing key
+  (precondition: key present); =force= upserts.
+- =V_HASH_TABLE= with =STRING= keys: MUST be created
+  =with_object_equality=, otherwise lookups compare references and
+  fail mysteriously.
+- Postconditions are active during tests (all assertions on in the
+  ECF) — a test failure may mean a postcondition disagrees, not that
+  the result is wrong.
+- Test setup must only use public features ("test contracts, not
+  internals"): bypassing =extend= to poke internal state trips model
+  postconditions.
+- EQA runner only discovers =test_*= features declared /directly/ in a
+  class; inherited test features need =do Precursor end= stubs in each
+  concrete subclass.
+- Generic parameter naming (decision 15): =K= key, =V= value in
+  position-agnostic classes, =R=/=S= only where conversion relates
+  Representation and Store; =F=/=B= banned as type parameters.
