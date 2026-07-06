@@ -1,0 +1,397 @@
+#+TITLE: RESTLY Testing Guide
+#+DATE: 2026-07-05
+#+STARTUP: overview
+
+* Overview
+
+RESTLY has three test layers, each with its own ECF target and scope:
+
+| Layer          | ECF                        | Target              | Count | What it tests                        |
+|----------------+----------------------------+---------------------+-------+--------------------------------------|
+| Core library   | =library/restly/restly.ecf= | =restly_tests=      | 59    | Protocol, converters, pipeline front |
+| EWF bridge     | =library/restly_ewf/restly_ewf.ecf= | =restly_ewf_tests= | 77    | JSON response, tag parser, JSON front + all core tests |
+| Acceptance     | external npm project       | =npm test=          | 16    | Full HTTP round-trips against a running server |
+
+The EWF bridge test target INCLUDES the core =testing/= cluster (minus
+its =application.e=) so that all core tests run alongside bridge tests.
+This catches regressions across the boundary.
+
+* How to run tests
+
+Core library tests:
+#+begin_example
+cd library/restly
+ec -batch -config ./restly.ecf -target restly_tests -tests -stop
+#+end_example
+
+EWF bridge tests (includes core):
+#+begin_example
+cd library/restly_ewf
+ec -batch -config ./restly_ewf.ecf -target restly_ewf_tests -tests -stop
+#+end_example
+
+Acceptance tests (requires a running server):
+#+begin_example
+cd examples/todobackend
+lsof -ti:8080 | xargs --no-run-if-empty kill -9
+./EIFGENs/todobackend_standalone/W_code/todobackend &
+sleep 3
+cd /path/to/go-todo-app-new/test/client
+TEST_SERVER_URL=http://localhost:8080/todos npm test
+#+end_example
+
+AutoTest does not support filtering by test class or feature — it
+runs everything in the target.
+
+* ECF test target structure
+
+Each test target follows the same pattern:
+
+1. It EXTENDS the library target (inherits all source clusters and
+   dependencies).
+2. It adds the =testing= library from EiffelStudio.
+3. It adds a =testing/= cluster containing test classes and fixtures.
+4. It sets a root class =APPLICATION.make= (a no-op class required by
+   the compiler).
+5. ALL assertions are enabled: precondition, postcondition, check,
+   invariant, loop, supplier_precondition.
+
+Example from =restly.ecf=:
+
+#+begin_src xml
+<target name="restly_tests" extends="restly">
+    <root class="APPLICATION" feature="make"/>
+    <option>
+        <assertions precondition="true" postcondition="true"
+                    check="true" invariant="true"
+                    loop="true" supplier_precondition="true"/>
+    </option>
+    <library name="testing"
+             location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+    <cluster name="test" location=".\testing\" recursive="true"/>
+</target>
+#+end_src
+
+The =restly_ewf_tests= target also pulls in the core =testing/=
+cluster (excluding its =application.e= to avoid a duplicate root):
+
+#+begin_src xml
+<cluster name="restly_testing" location="..\restly\testing\"
+         recursive="true">
+    <file_rule>
+        <exclude>/application\.e$</exclude>
+    </file_rule>
+</cluster>
+#+end_src
+
+* Test class anatomy
+
+Every test class inherits =EQA_TEST_SET=. Only features named
+=test_*= are discovered and executed by AutoTest.
+
+#+begin_src eiffel
+class
+    TEST_EXAMPLE
+
+inherit
+    EQA_TEST_SET
+
+feature -- Tests
+
+    test_something
+        do
+            assert ("label", condition)
+        end
+
+end
+#+end_src
+
+** Fixtures as self-initializing attributes
+
+Instead of a =set_up= method, RESTLY tests use self-initializing
+attributes — the =attribute= keyword with an inline creation:
+
+#+begin_src eiffel
+feature {NONE} -- Fixtures
+
+    table: RESTLY_HASH_TABLE [STRING, INTEGER]
+        attribute create Result.with_object_equality end
+
+    front: SAMPLE_FRONT
+        attribute create Result.make (inner, converter, key_conv) end
+#+end_src
+
+Each test gets a fresh instance (EQA creates a new test object per
+test feature). This replaces =set_up= / =tear_down= — no framework
+hook needed.
+
+** Assertion style
+
+Use =assert ("label", boolean_expression)=. Labels should describe
+what is expected, not what went wrong:
+
+#+begin_src eiffel
+-- Good
+assert ("key present", front.has_key ("1"))
+assert ("count unchanged", front.count = 1)
+
+-- Bad
+assert ("failed", front.has_key ("1"))
+assert ("wrong count", front.count = 1)
+#+end_src
+
+* The four test patterns in RESTLY
+
+** Pattern 1: Direct storage tests
+
+Test a storage class (=RESTLY_HASH_TABLE=) directly. No converters,
+no pipeline front.
+
+Used by: =TEST_RESTLY_TRAVERSABLE=, =TEST_RESTLY_RESOURCE_*=.
+
+#+begin_src eiffel
+feature {NONE} -- Fixtures
+
+    table: RESTLY_HASH_TABLE [STRING, INTEGER]
+        attribute create Result.with_object_equality end
+
+feature -- Tests
+
+    test_wipe_out_clears_table
+        do
+            table.extend (1, "x")
+            table.extend (2, "y")
+            table.wipe_out
+            assert ("x gone", not table.has_key ("x"))
+            assert ("count zero", table.count = 0)
+        end
+#+end_src
+
+** Pattern 2: Pipeline front with sample types
+
+Test the pipeline front's conversion and capability logic using
+non-JSON types. The fixture wires a =SAMPLE_FRONT= (STRING/STRING on
+the web side, INTEGER/SAMPLE_ITEM on the store side) with its inner
+storage exposed for cross-layer assertions.
+
+Used by: =TEST_RESTLY_PIPELINE_FRONT=, =TEST_RESTLY_EXTENDABLE=.
+
+#+begin_src eiffel
+feature {NONE} -- Fixtures
+
+    inner: RESTLY_HASH_TABLE [INTEGER, SAMPLE_ITEM]
+        attribute create Result.with_object_equality end
+
+    front: SAMPLE_FRONT
+        attribute create Result.make (inner,
+            create {SAMPLE_KEY_CONVERTER},
+            create {SAMPLE_VALUE_CONVERTER}) end
+
+feature -- Tests
+
+    test_extend_and_item_with_conversion
+        do
+            front.extend ("hello", "1")
+            -- Assert at the web layer
+            assert ("front has key", front.has_key ("1"))
+            assert ("front value", front ["1"] ~ "hello")
+            -- Assert at the store layer (cross-layer check)
+            assert ("inner has integer key", inner.has_key (1))
+            assert ("inner value", inner.item (1).title ~ "hello")
+        end
+#+end_src
+
+Key insight: holding a direct reference to =inner= lets you verify
+that conversion happened correctly on both sides. This is the
+"hold references to collaborators" pattern.
+
+** Pattern 3: JSON pipeline front
+
+Test the JSON-specific front (merge semantics, fresh_key minting)
+using =JSON_OBJECT= values. Uses helper features instead of
+fixture attributes because each test may need a differently
+configured front.
+
+Used by: =TEST_RESTLY_JSON_PIPELINE_FRONT=.
+
+#+begin_src eiffel
+feature -- Tests
+
+    test_merge_keeps_absent_field
+        local
+            l_front: RESTLY_JSON_PIPELINE_FRONT [INTEGER, JSON_OBJECT]
+            l_original, l_patch, l_result: JSON_OBJECT
+        do
+            l_front := new_front
+            l_original := new_json_object ("title", "keep me")
+            l_original.put_string ("extra", "done")
+            l_front.extend (l_original, "1")
+            l_patch := new_json_object ("done", "yes")
+            l_front.merge (l_patch, "1")
+            l_result := l_front ["1"]
+            -- title was absent from patch → unchanged
+            check attached l_result.string_item ("title") as v then
+                assert ("title unchanged",
+                    v.unescaped_string_8.same_string ("keep me"))
+            end
+        end
+
+feature {NONE} -- Helpers
+
+    new_front: RESTLY_JSON_PIPELINE_FRONT [INTEGER, JSON_OBJECT]
+        local
+            l_table: RESTLY_HASH_TABLE [INTEGER, JSON_OBJECT]
+        do
+            create l_table
+            create Result.make (l_table,
+                create {SAMPLE_KEY_CONVERTER},
+                create {RESTLY_IDENTITY_CONVERTER [JSON_OBJECT]})
+        end
+
+    new_json_object (a_key, a_value: STRING): JSON_OBJECT
+        do
+            create Result.make_with_capacity (2)
+            Result.put_string (a_value, a_key)
+        end
+#+end_src
+
+** Pattern 4: Handler internals via helper class
+
+Some handler features are ={NONE}= (not exported). To test them,
+create a thin helper class that re-exports the feature, then test
+the helper.
+
+Used by: =TEST_TAG_PARSER= (via =TEST_TAG_PARSER_HELPER=).
+
+The helper:
+#+begin_src eiffel
+class
+    TEST_TAG_PARSER_HELPER
+
+inherit
+    RESTLY_EWF_COLLECTION_HANDLER
+        export
+            {ANY} status_from_tag
+        end
+
+create
+    make
+
+end
+#+end_src
+
+The test:
+#+begin_src eiffel
+feature -- Tests
+
+    test_error_404_not_found
+        do
+            assert ("404",
+                handler.status_from_tag ("error_404_not_found") = 404)
+        end
+
+feature {NONE} -- Helpers
+
+    handler: TEST_TAG_PARSER_HELPER
+        local
+            l_table: RESTLY_HASH_TABLE [STRING, JSON_OBJECT]
+        once
+            create l_table
+            create Result.make (l_table)
+        end
+#+end_src
+
+** Pattern 5: Response object tests (no server)
+
+=WSF_JSON_RESPONSE= is a plain object (inherits =WSF_PAGE_RESPONSE=)
+— its status, headers, and body can be inspected without running a
+server.
+
+Used by: =TEST_WSF_JSON_RESPONSE=.
+
+#+begin_src eiffel
+test_with_location_sets_header
+    local
+        l_resp: WSF_JSON_RESPONSE
+    do
+        l_resp := {WSF_JSON_RESPONSE}.created.with_location ("/todos/42")
+        assert ("location header",
+            l_resp.header.string.has_substring ("Location"))
+        assert ("location value",
+            l_resp.header.string.has_substring ("/todos/42"))
+    end
+#+end_src
+
+* Support classes (fixtures)
+
+All support classes live in =library/restly/testing/=:
+
+| Class                    | Role                                       |
+|--------------------------+--------------------------------------------|
+| =APPLICATION=            | No-op root class required by the ECF       |
+| =SAMPLE_ITEM=            | Minimal domain object (just a =title=)     |
+| =SAMPLE_FRONT=           | Concrete pipeline front: STRING ↔ INTEGER/SAMPLE_ITEM |
+| =SAMPLE_KEY_CONVERTER=   | STRING ↔ INTEGER key converter for tests   |
+| =SAMPLE_VALUE_CONVERTER= | STRING ↔ SAMPLE_ITEM value converter       |
+
+The EWF bridge has its own support class in
+=library/restly_ewf/testing/=:
+
+| Class                    | Role                                       |
+|--------------------------+--------------------------------------------|
+| =APPLICATION=            | No-op root class for the EWF test target   |
+| =TEST_TAG_PARSER_HELPER= | Re-exports =status_from_tag= for testing   |
+
+* Rules
+
+1. *Test contracts, not internals.* Only set up states reachable
+   through the public interface. Postconditions are active (all
+   assertions on in the ECF) — a test failure may mean a
+   postcondition disagrees, not that the result is wrong.
+
+2. *Hold references to collaborators.* Create them as locals or
+   fixture attributes, pass into =make=, assert on the locals.
+   This is how cross-layer assertions work (checking =inner= after
+   operating on =front=).
+
+3. *STRING keys need object equality.* Create =RESTLY_HASH_TABLE=
+   with =.with_object_equality=, otherwise lookups compare
+   references and fail mysteriously.
+
+4. *EQA only discovers =test_*= features declared directly in a
+   class.* Inherited test features need =do Precursor end= stubs
+   in each concrete subclass.
+
+5. *No mocking.* All tests use real objects. The pipeline front
+   wraps a real =RESTLY_HASH_TABLE=, converters are real converters.
+   The fixture classes (=SAMPLE_FRONT=, =SAMPLE_ITEM=) are simple
+   implementations, not mocks.
+
+6. *One assert per concern.* A test may have multiple =assert= calls,
+   but each should verify a distinct aspect. Name them accordingly.
+
+* Adding a new test class
+
+1. Create a file =test_your_class.e= in the appropriate =testing/=
+   directory (=library/restly/testing/= for core,
+   =library/restly_ewf/testing/= for bridge).
+
+2. Inherit =EQA_TEST_SET=.
+
+3. Name all test features =test_*=.
+
+4. Run: =ec -batch -config ./restly.ecf -target restly_tests -tests -stop=
+   (or the EWF equivalent).
+
+No ECF changes needed — the =testing/= cluster is recursive.
+
+* Adding a support class
+
+Support classes (fixtures, helpers, re-exporters) go in the same
+=testing/= directory. They do NOT inherit =EQA_TEST_SET= and do NOT
+have =test_*= features — they are plain Eiffel classes used by the
+test classes.
+
+If a support class is needed by BOTH core and bridge tests, put it
+in =library/restly/testing/=. The bridge ECF already includes that
+cluster.

@@ -90,6 +90,122 @@ After the EWF bridge is working with real JSON payloads. The right answer
 depends on whether domain objects ever need to know about patching themselves
 or whether the pipeline front always handles it externally.
 
+** Generalize RESTLY_PROTOCOL key type to reduce string mangling in EWF bridge
+
+The EWF bridge hardcodes ~RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ everywhere:
+handlers, server, mount signatures. But EWF itself returns
+~READABLE_STRING_GENERAL~ from ~path_parameter~ and ~READABLE_STRING_8~ from
+~request_uri~. Every handler call site needs ~.to_string_8~ or
+~.string_representation.to_string_8~ to bridge the gap.
+
+String mangling inventory in restly_ewf:
+
+| Location              | Conversion                                      |
+|-----------------------+-------------------------------------------------|
+| ~element_key~         | ~WSF_STRING~ → ~.string_representation.to_string_8~ |
+| ~element_uri~         | ~req.request_uri.to_string_8~                   |
+| ~patch_url~           | ~req.absolute_script_url(...)~ + ~replace_with_string~ |
+| ~parse_json_body~     | ~read_input_data_into~ → JSON_PARSER → extract  |
+| ~status_from_tag~     | Substring parsing of ~"error_NNN_description"~  |
+
+*** Options
+
+- Option A: Make the EWF bridge generic on K and V instead of hardcoding
+  ~[STRING, JSON_OBJECT]~. Handlers become ~RESTLY_EWF_HANDLER [K, V]~,
+  mount takes a key-extractor agent. Removes the string assumption from
+  the bridge entirely.
+
+- Option B: Use ~READABLE_STRING_GENERAL~ as the key type in the bridge
+  signatures. Fewer ~.to_string_8~ calls but still string-typed.
+
+- Option C: Keep ~STRING~ but move ~patch_url~ out of the handlers. The
+  "url" field is an HTTP-layer concern — inject it at POST time or via a
+  decorator on the pipeline front, not per-request in every handler.
+
+Options A and C are not mutually exclusive.
+
+*** When
+
+After the smoke tests pass and the EWF bridge is stable. The current
+string mangling works but adds noise to every handler method.
+
+** Introduce domain objects (e.g. TODO_ITEM) to own defaults and validation
+
+The current pipeline is ~JSON_OBJECT~ end to end: the EWF handler
+receives JSON, the pipeline stores JSON, the converter injects defaults
+(~completed: false~) on the way out. There is no domain object.
+
+This works but pushes business rules into converters. A domain object
+like ~TODO_ITEM~ would own its defaults, validation, and patch logic
+natively. The converter would then map between ~JSON_OBJECT~ and the
+domain type, and the pipeline would store typed objects instead of raw
+JSON.
+
+*** Approach
+
+- Define ~TODO_ITEM~ (or a generic pattern) with attributes (~title~,
+  ~completed~, ~order~) and sensible defaults in the constructor.
+- The converter maps ~JSON_OBJECT ↔ TODO_ITEM~ instead of
+  ~JSON_OBJECT ↔ JSON_OBJECT~.
+- The pipeline becomes ~RESTLY_PIPELINE_FRONT [INTEGER, JSON_OBJECT, TODO_ITEM]~
+  — representation is JSON, store is the domain type.
+- Patch logic moves from the handler's raw JSON merge into the domain
+  object (connects to the MERGEABLE discussion above).
+
+*** When
+
+After v1 ships. The current converter-based default injection works
+and is tested (16/16 acceptance tests). The domain object becomes
+valuable when a second resource appears or validation rules grow
+beyond a single boolean default.
+
+** Generalize restly_ewf beyond [STRING, JSON_OBJECT]
+
+The entire EWF bridge is hardcoded to ~[STRING, JSON_OBJECT]~:
+
+| Class                           | Hardcoded assumption                        |
+|---------------------------------+---------------------------------------------|
+| ~RESTLY_EWF_HANDLER~            | ~storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_COLLECTION_HANDLER~ | casts to ~RESTLY_TRAVERSABLE [STRING, JSON_OBJECT]~, ~RESTLY_EXTENDABLE [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_ELEMENT_HANDLER~    | casts to ~RESTLY_PATCHABLE [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_SERVER~             | just two inherits, no type assumptions (OK)  |
+| ~RESTLY_JSON_PIPELINE_FRONT~    | auto-increment INTEGER keys, JSON merge      |
+
+A second resource with UUID keys, XML values, or a different key
+minting strategy cannot reuse any handler or the pipeline front.
+
+*** Approach
+
+- Make handlers generic: ~RESTLY_EWF_HANDLER [K, V]~ with a
+  key-extractor and a body-parser injected at creation (agents or
+  deferred features). The current ~parse_json_body~ and ~element_key~
+  become the JSON-specific implementations.
+- Extract ~fresh_key~ minting from ~RESTLY_JSON_PIPELINE_FRONT~ into a
+  strategy (agent or deferred). The auto-increment integer is just one
+  policy; UUIDs, slugs, and database sequences are others.
+- The current classes become the JSON specializations:
+  ~RESTLY_EWF_JSON_HANDLER~, ~RESTLY_JSON_PIPELINE_FRONT~ (already
+  named correctly).
+
+*** Relationship to other items
+
+This overlaps with "Generalize RESTLY_PROTOCOL key type" (above) and
+"Introduce domain objects" (above). All three address the same root
+issue: v1 baked ~[STRING, JSON_OBJECT]~ into every layer to ship
+fast. Fixing one without the others leaves half the bridge still
+hardcoded.
+
+Suggested order: domain objects first (gives a concrete second type
+to test against), then generalize the handlers, then clean up the
+key type.
+
+*** When
+
+After v1 ships and a second resource type appears. The current
+hardcoding works for any JSON REST API with auto-increment keys,
+which covers the common case. Generalizing before a second consumer
+exists is speculative.
+
 ** Replace WSF_JSON_RESPONSE factories with a single ~response~ feature
 
 WSF_JSON_RESPONSE has 11 factory features (~not_found~, ~ok~, ~created~, ...)

@@ -99,7 +99,7 @@ feature {NONE} -- Helpers
 		local
 			l_table: RESTLY_HASH_TABLE [INTEGER, JSON_OBJECT]
 			l_key_conv: SAMPLE_KEY_CONVERTER
-			l_val_conv: JSON_IDENTITY_CONVERTER
+			l_val_conv: RESTLY_IDENTITY_CONVERTER [JSON_OBJECT]
 		do
 			create l_table
 			create l_key_conv

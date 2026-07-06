@@ -146,12 +146,13 @@ feature {NONE} -- Helpers
 		end
 
 	add_cors_headers (a_response: WSF_RESPONSE_MESSAGE)
-			-- Add CORS headers to any response.
+			-- Add CORS and connection headers to any response.
 		do
 			if attached {WSF_PAGE_RESPONSE} a_response as l_page then
 				l_page.header.put_header ("Access-Control-Allow-Origin: *")
 				l_page.header.put_header ("Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS")
 				l_page.header.put_header ("Access-Control-Allow-Headers: Content-Type, Accept")
+				l_page.header.put_header ("Connection: close")
 			end
 		end
 
