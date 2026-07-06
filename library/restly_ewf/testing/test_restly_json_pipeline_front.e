@@ -93,6 +93,29 @@ feature -- Tests: extend_new
 			end
 		end
 
+feature -- Tests: MappingStore identity default (SC '19 symmetry)
+
+	test_identity_converters_behave_as_passthrough
+			-- A front wired with both identity converters is
+			-- observationally a PASSTHROUGH over its store —
+			-- Weiher's "abstract mapper defaults to PassThrough".
+		local
+			l_bare: RESTLY_HASH_TABLE [STRING, JSON_OBJECT]
+			l_front: RESTLY_JSON_RESOURCE
+			l_json: JSON_OBJECT
+		do
+			create l_bare.with_object_equality
+			create l_front
+			l_json := new_json_object ("title", "same")
+			l_bare.extend (l_json, "k")
+			l_front.extend (l_json, "k")
+			assert ("has_key agrees", l_bare.has_key ("k") = l_front.has_key ("k"))
+			assert ("item agrees", l_bare ["k"] = l_front ["k"])
+			l_bare.remove ("k")
+			l_front.remove ("k")
+			assert ("remove agrees", l_bare.has_key ("k") = l_front.has_key ("k"))
+		end
+
 feature {NONE} -- Helpers
 
 	new_front: RESTLY_JSON_PIPELINE_FRONT [INTEGER, JSON_OBJECT]

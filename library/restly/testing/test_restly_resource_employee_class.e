@@ -10,7 +10,7 @@ inherit
 		redefine
 			test_extend_then_has_key,
 			test_item_preserves_name,
-			test_item_id_is_hash_of_name,
+			test_item_id_follows_converter_round_trip,
 			test_force_on_new_key,
 			test_force_overwrites_existing,
 			test_put_updates_existing,
@@ -27,7 +27,7 @@ feature -- Tests
 
 	test_extend_then_has_key         do Precursor end
 	test_item_preserves_name         do Precursor end
-	test_item_id_is_hash_of_name     do Precursor end
+	test_item_id_follows_converter_round_trip     do Precursor end
 	test_force_on_new_key            do Precursor end
 	test_force_overwrites_existing   do Precursor end
 	test_put_updates_existing        do Precursor end

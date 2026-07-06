@@ -14,13 +14,15 @@ create
 feature -- Conversion
 
 	to_store (e: EMPLOYEE): PERSON
+			-- Assignment fires {EMPLOYEE}'s convert clause (`to_person`).
 		do
-			create Result.make (e.name)
+			Result := e
 		end
 
 	to_representation (p: PERSON): EMPLOYEE
+			-- Assignment fires {EMPLOYEE}'s convert clause (`make_from_person`).
 		do
-			create Result.make (p.name, p.name.hash_code)
+			Result := p
 		end
 
 end

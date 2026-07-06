@@ -292,6 +292,112 @@ more combinator.
       non-conforming inner storage → 405 via contract tag.
     - =RESTLY_KEY_CONVERTING_COMBINATOR= is off the v1 path
       (see decision 3).
+17. *Converter laws* (decided 2026-07-06): the round-trip law is
+    stated FROM THE REPRESENTATION, because the representation is
+    the artifact we control — philosophically we cannot modify the
+    Store.
+    - Value converters (=RESTLY_CONVERTER=): the law is
+      =to_representation (to_store (r)) ~ r= for CANONICAL
+      representations; in general the composite is only idempotent,
+      because =to_store= may canonicalize. Two existing converters
+      prove exact round-trip is too strong: =TODOBACKEND_CONVERTER=
+      adds ="completed": false= on retrieval (required by the npm
+      suite), and =EMPLOYEE_PERSON_CONVERTER= mints
+      =id := name.hash_code= — in both, the law holds exactly on
+      the image of the pipeline (the canonical subset), not on
+      all of R.
+    - Key converters (=RESTLY_KEY_CONVERTER=): strictly stronger —
+      keys must round-trip EXACTLY in BOTH directions (a
+      bijection), or router lookups break ("42" → 42 → "42").
+      This upgrades the distinct-type decision (Q2/decision 3)
+      from a readability choice to a substantive one: the type
+      exists to carry a stronger contract.
+    - Placeholder tags per the handoff protocol:
+      =representation_round_trips= on ={RESTLY_CONVERTER}.to_store=;
+      =exact_key_round_trip= / =exact_store_round_trip= on the
+      redeclared features of =RESTLY_KEY_CONVERTER=. Owner fills
+      the expressions.
+    - CONSTRAINT (the "we can't modify the Store" consequence,
+      bites on PATCH not PUT): the JSON front's merge path is
+      read → =to_representation= → JSON-merge → =to_store= → =put=.
+      If the representation is a LOSSY VIEW of a store we do not
+      own (store richer than representation), every PATCH silently
+      destroys the store-only fields the representation cannot
+      see. The representation-side law does not protect this path;
+      the store-side law (=to_store (to_representation (s)) ~ s=)
+      does. Rule: a converter mounted on the PATCH path must not
+      be lossy toward the store — otherwise merge must move to the
+      store side. Moot for identity converters (todobackend), but
+      binding for any future backend bridge.
+18. *Converter objects vs constrained genericity* (discussed
+    2026-07-06): converter OBJECTS stay the default. The tempting
+    alternative — =CONVERTER [R -> CONVERTIBLE_TO [S], S]=, making
+    the representation carry its own conversion — was examined and
+    rejected for the general case. The price:
+    - One wrapper class per FORMAT × DOMAIN pair (e.g.
+      =TODO_JSON_CONVERTIBLE=) — more classes than converter
+      objects, which are one per pair without the next two costs.
+    - A boundary copy per request: =JSON_PARSER= creates
+      =JSON_OBJECT=, and nominal typing means no cast can turn a
+      foreign instance into our subclass — only copy-construction
+      (=make_from_json= iterating the entries) gets across.
+    - Dependency inversion: =to_store= on the representation makes
+      the wire-format layer know every domain type it can become;
+      the converter object keeps both sides mutually ignorant.
+    Root cause: Eiffel is nominally typed and =JSON_OBJECT= is a
+    foreign class — conformance cannot be retrofitted onto a type
+    we do not own. The converter object IS the answer to that: a
+    type-class instance passed explicitly as an argument (also
+    Weiher's "named reusable components" rationale, MappingStore).
+    RECORDED ALTERNATIVE — constrain the side we OWN: since domain
+    classes are ours, a generic front can demand conformance plus
+    a creation procedure from S instead of R:
+    #+begin_src eiffel
+    class RESTLY_TYPED_JSON_FRONT [S -> JSON_STORABLE create make_from_json end]
+        -- to_store:          create Result.make_from_json (a_json)
+        -- to_representation: Result := a_store.to_json
+    #+end_src
+    One generic front, zero converter objects, zero wrappers, zero
+    boundary copies — the parsed =JSON_OBJECT= is used as-is.
+    Price: the domain class inherits =JSON_STORABLE= and imports
+    the JSON library — the domain is no longer format-pure, which
+    cuts against decision 9's spirit (same trade as Jackson
+    annotations on Java domain classes). Available for anyone who
+    accepts JSON-aware domain classes to eliminate converter
+    boilerplate; NOT the v1 path.
+
+19. *PassThrough and auto-diagrams* (implemented 2026-07-06, plan in
+    =plans-to-improve.org=). Three items closing gaps against the
+    corpus catalog (=weiher_corpus_design_document.org=):
+    - =RESTLY_PASSTHROUGH [K, V]= — the identity combinator (SC '19
+      "Adopt" ruling, previously missing). Pure
+      =RESTLY_PROTOCOL= descendant forwarding all six verbs to
+      =backend=; deliberately NOT a pipeline front (mid-chain
+      identity must carry no capability mixins) and NOT a
+      BASIC_COMBINATOR descendant (that base is two-store shaped).
+      Substitutability is proven by test, twice: identical
+      observations vs a bare store, and spliced between CACHE and
+      its back with no observable change.
+    - BASIC_COMBINATOR ruling: KEPT (owner decision 2026-07-06) as
+      the deferred binary-combinator base; CACHE remains its only
+      descendant. The "MappingStore defaults to PassThrough"
+      symmetry is demonstrated by test
+      (=test_identity_converters_behave_as_passthrough=): a front
+      wired with both identity converters is observationally a
+      passthrough over its store.
+    - =graph_description= — GraphViz dot rendering of any
+      composition (SC '19 §4 auto-diagrams; thesis requires graphic
+      representation of compositions). Three queries on
+      =RESTLY_PROTOCOL=: =graph_node_id= (address-based, unique per
+      object, CQS-clean), =graph_dot_lines= (leaf default = one
+      labeled node; PIPELINE_FRONT, CACHE, PASSTHROUGH redefine to
+      add children and labeled edges), =graph_description= (wraps in
+      =digraph restly {rankdir=LR;}=). Arrow direction: =a -> b=
+      reads "a is backed by b" — the INVERSION of Weiher's
+      source-to-front arrows, recorded here so figures are read
+      correctly. Todobackend prints its graph on first request
+      (=print_pipeline_graph=, once); pipe to =dot -Tpdf= for the
+      thesis figure.
 
 * Architecture
 
@@ -724,8 +830,9 @@ Directly on =RESTLY_HASH_TABLE= (which now conforms, decision 12).
 
 *** Checklist [0/12]
 - [ ] =protocol/restly_extendable.e= (with =fresh_key= deferred)
-- [ ] =protocol/restly_mergeable.e= (kept available; UNUSED in v1 —
-  decision 16)
+- [X] =protocol/restly_mergeable.e= (DELETED 2026-07-06 — was unused;
+  merge lives at the front per decision 16; restore from git if a
+  domain-level merge interface is ever needed)
 - [ ] =protocol/restly_patchable.e= (=merge (a_patch: V; a_k: K)=,
   no MERGEABLE constraint — decision 16)
 - [ ] =protocol/restly_traversable.e=

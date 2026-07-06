@@ -1,0 +1,231 @@
+#+TITLE: Plans to Improve: Weiher Catalog Completion
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-06
+#+OPTIONS: toc:2 num:t
+#+STARTUP: overview
+
+* Preamble
+
+Two plans derived from re-reading =weiher_corpus_design_document.org=
+against the current code. Correction recorded up front: contrary to an
+earlier working assumption, =RESTLY_BASIC_COMBINATOR= is NOT a partial
+MappingStore — it has no mappings at all. It is front/back chaining
+scaffolding (=front=, =back=, =-=, =<|=) with exactly one descendant:
+=RESTLY_CACHE=. That makes item A3 a deletion question, not a refactor.
+
+Open calls for the owner before either plan starts:
+- A3: DECIDED 2026-07-06 — Option B, keep BASIC_COMBINATOR as the
+  deferred binary-combinator base.
+- B1: authorize the placeholder contract tags on
+  =RESTLY_PATCHABLE.merge= (contract handoff protocol).
+
+* Plan A — PASSTHROUGH, combinator unification, graph_description
+:PROPERTIES:
+:STATUS: DONE 2026-07-06 — implemented as decision 19 in restly_ewf_design_document.org; 90/90 tests green
+:END:
+
+** A1. RESTLY_PASSTHROUGH [K -> HASHABLE, V] (new, ~40 lines)
+
+File: =library/restly/src/combinator/restly_passthrough.e=
+
+- Inherits =RESTLY_PROTOCOL [K, V]= directly — NOT the pipeline front
+  (a mid-chain passthrough must be pure protocol, no capability
+  mixins) and NOT BASIC_COMBINATOR (that is two-store shaped; a
+  passthrough holds one backend).
+- =make (a_backend: RESTLY_PROTOCOL [K, V])=; attribute =backend=.
+- All six verbs forward, one line each:
+  =Result := backend.item (k)=, =backend.extend (v, k)=, etc.
+- =backed_by alias "<|"= mirroring the front's (swap backend, return
+  =like Current=) so it drops into existing chains.
+- No new contracts needed — it inherits the protocol's; forwarding
+  adds nothing. Optional owner contract: a passthrough-specific
+  postcondition like =same_as_backend: item (k) = backend.item (k)= —
+  agent suggests the tag and leaves the placeholder per the handoff
+  protocol.
+- Note clause cites SC '19: the identity element of the composition.
+
+** A2. Substitutability test (the actual point of A1)
+
+File: =library/restly/testing/test_restly_passthrough.e=
+
+Two tests, both running the same verb sequence:
+
+1. /Identity vs bare store/ — run extend/item/put/force/remove
+   against a bare =RESTLY_HASH_TABLE= and against the same table
+   wrapped in PASSTHROUGH; assert identical observations at every
+   step.
+2. /Insert mid-chain, no observable change/ — take the existing cache
+   scenario from =TEST_RESTLY_CACHE= (front hash table, back hash
+   table), splice a PASSTHROUGH between cache and back, re-run,
+   assert same results. This is SC '19's "insert the identity
+   combinator anywhere" sentence made executable.
+
+Register in the test target's class list alongside the other =TEST_*=
+classes.
+
+** A3. BASIC_COMBINATOR fate — owner decision, two options
+
+- /Option A (recommended, lazy):/ fold =front= / =back= / =make= /
+  =make_with_back= into =RESTLY_CACHE=, delete
+  =restly_basic_combinator.e= (29 lines). The deferred factories
+  =new_with_front= / =backed_by= are only meaningfully implemented in
+  CACHE anyway. Thesis catalog becomes clean: leaf stores /
+  PASSTHROUGH (identity) / PIPELINE_FRONT (MappingStore) / CACHE
+  (CachingStore) — one class per corpus concept, no scaffolding class
+  to explain.
+- /Option B:/ keep it as the deferred binary-combinator base for
+  future two-store combinators (Copier-like things are out of scope
+  per the corpus, so no second descendant is in sight).
+- Either way: the "MappingStore defaults to PassThrough" symmetry is
+  demonstrated by a TEST, not inheritance: a front wired with both
+  identity converters behaves observably like PASSTHROUGH. One test
+  in =test_restly_pipeline_front.e=.
+
+** A4. graph_description — GraphViz dot (~45 lines total)
+
+The thesis REQUIRES graphic representation of the compositions
+(SC '19 §4: Weiher's auto-generated store graphs, reported as an
+invaluable debugging aid). Output format is therefore GraphViz dot,
+renderable with =dot -Tpdf= / =-Tsvg= for thesis figures.
+
+Unique node ids without walk state (stays CQS-clean): derive the id
+from the object's address — =("n" + ($Current).out)= is a pure query,
+unique per object, stable for the object's lifetime. Labels carry the
+class name; ids carry the address.
+
+Three queries on =RESTLY_PROTOCOL=:
+
+- =graph_node_id: STRING= — ="n" + ($Current).out=. Frozen intent
+  (uniqueness is load-bearing); actual freezing is the owner's call.
+- =graph_dot_lines: STRING= — default implementation: one node
+  declaration =<id> [label="CLASS_NAME"]= via =generating_type.name=.
+  Every leaf store is a node with zero per-class work.
+  Combinators REDEFINE to emit: own node line, each child's
+  =graph_dot_lines=, and labeled edges =<id> -> <child_id>=:
+  - =RESTLY_PIPELINE_FRONT=: edge to =store= labeled "store"; node
+    label includes converter class names (key + value).
+  - =RESTLY_CACHE=: edges to =front= / =back= labeled "front"/"back".
+  - =RESTLY_PASSTHROUGH=: edge to =backend=.
+- =graph_description: STRING= — effective, NOT redefined: wraps
+  =graph_dot_lines= in =digraph restly { rankdir=LR; ... }=.
+
+Arrow direction: front points toward its backing (=a -> b= means "a
+is backed by b"), matching =backed_by= nesting; note in the design
+doc that this is the inversion of Weiher's source-to-front arrow
+syntax (already flagged in SC '19 §4 notes of the corpus doc).
+
+Test: compose =front <| cache (hash, hash)=, assert the string starts
+with =digraph=, contains all class-name labels, and contains one
+=->= edge per composition link (ids are addresses, so assert
+structure, not exact strings).
+
+Demo for the thesis: todobackend prints
+=todo_resource.graph_description= at startup — one =io.put_string=
+line; pipe to =dot -Tpdf= for the figure.
+
+** A5. Verify + record
+
+- Fast compile + tests after A1/A2; clean compile after A3 (class
+  deletion).
+- Design doc: decision 19 (PASSTHROUGH added per corpus "Adopt"
+  ruling; BASIC_COMBINATOR folded/kept; graph_description per SC '19
+  §4 auto-diagram precedent). Only the ewf design doc checklist is
+  touched; the corpus doc is authority and stays as is.
+
+Order: A1 → A2 → A4 → A3 (deletion last, after everything is green).
+Roughly 120 lines of code, 3 new files, 1 deleted.
+
+* Plan B — merge-forwarding defense + RESTLY_REF [K, V]
+
+** B1. Merge: defense, not mechanism — with one honest constraint
+
+Current facts: =merge= lives only in =RESTLY_PATCHABLE= (front-side);
+the implementation in =RESTLY_JSON_PIPELINE_FRONT.merge= does
+load-merge-store as =store.item= → merge → =store.put=. That
+=store.item= reads through WHATEVER the chain is — so if a CACHE ever
+sits between front and source, the load can be stale, which is
+exactly Weiher's CachingStore refresh-on-merge concern.
+
+1. /Design doc decision 20 — "merge is front-only, deliberately":/
+   - Verb inviolability: adding =merge= to =RESTLY_PROTOCOL= is the
+     same move as =invalidateReference:= — extending the uniform
+     interface because one combinator wants it — already rejected.
+     Cite the jurisdiction table row.
+   - Weiher's own CachingStore decomposes PATCH into load-merge-store
+     internally, so decomposition per se is corpus-sanctioned; the
+     delta is only WHERE the load reads from.
+   - /The recorded constraint:/ front-only merge is correct iff the
+     front's load phase reads authoritative data. In v1 (front → hash
+     table, no intermediate cache) this holds trivially. If a cache
+     is ever inserted between front and source, one of two named
+     remedies applies: the cache refreshes on the read that feeds a
+     merge, or the front loads via a cache bypass. State as a
+     documented limitation with the two remedies, not solved code.
+2. /Contract suggestion (owner authors):/ a postcondition on
+   =RESTLY_PATCHABLE.merge= expressing RFC 7386 field-wise semantics —
+   patched keys updated, unpatched keys intact. Agent writes the tag
+   names + placeholders per the handoff protocol:
+   =patched_fields_updated: True -- TODO(owner)=,
+   =unpatched_fields_intact: True -- TODO(owner)=. Per the corpus doc,
+   merge has no specification anywhere in the corpus — these tags are
+   the contribution-in-progress skeleton.
+3. /One test:/ merge through a front backed by a CACHE (the dangerous
+   topology), asserting current behavior — so the limitation is
+   pinned by a test that fails loudly if cache read semantics later
+   change under an assumed merge-safety. Name it as documentation:
+   =test_merge_reads_through_cache_current_behavior=.
+
+No mechanism changes. ~1 page of org text, 2 placeholder tags, 1 test.
+
+** B2. RESTLY_REF [K -> HASHABLE, V] — the other branch, as a footnote class
+
+File: =library/restly/src/restly_ref.e= (~35 lines)
+
+#+BEGIN_EXAMPLE
+note
+	description: "[
+		Reified Load-Update Pair for ONE L-value (DLS '13 reference).
+		Created by a store from a key; the formal home of the
+		lens laws (single-store, single-ref layer).
+	]"
+class RESTLY_REF [K -> HASHABLE, V]
+create make
+	-- make (a_store: RESTLY_PROTOCOL [K, V]; a_key: K)
+	-- store: RESTLY_PROTOCOL [K, V]; key: K
+	-- item: V assign set        -- Load; require exists (404 tag, owner's)
+	-- set (v: V)                -- Update: store.force (v, key)
+	-- exists: BOOLEAN           -- store.has_key (key)
+	-- remove                    -- store.remove (key); require exists
+#+END_EXAMPLE
+
+- /Factory on the protocol:/ =ref (k: K): RESTLY_REF [K, V]= added to
+  =RESTLY_PROTOCOL= as an EFFECTIVE feature
+  (=create Result.make (Current, k)=) — stores create references, per
+  DLS '13, and every descendant gets it for free. This is the only
+  touch to an existing class.
+- /Lens laws land as tests, not contracts/ (they are cross-feature
+  algebraic properties): =test_get_put= (=r.set (v)= then
+  =r.item ~ v=), =test_put_get= (=r.set (r.item)= observationally
+  idempotent on the store), =test_ref_and_store_agree= (mutation via
+  ref visible via =store.item (k)= and vice versa). File:
+  =library/restly/testing/test_restly_ref.e=. If the laws later move
+  to postcondition tags on =set=, suggested tag: =lens_get_put:= —
+  owner fills.
+- /Design doc decision 21:/ RESTLY implements BOTH branches of SC '19
+  §9's future-work paragraph — types-on-interface (the thesis) and
+  types-on-reference (=RESTLY_REF=, fifteen lines) — turning "we
+  chose the interface branch" into a demonstrated comparison. Also
+  note the ref is where the lens vocabulary is ALLOWED per the SC '19
+  §8 boundary; combinator-layer prose stays lens-free.
+- Not wired into EWF at all. It exists to be cited, tested, and
+  diagrammed.
+
+** B3. Verify + record
+
+Fast compile + tests; the =ref= factory addition to =RESTLY_PROTOCOL=
+is the riskiest line (touches the root class), so run the full suite
+plus the todobackend npm acceptance once.
+
+Order: B2 first (small, self-contained, all green), then B1 (mostly
+prose, ends with the cache-topology test). ~50 lines of code, 2 new
+files, 2 org decisions.

@@ -14,12 +14,19 @@ inherit
 
 	RESTLY_EXTENDABLE [KR, R]
 		redefine
-			extend_new
+			extend_new,
+			graph_dot_lines
 		end
 
 	RESTLY_PATCHABLE [KR, R]
+		redefine
+			graph_dot_lines
+		end
 
 	RESTLY_TRAVERSABLE [KR, R]
+		redefine
+			graph_dot_lines
+		end
 
 feature {NONE} -- Initialization
 
@@ -129,6 +136,24 @@ feature -- Traversal (RESTLY_TRAVERSABLE)
 			-- Remove all entries from the store.
 		do
 			store_traversable.wipe_out
+		end
+
+feature -- Output
+
+	graph_dot_lines: STRING
+			-- <Precursor>
+			-- Node labeled with both converters; edge to `store`.
+		do
+			create Result.make_from_string (graph_node_id)
+			Result.append (" [label=%"")
+			Result.append (generating_type.name)
+			Result.append ("\nkey: ")
+			Result.append (key_converter.generating_type.name)
+			Result.append ("\nvalue: ")
+			Result.append (converter.generating_type.name)
+			Result.append ("%"];%N")
+			Result.append (store.graph_dot_lines)
+			Result.append (graph_node_id + " -> " + store.graph_node_id + " [label=%"store%"];%N")
 		end
 
 feature {NONE} -- Implementation

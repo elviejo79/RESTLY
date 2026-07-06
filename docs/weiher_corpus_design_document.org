@@ -1,0 +1,203 @@
+#+TITLE: The Weiher Corpus: A Design Document for RESTLY
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-06
+#+OPTIONS: toc:2 num:t
+#+STARTUP: overview
+
+* Preamble
+:PROPERTIES:
+:STATUS: Working reference
+:END:
+
+*Status:* Working reference. Conceptual authority document (Weiher jurisdiction) per the three-authority framework: Weiher decides what to build, Fielding decides what survives, Eiffel decides what is true.
+
+*Sources covered:* Polymorphic Identifiers (DLS '13), In-Process REST at the BBC (2014, secondary — cited through the later papers), Storage Combinators (Onward! '19), Can Programmers Escape the Gentle Tyranny of call/return? (<Programming'20> Companion), Beyond Procedure Calls as Component Glue (Onward! '24). Adjacent works cited by Weiher but not summarized here: Constraints as Polymorphic Connectors (MODULARITY '16), Polymorphic Write Streams (DLS '19), Higher Order Messaging (DLS '05).
+
+* Purpose of this document
+
+This document does three things. First, it reconstructs the conceptual system of Weiher's research program in dependency order, because the papers are cumulative and citing one without the others misstates what each contributes. Second, it isolates the normative content — the definitions, protocols, and combinator catalog that a system claiming lineage from Storage Combinators must either implement or explicitly diverge from. Third, it assigns each concept a jurisdictional ruling for RESTLY: adopt, adapt, or reject, with the reason recorded.
+
+A warning before anything else: this is a single-author research program, evaluated almost entirely on self-reported industrial experience, implemented in a dynamically typed research language with one primary implementor. That is not a defect for RESTLY — it is the opening. But every empirical claim cited from this corpus must be attributed as the author's own report, never as independent validation. Reviewers will know the difference even if the prose doesn't.
+
+* The shape of the program
+
+Weiher's work is one sustained argument developed over roughly two decades, and it must be read as such. The argument in one paragraph: mainstream languages give polymorphism to computation (methods, dispatch) but not to storage (identifiers, L-values); this asymmetry breaks the Uniform Access Principle the moment state lives anywhere other than an instance variable; the World Wide Web demonstrates that a storage-oriented interface — a small fixed verb set over an open identifier space — supports generic intermediaries and plug-composability that procedural interfaces cannot; therefore the REST architectural style should be scaled /down/, into the process, as a first-class linguistic mechanism, and ultimately generalized into a language where connectors of every kind have the same metaclass status that classes gave to components.
+
+The dependency chain of the publications:
+
+*In-Process REST at the BBC (2014)* is the empirical origin. A distributed system of over one hundred processes across a dozen machines was rewritten as a single Java process whose internal structure kept the REST shape: a ~nodeForUri(path)~ method resolving string paths against a tree of named nodes. The location (path) is separated from the operation (fetch), mirroring HTTP's verb/URI separation. Everything later is a generalization of this move.
+
+*Polymorphic Identifiers (2013)* supplies the theory of /location/. *Storage Combinators (2019)* supplies the theory of /intermediaries/. *Gentle Tyranny (2020)* supplies the /diagnosis/ — why call/return is the wrong universal glue. *Beyond Procedure Calls (2024)* supplies the /synthesis/ — Objective-S, a language where storage access is just one of five polymorphic connector types.
+
+RESTLY enters this chain at exactly one point: the 2019 paper's closing future-work section, where Weiher concedes that typing and statically checking storage combinators is unsolved, that existing generics are probably insufficient because single combinator instances process many types, and that one possibility is that "the types move from the operations to the polymorphic identifiers." RESTLY is a direct answer to that paragraph, and the thesis should say so in the first page of its related work. It takes the opposite branch to the one Weiher speculated: instead of moving types onto identifiers, RESTLY moves them onto the store interface itself via generic parameters ~[K, V]~, and accepts the loss of universal plug-compatibility as the price. That trade — verification of each composition instead of syntactic compatibility of all compositions — is the thesis in one sentence.
+
+* Polymorphic Identifiers (DLS '13): the theory of location
+
+** The problem as Weiher frames it
+
+Strachey's model of imperative programming has a store of L-values, each with content (an R-value) and a Load-Update Pair (LUP). Meyer's Uniform Access Principle demands that access to state be indistinguishable from access to computation, so that clients survive changes in storage strategy. Weiher's observation is that every mainstream UAP implementation — Eiffel's unified feature access included — applies the uniformity to exactly one store: instance variables. For any other store (a dictionary, a file, a URL, the keychain), only procedural abstraction is available, which means writing a distinct Load-Update Pair per attribute rather than one polymorphic LUP per store.
+
+The paper works through three scenarios in Objective-C — substituting a dictionary for instance-variable storage, parametrized attribute access, and external resources — and shows that every available bridging technique (adapting the object to the keyed protocol, cover methods, message-not-understood handlers, accessor-reifying helper objects) costs either massive boilerplate, an order of magnitude or more in performance, or both. The practical outcome in industry, he notes, is that people simply live with non-uniform access. The section is rhetorically effective and its logic transfers to Eiffel almost unchanged: Eiffel's UAP covers the attribute/function distinction, not the attribute/hash-table/file/HTTP distinction. This is the correct citation for the thesis's motivation chapter, more so than the 2019 paper.
+
+** The mechanism
+
+Three parts. Polymorphic Identifiers are URIs in the language: ~scheme:path~, where the scheme names a handler. References are first-class LUP objects, created by stores from identifiers, mediating access to one L-value; the store decides what kind of reference to hand out (message-based, keyed, or even direct-offset). Scheme handlers each manage one store — one set of L-values — and translate identifiers to references. Built-in storage classes (instance variables via ~ivar:~, locals via ~local:~, globals, thread-locals) are re-expressed as schemes with no special status, and the conventional identifier-lookup rules of a language are reconstructed as a ~var:~ scheme doing prioritized sequential lookup over the others. Composite scheme handlers — relative, filter, sequential, caching — appear here in embryonic form; the 2019 paper renames and systematizes them as combinators.
+
+The performance evaluation matters more than it looks: PI access with a negotiated reference is competitive with native message sends (3.11 ns vs 2.50 ns for object storage) and with direct-offset negotiation actually beats messaging. The point is that first-class references are not inherently slow, because the reference amortizes the resolution. RESTLY has no analog of this claim to defend — Eiffel's static dispatch makes it moot — but the thesis should not accidentally imply that Weiher's system pays a large runtime tax for its uniformity. It doesn't, and he measured it.
+
+** Jurisdictional ruling for RESTLY
+
+Adopt the problem statement wholesale; it is the strongest motivating text in the corpus. Reject the mechanism almost entirely, and say so precisely: RESTLY has no polymorphic identifiers, no schemes, no first-class references, and no hierarchical identifier space in the core. Keys are flat, typed values (~K~); path structure exists only at the EWF bridge. This is not an omission to be papered over — it is the same deliberate rejection of untyped uniformity that defines the whole project, applied to the identifier axis. A URI is a stringly-typed key; ~K~ is not. What is lost: a single client expression that works against any store at any location, and reference-level indirection. What is gained: key validity is a compile-time property, and the 404-relevant precondition (~has_key~) is stated against a typed domain. The Evaluation section owes the reader this ledger explicitly.
+
+One residue worth keeping: the paper's point that a reference is a /reified LUP for one L-value/ is the correct conceptual slot for the single-ref layer where RESTLY's lens contract legitimately applies (per the settled combinator-vs-lens boundary). When the thesis says "the lens laws hold at the single-store, single-ref layer," the DLS '13 reference object is the thing being formalized.
+
+* Storage Combinators (Onward! '19): the theory of intermediaries
+
+This is the primary source and it deserves the most careful treatment, because RESTLY both descends from it and contradicts it on its central enabling condition.
+
+** The conceptual spine: location, operation, resolver
+
+The paper's Table 1 is the deepest single idea in the corpus and should be reproduced (redrawn, cited) in the thesis:
+
+|           | OO      | In-Process REST  | HTTP         |
+|-----------+---------+------------------+--------------|
+| location  | message | reference        | URI          |
+| operation | message | Storage protocol | HTTP methods |
+| resolver  | object  | store            | HTTP server  |
+
+Object-orientation fuses location and operation into the message, which is exactly what prevents generic intermediaries: a proxy cannot interpose on "all reads" when every read has a different selector. REST and In-Process REST keep them separate, so an intermediary can implement four operations once and thereby handle an unbounded identifier space. This is the load-bearing wall. Every combinator in the catalog is a corollary of this separation, and RESTLY preserves it fully — ~item (k)~ separates the operation (~item~) from the location (~k~) just as ~at:ref~ does. The thesis divergence is not here; it is in whether the /value/ flowing through the separated interface is typed.
+
+** The Storage protocol and the store abstraction
+
+Four messages: ~at:~ (GET), ~at:put:~ (PUT), ~at:merge:~ (PATCH), ~deleteAt:~ (DELETE). The protocol is deliberately dictionary-shaped; the paper shows store-based and raw-dictionary code side by side and the near-identity is presented as a feature — you can "lift" a dictionary to a store with almost no effort and thereby escape being tied to it. Note what is absent: POST, HEAD, OPTIONS, enumeration, existence-testing, and any error model whatsoever. The protocol has no failure vocabulary. ~at:~ on a missing reference returns nil in the caching-store code shown; nothing in the paper says what ~put:~ on a read-only store does. This absence is RESTLY's second-largest opening after typing: the entire contract-tags-as-status-codes contribution occupies space Weiher left genuinely empty, not space he filled differently.
+
+A store is /anything/ implementing the protocol; the paper is explicit that a store need not store — it may compute, as HTTP servers do. This is the license for ~RESTLY_NULL~, ~RESTLY_READONLY~, and any future computed resource, and should be cited as such.
+
+The uniformity sentence must be quoted or closely paraphrased in the thesis because RESTLY's contribution is defined against it: uniformity, Weiher says, both enables the composability that combinators require and incentivises it, since reusable intermediaries are only worth building if they can actually be reused in many contexts. RESTLY deletes the enabler and keeps the architecture; the thesis must therefore answer, in Weiher's own economic terms, why typed combinators are still worth building when each composition must be individually proven. The answer on record: the type checker performs the proof, the contract system prices the failure modes, and the incentive shifts from reuse-across-domains to correctness-within-one.
+
+** The combinator catalog (normative)
+
+This is the checklist a reviewer will hold against any system claiming the lineage. For each: what it is, and the RESTLY disposition.
+
+*** PassThrough
+Forwards all four messages unchanged. Trivial, but it is the substitutability baseline — the identity element of the composition. RESTLY has no equivalent and should add one, if only in the test suite, because "insert the identity combinator anywhere without observable change" is the cheapest possible demonstration that the typed protocol preserves Weiher's symmetry property. Cost: one class, a dozen lines.
+
+*** MappingStore
+The abstract workhorse: three overridable mappings — map the reference on the way in, map retrieved data on the way out, map stored data on the way in — with the protocol methods handling only sequencing. All three mappings default to identity, making the abstract mapper a PassThrough. Weiher notes the mappings are overridable methods rather than function arguments /deliberately/, to encourage named, reusable components. RESTLY's converter architecture is the typed reconstruction: value converters cover mappings two and three, the pipeline front's key converter covers mapping one. The design document for TypeScript developers understates this — ~RESTLY_BASIC_COMBINATOR~ alone is two-thirds of a MappingStore; only the pipeline front is the full analog. The thesis should present the correspondence at the front, not the basic combinator. Note also the "named reusable components" rationale transfers directly to Eiffel and argues for converter /classes/ over agent-based converters as the primary presentation, with ~AGENT_CONVERTER~ as the lightweight alternative — which happens to match the settled three-species design.
+
+*** RelativeStore
+Maps references by prefixing. Depends on hierarchical references; RESTLY has none in the core. Ruling: out of scope, stated explicitly, with the EWF mount-path mechanism (~mount_collection ("/todos", ...)~) acknowledged as the place where the same decoupling-from-absolute-location concern is handled — at the edge, once, rather than composably in the middle. This is consistent with the flat-typed-keys decision but must be written down or a reviewer will write it down for you.
+
+*** Serialiser
+Maps only data, between an external format (JSON, XML) and internal objects. RESTLY's converters at edge resources are exactly this, and the settled "JSON only inside converter bodies at edge resources" rule is a /stricter/ discipline than Weiher's, who freely places serialisers mid-chain (the HTTP client stack even discusses moving the memory cache behind the serialisers to cache native objects instead of bytes). The thesis can claim the restriction as a benefit — the typed pipeline makes mid-chain serialization both unnecessary and unrepresentable — but should acknowledge it forecloses Weiher's cache-placement flexibility.
+
+*** SwitchingStore
+Selects a subsidiary store by the first path component; explicitly compared to filesystem mount points. This is the router. The RESTLY insight that the router is a hash table whose keys are URL patterns is the SwitchingStore fused with URI templates, and the "no separate router abstraction" claim is Weiher's own claim inherited. In RESTLY the switching happens once, at the EWF bridge, over untyped path strings — which is where it must happen, because switching over heterogeneous typed stores is precisely what a single generic interface cannot express. This is worth a paragraph in the thesis: the SwitchingStore is /the/ combinator that typed uniformity cannot reconstruct in the middle of a pipeline, because its whole point is that the subsidiary stores are heterogeneous. RESTLY's answer is that heterogeneity lives at the untyped HTTP boundary and nowhere else. That is a defensible answer, but it is a real loss and should be tabulated as one.
+
+*** CachingStore
+Holds a source and a cache. Reads try the cache, fall through to the source, deposit the result. Writes are write-through to both. No automatic invalidation; instead an ~invalidateReference:~ message is /added to the protocol/ — note that Weiher extends the four-verb protocol without ceremony when a combinator needs it, a liberty RESTLY's inviolable verb set forbids itself.
+
+Read his merge implementation carefully, because it matters for the PATCH pipeline: on ~merge~, the CachingStore first re-copies the entry /from the source/ into the cache, merges into the cache, then puts the merged result to the source. So Weiher's own cache decomposes PATCH into load–merge–store — the same read-modify-write shape as RESTLY's ~zoom~-grounded pipeline — but with the load taken from the authoritative source, never from possibly-stale cache contents. Two consequences. First, the earlier architectural criticism of RESTLY (merging against stale cache data when a cache sits in the chain) is not a criticism of decomposing PATCH per se — Weiher decomposes it too — it is a criticism of /where the load reads from/. Fixing it means the front's load phase must bypass caches or the cache must refresh-on-merge, exactly as Weiher's does. Second, Weiher's decomposition is /inside one combinator/ that still forwards ~merge~ semantics outward, whereas RESTLY's decomposition happens at the front and ~merge~ never crosses the pipeline. The thesis must either restore merge-forwarding through combinators or argue the front-only decomposition is safe given constraint one. Under SCOOP, the atomicity of Weiher's three-step merge is exactly the open read-modify-write concern; his paper is silent on concurrency, so no help there.
+
+*** LoggingStore and filters
+The LoggingStore is described as an adapter rather than a pure combinator: it passes requests through, but bundles verb and reference (not data) into a RESTOperation and writes it to a log via a single-message Streaming protocol (~write:~). Implementors of ~write:~ are filters — the pipes-and-filters connector, kept deliberately separate from the storage connector. On top of this: MVC change notifications (a filter posting to NSNotificationCenter) and the Copier (a filter that replays PUT/DELETE operations from a source store to a target store), which together implement one-way dataflow constraints over arbitrary stores. The asynchronous writer composition — cache whose write path goes through a logger into a queue into a copier — replaced a complex, error-prone procedural implementation and worked immediately once composed from pre-tested parts; Weiher flags the subtlety that pending writes make the cache the temporary source of truth. RESTLY ruling: entirely out of scope for the thesis, and the corpus itself supports the exclusion — Weiher keeps streams a separate connector type with a different protocol, which is the settled "stores are V_MAP-like containers, not streams" position stated by the primary authority himself. Cite Beyond Procedure Calls Table 1 (connector taxonomy) for this: data access and stream are /different rows/.
+
+** Composition mechanics
+
+Composition is fixed at configuration time. The paper offers procedural wiring, an array-literal convenience, and the arrow syntax ~a -> b -> c~, and argues the declarative forms matter because procedural wiring hides the static relationship inside the dynamic unfolding of execution — the reader must simulate the program to recover the architecture. The store graphs have a 1:1 correspondence to the composition expressions and are generated automatically at runtime via GraphViz dump, which Weiher reports as an invaluable debugging aid.
+
+Three RESTLY notes. First, this static-configuration property is the ground truth behind the settled "combinator composition is not monadic bind" ruling — Weiher's own composition is data-independent, fixed wiring; cite this directly when foreclosing the monad framing. Second, ~backed_by~ as a pure CQS-compliant nesting accumulator is RESTLY's arrow syntax; the thesis should show ~front.backed_by (mid.backed_by (backend))~ beside Figure 24's arrow chain and note the inversion of direction (Weiher composes source-to-front reading left to right toward the server; ~backed_by~ nests front-outward). Third, the automatic-diagram capability is cheap to reproduce (a ~graph_description: STRING~ feature walking the chain) and disproportionately persuasive in a thesis defense; Weiher's own report of its debugging value is the justification.
+
+** Experience and evaluation: what may be claimed, and how
+
+BBC SportStats: hundred-plus processes to one Java process; reliability improved by a factor of fifty measured by production outages; performance by around a factor of one hundred; code size down by a factor of four while adding two output media. Weiher himself hedges the reliability number — it cannot be attributed solely to the architecture.
+
+Wunderlist 3: crashes down tenfold versus version 2, attributed at least partially to the storage rewrite; the storage stack grew from bare nested dictionaries to the full cache/serialiser/disk/keychain composition without changing the interface or the client — this incremental-growth story is the best narrative evidence for the substitutability claim in the whole corpus. The test configuration replaced the entire stack with a memory store, using no mocks — real components in a simpler configuration — which is precisely RESTLY's no-mocks testing strategy; cite it as inherited methodology, not invention.
+
+Microsoft To-Do: roughly a dozen stores, evenly split generic and domain-specific; the developer-reported benefits (extensibility, parallel teamwork, feature toggles by swapping stores, an estimated 50–60% code reduction) and, critically, the developer-reported /downsides/: dataflow paths cannot be determined before runtime and must be held in the programmer's head, and debugging requires stepping through the whole transformation chain. These two downsides are typed-system openings and the thesis should quote-or-paraphrase them prominently: static types make the dataflow path a compiler-checkable property, and contract violations localize failures to a phase. That is a direct answer to the corpus's own self-criticism.
+
+The microbenchmark: in-process storage combinators at 49 million requests per second versus 63 thousand for the same combinators over HTTP versus low-thousands for Sinatra/Flask — five orders of magnitude range, establishing that the distribution boundary, not the abstraction, is the cost. RESTLY inherits the argument's shape (in-process REST removes marshalling and partial-failure modes, per the Waldo citation) but should run its own numbers rather than borrowing these.
+
+Handle all of this with the discipline already noted: every number is self-reported by the system's author about his own systems, one of them via personal communication. Cite as experience report, never as controlled evidence.
+
+** Related-work boundaries Weiher himself draws (reviewer armor)
+
+Three distinctions in his Section 8 are load-bearing for RESTLY's terminology and must be respected verbatim in the thesis.
+
+- Lenses :: bidirectional like combinators, but per-function, focusing one component — combinators abstract over an entire identifier set at once. This is the settled combinator≠lens boundary, /in the primary source/; the thesis's zoom/lens machinery must always be scoped to the single-ref layer or a reviewer armed with this paragraph will use it.
+- HTTP middleware :: stackable in-process request filters, but tied to a specific server and to HTTP; combinators apply REST principles to arbitrary domains — useful for positioning RESTLY against Express/Rack middleware if a reviewer reaches for that comparison.
+- Properties (he names Eiffel explicitly) :: provide data-like syntax over procedural abstraction but do not fully separate name from operation, so no generic interposition — this is the corpus's own statement that Eiffel's built-in UAP machinery is insufficient for the job, i.e., the justification for RESTLY existing as a library rather than leaning on the language's uniform access.
+
+* Gentle Tyranny (Programming '20): the diagnosis
+
+This is an essay, not a systems paper, and should be cited for framing rather than mechanism. Its argument: call/return — imperative, functional, and OO being minor variants of one style — is a mechanism for computing results, but systems today primarily store and communicate, with computation incidental; since the call is also the primary means of abstraction, the mismatch cannot be abstracted away. The temperature-converter worked example shows a trivial domain accreting accidental complexity purely from moving data between model, UI, and persistence via methods that act and terminate; the constraint-connector version (~|=~, ~=|=~) makes each extension purely additive.
+
+The essay's sharpest conceptual tool is the meta-description critique, drawing on Andrew Black and on Dijkstra's go-to argument: call/return code that /sets up/ ongoing relationships (Cocoa bindings, Java Streams' fluent filter-construction) is a meta-description from which the actual behavior must be laboriously inferred, exactly as control flow had to be inferred from jumps before structured programming. Java Streams get a precise demolition: the chained calls look like a pipeline but construct one instead of being one, an indirection that makes extension hard and encapsulation of custom stages awkward. The Feynman filing-systems quotation and the storage-combinators recap add nothing new over Onward! '19.
+
+RESTLY jurisdiction: two usable items. First, the meta-description critique applies uncomfortably /to RESTLY itself/ — ~backed_by~ chains executed in a creation procedure are setup code, a meta-description of the pipeline, not the pipeline; Eiffel has no connection designator. The honest move is to preempt: acknowledge the thesis lives inside the gentle tyranny, and argue that contracts partially compensate because the invariants of the composed object /are/ a static, checkable description of the ongoing relationship. Do not let a reviewer discover this asymmetry first. Second, the essay's claim that ongoing-behavior styles beat call/return for UI/synchronization is jurisdictionally irrelevant to a storage framework and should simply not be engaged.
+
+* Beyond Procedure Calls (Onward! '24): the synthesis
+
+The mature statement. Objective-S elevates connectors to metaclass status: five connector types from the Mehta/Medvidovic taxonomy get direct linguistic support — procedure call (via Smalltalk messaging generalized by Higher Order Messaging), data access (storage combinators), streams (polymorphic write streams, ~<<~), events (notification protocols), naming (polymorphic identifiers) — each with common surface syntax, a metaobject protocol for plugging in instances, and a generic connection designator ~→~ that matches default ports to connector roles. Dataflow constraints are shown to be a /derived/ connector, built from a LoggingStore feeding a write stream — the 2016 constraints paper's future work realized. Complex object literals (~#Task{ id:0, ... }~) exist to kill "accidentally algorithmic" construction code. The ADL critique is worth internalizing: ACME-style languages are less expressive and more verbose than the systems they describe, constitute a second representation that must be kept in sync, and are therefore unused in industry; Objective-S's answer is that the architecture /is/ the implementation.
+
+Three items bear directly on RESTLY.
+
+** Property paths and the verb set
+The Todo store defines path patterns (~/task/:id~) whose bodies implement REST verbs — ~get~, ~put~, ~post~, ~delete~ — with ~newValue~ bound for operations carrying a body and path parameters bound as variables. Two facts to extract. First: *POST appears here, at the property-path/HTTP edge, and nowhere in the Storage protocol*, which in 2024 still has exactly four messages. Weiher's own architecture keeps allocation out of the uniform store interface and puts it at the resource edge. This is primary-source confirmation of the settled RESTLY ruling that allocation is orthogonal to the table interface and lives in the allocator protocol / ~extendNew~ at the front. Cite it exactly this way; it converts a design choice into a corroborated one. Second: property paths are the corpus's own admission that flat references are insufficient at the HTTP boundary — pattern-matching dispatch with parameter extraction is needed there — which is what the EWF bridge's template-matching mount does. RESTLY's router-as-pattern-keyed-table is Listing 3's property paths plus the 2019 SwitchingStore, and the thesis should trace both parents.
+
+** The tasks backend benchmark
+An Objective-S todo backend at ~89K requests/second against Sinatra's ~1.8K, on loosely controlled conditions Weiher openly flags as rough. Relevant to RESTLY only as precedent: the corpus itself validates a todo-backend as the demonstration vehicle, which strengthens the TodoBackend suite as the empirical target rather than looking like an arbitrary choice.
+
+** The JSONConverter as storage combinator
+Listing 31 composes ~todo → fromJSON → file-scheme~ — a serialiser combinator parameterized by a converter class, placed mid-chain. Contrast with RESTLY's edge-only JSON rule, per the Serialiser entry in the combinator catalog.
+
+Jurisdiction: this paper is context, not authority, for RESTLY. Its ambitions (polymorphic connection, metaobject protocols, five connector types) are strictly wider than a storage framework's, and the thesis should cite it for the connector taxonomy, the property-path/POST evidence, and the ADL critique, then decline the rest. One trap to avoid: do not describe RESTLY as an implementation of Objective-S ideas in Eiffel. It is an implementation of the 2013–2019 storage layer, under a type discipline the 2019 paper names as open future work, with an error model the corpus lacks entirely.
+
+* What the corpus does not contain (the openings, consolidated)
+
+These are the empty regions of the corpus. Each is either an RESTLY contribution or a scoping statement, and the Evaluation section should enumerate them against this list.
+
+** No error model
+No paper defines what any operation does on failure. No status-code vocabulary, no distinction between missing-key, conflict, and malformed-representation. RESTLY's contract-tag→status mapping (404/409/412/422 as named precondition classes) has no antecedent anywhere in the corpus. This is the cleanest novelty claim available and the thesis currently under-weights it relative to the typing claim.
+
+** No types
+Named as future work in 2019 with the concession that existing generic approaches probably don't suffice; not revisited in 2024, where Objective-S remains dynamic. RESTLY's ~[K, V]~ protocol, creation-constrained representation genericity, and compile-time 405 (capability interfaces present or absent per mount) occupy this space. The compile-time-405 claim needs its precise form: in Weiher's system an unsupported verb is a runtime doesNotUnderstand or silent path-non-match; in RESTLY, mounting a collection route requires the traversable capability /at compile time/.
+
+** No concurrency treatment
+The corpus is silent on threads; the asynchronous writer gets a queue but no memory-model discussion, and the pending-writes-are-source-of-truth caveat is noted, not solved. SCOOP analysis (precondition-as-wait-condition transmutation, the 405-guard deadlock, PATCH atomicity) has no competitor in the corpus and no help from it either.
+
+** No specification of merge
+~at:merge:~ is in the protocol from 2013 onward and is never once given semantics — not RFC 7386, not anything. The CachingStore shows an /implementation strategy/ but no contract. RESTLY's open ~merge~ problem (zoom-shaped specification with round-trip postconditions) is therefore not lagging the corpus; it is attempting something the corpus never tried. State this to convert an open problem into a contribution-in-progress.
+
+** No allocation in the protocol, and no enumeration
+POST lives at the edge; nothing anywhere addresses listing a store's contents — the 2019 file-browser anecdote even shows the DiskStore /cannot/ fetch directory entries by index, forcing quadratic behavior patched by a cache. Enumeration is genuinely unresolved in the corpus, which means RESTLY's open jurisdictional question (static typing vs. runtime discovery) has no Weiher ruling to defer to or diverge from: Fielding and Eiffel are the only authorities in the room for that one.
+
+* Consolidated jurisdiction table
+
+| Corpus element                                        | Source            | RESTLY ruling                                                                                                                                    |
+|-------------------------------------------------------+-------------------+---------------------------------------------------------------------------------------------------------------------------------------------------|
+| Location/operation/resolver separation                | SC '19 Table 1    | *Adopt* — the load-bearing wall                                                                                                                    |
+| Four-message Storage protocol                         | PI '13 / SC '19   | *Adapt* — item/force/merge/remove as vocabulary-conformant typed counterpart; any refinement (extend/put split) must be recorded as a deliberate revision, not drift |
+| Store-need-not-store                                  | SC '19            | *Adopt* — licenses NULL/READONLY/computed leaves                                                                                                   |
+| Untyped uniformity as composability enabler           | SC '19 §2.3       | *Reject deliberately* — the thesis-defining divergence; answer the incentive argument explicitly                                                   |
+| Polymorphic identifiers, schemes, hierarchical refs   | PI '13            | *Reject* — flat typed keys; hierarchy only at EWF bridge; ledger the loss                                                                          |
+| First-class reference as reified LUP                  | PI '13            | *Adopt conceptually* — the formal home of the single-ref lens layer                                                                                |
+| PassThrough                                           | SC '19            | *Adopt* — add as substitutability baseline (currently missing)                                                                                     |
+| MappingStore (3 mappings, named components)           | SC '19            | *Adapt* — pipeline front = full analog; basic combinator = data mappings only                                                                      |
+| Serialiser                                            | SC '19            | *Adapt, stricter* — edge-only JSON; acknowledge lost mid-chain flexibility                                                                         |
+| SwitchingStore                                        | SC '19            | *Adapt at edge only* — heterogeneous switching is untypeable mid-pipeline; tabulate as a loss                                                      |
+| CachingStore, incl. merge-refresh strategy            | SC '19            | *Adapt with correction* — load phase must read authoritative source; SC's own merge decomposition is the precedent                                 |
+| invalidateReference: protocol extension               | SC '19            | *Reject* — violates verb inviolability; invalidation must be a cache-class feature outside the store interface                                     |
+| Logging store, filters, Copier, constraints           | SC '19 / BPC '24  | *Out of scope* — streams are a different connector row per the corpus's own taxonomy                                                               |
+| Static composition, arrow syntax, auto-diagrams       | SC '19 §4         | *Adopt* — backed_by is the arrow; cite for anti-monad ruling; consider graph_description                                                           |
+| No-mocks simpler-configuration testing                | SC '19 §5.2       | *Adopt, attribute* — inherited methodology                                                                                                         |
+| Experience numbers (BBC, Wunderlist, To-Do)           | SC '19 §5–6       | *Cite as self-report only*; quote the To-Do downsides as the typed-system opening                                                                  |
+| Lens / middleware / Eiffel-properties boundaries      | SC '19 §8         | *Adopt verbatim* — reviewer armor; lens vocabulary confined to single-ref layer                                                                    |
+| Meta-description critique                             | Tyranny '20       | *Preempt* — applies to backed_by setup code; contracts as partial answer                                                                           |
+| Property paths; POST at edge only                     | BPC '24 §2.1.2    | *Adopt as corroboration* of allocation-orthogonality; second parent of the pattern-keyed router                                                    |
+| Connector taxonomy, ADL critique                      | BPC '24           | *Cite for context* — decline the wider program                                                                                                     |
+| Typing of combinators as open problem                 | SC '19 §9         | *The thesis's front door* — quote, take the interface-typing branch, own the trade                                                                 |
+
+* Standing risks when citing this corpus
+
+Single-author program, self-evaluated: attribute every empirical claim. Terminology drift across papers: "scheme handler" (2013) ≈ "store" (2019); "composite scheme" (2013) ≈ "combinator" (2019); Objective-Smalltalk (2013–20) becomes Objective-S (2024) — pick the 2019 vocabulary as canonical and note the aliases once. The Storage protocol is presented in Objective-Smalltalk pseudo-code with occasional typos and inconsistencies between figures (e.g., the 2019 CachingStore's ~at:~ is declared ~<void>~ yet returns a result); transcribe semantics, not listings. Finally, never cite the corpus for anything about types, contracts, concurrency, error semantics, allocation, or enumeration — it contains nothing on any of them, and implying otherwise is the fastest way to hand a reviewer a verifiable misattribution.

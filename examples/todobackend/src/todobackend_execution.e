@@ -13,22 +13,26 @@ create
 feature {NONE} -- Router
 
 	setup_router
-		local
-			l_collection: RESTLY_EWF_COLLECTION_HANDLER
-			l_element: RESTLY_EWF_ELEMENT_HANDLER
 		do
-			create l_collection.make (front)
-			map_uri_template_response ("/todos", l_collection, Void)
-			create l_element.make (front)
-			map_uri_template_response ("/todos/{id}", l_element, Void)
+			mount_resource ("/todos", todo_resource)
+			print_pipeline_graph
+		end
+
+feature {NONE} -- Diagnostics
+
+	print_pipeline_graph
+			-- Dump the composition as GraphViz dot (first request only).
+			-- Render with: dot -Tpdf
+		once
+			io.put_string (todo_resource.graph_description)
 		end
 
 feature -- Access
 
-	front: RESTLY_JSON_PIPELINE_FRONT [INTEGER, JSON_OBJECT]
+	todo_resource: RESTLY_JSON_RESOURCE
 			-- Shared across all request executions.
 		once
-			create Result.make (create {RESTLY_HASH_TABLE [INTEGER, JSON_OBJECT]}, create {RESTLY_INT_KEY_CONVERTER}, create {TODOBACKEND_CONVERTER})
+			create Result.make_with_converter (create {TODOBACKEND_CONVERTER})
 		end
 
 end

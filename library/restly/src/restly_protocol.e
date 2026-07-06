@@ -68,4 +68,34 @@ feature -- REST verbs
 			error_500_didnt_actually_delete: not has_key(k)
 		end
 
+feature -- Output
+
+	graph_description: STRING
+			-- Composition rooted at this store as a GraphViz digraph
+			-- (SC '19 §4 auto-diagrams; render with `dot -Tpdf').
+			-- `a -> b' reads "a is backed by b" — the inversion of
+			-- Weiher's source-to-front arrows.
+		do
+			create Result.make_from_string ("digraph restly {%Nrankdir=LR;%N")
+			Result.append (graph_dot_lines)
+			Result.append ("}%N")
+		end
+
+	graph_node_id: STRING
+			-- GraphViz node id, unique per object (address-based).
+		do
+			Result := "n" + ($Current).out
+		end
+
+	graph_dot_lines: STRING
+			-- Dot lines for this node and everything behind it.
+			-- Leaf default: a single labeled node; combinators
+			-- redefine to add their children and labeled edges.
+		do
+			create Result.make_from_string (graph_node_id)
+			Result.append (" [label=%"")
+			Result.append (generating_type.name)
+			Result.append ("%"];%N")
+		end
+
 end

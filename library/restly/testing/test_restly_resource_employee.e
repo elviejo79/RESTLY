@@ -34,13 +34,15 @@ feature -- Tests
 			assert ("name preserved", res ["alice"].name ~ "Alice")
 		end
 
-	test_item_id_is_hash_of_name
+	test_item_id_follows_converter_round_trip
+			-- The resource's stored id is whatever `conv's round trip yields.
 		local
-			name: STRING
+			e: EMPLOYEE
 		do
-			name := "Alice"
-			res.extend (create {EMPLOYEE}.make (name, 0), "alice")
-			assert ("id is hash of name", res ["alice"].employee_id = name.hash_code)
+			create e.make ("Alice", 0)
+			res.extend (e, "alice")
+			assert ("id follows round trip",
+				res ["alice"].employee_id = conv.to_representation (conv.to_store (e)).employee_id)
 		end
 
 	test_force_on_new_key
