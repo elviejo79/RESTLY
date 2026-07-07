@@ -1,7 +1,7 @@
 note
 	description: "[
-		Element endpoint handler.
-		Verbs: GET (one), PATCH, DELETE (one), OPTIONS.
+		Element verb provider.
+		Verbs: GET (one), PATCH, DELETE (one).
 	]"
 
 class
@@ -18,23 +18,7 @@ feature -- Access
 	id_parameter_name: STRING = "id"
 			-- URI template variable for the element key.
 
-feature {NONE} -- Dispatch
-
-	dispatch (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
-			-- <Precursor>
-		do
-			if req.is_get_request_method then
-				Result := get_one (req)
-			elseif req.is_request_method ("PATCH") then
-				Result := patch_one (req)
-			elseif req.is_delete_request_method then
-				Result := delete_one (req)
-			else
-				Result := {WSF_JSON_RESPONSE}.method_not_allowed
-			end
-		end
-
-feature {NONE} -- Verb handlers
+feature -- Verb handlers
 
 	get_one (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- GET /resource/{id}

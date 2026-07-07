@@ -211,8 +211,6 @@ feature -- Fluent setters
 
 	with_location (a_uri: STRING): like Current
 			-- Set Location header.
-		require
-			uri_not_empty: not a_uri.is_empty
 		do
 			header.put_location (a_uri)
 			Result := Current
@@ -220,8 +218,6 @@ feature -- Fluent setters
 
 	with_header (a_name, a_value: STRING): like Current
 			-- Add custom header.
-		require
-			name_not_empty: not a_name.is_empty
 		do
 			header.put_header (a_name + ": " + a_value)
 			Result := Current

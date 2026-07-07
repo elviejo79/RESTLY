@@ -1,7 +1,7 @@
 note
 	description: "[
-		Collection endpoint handler.
-		Verbs: GET (list), POST, DELETE (wipe_out), OPTIONS.
+		Collection verb provider.
+		Verbs: GET (list), POST, DELETE (wipe_out).
 	]"
 
 class
@@ -13,23 +13,7 @@ inherit
 create
 	make
 
-feature {NONE} -- Dispatch
-
-	dispatch (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
-			-- <Precursor>
-		do
-			if req.is_get_request_method then
-				Result := get_list (req)
-			elseif req.is_post_request_method then
-				Result := post_new (req)
-			elseif req.is_delete_request_method then
-				Result := delete_all (req)
-			else
-				Result := {WSF_JSON_RESPONSE}.method_not_allowed
-			end
-		end
-
-feature {NONE} -- Verb handlers
+feature -- Verb handlers
 
 	get_list (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- GET /resource — return all items as a JSON array.

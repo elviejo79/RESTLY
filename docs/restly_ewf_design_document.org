@@ -555,8 +555,9 @@ feature -- Components (explicit wiring at creation, decision 16)
 | Class                 | Responsibility                                              |
 |-----------------------+-------------------------------------------------------------|
 | =WSF_JSON_RESPONSE=   | ported + fixed (escaping, 204 body, make_with_body)         |
-| =RESTLY_EWF_SERVER=   | owns =WSF_ROUTER=; =mount_collection= / =mount_element=; CORS wiring |
-| =RESTLY_EWF_HANDLER=  | per-route verb dispatch; tag→status mapping; =url= patching |
+| =RESTLY_EWF_SERVER=   | owns =WSF_ROUTER=; =map_verb= route table; =mount_collection= / =mount_element= sugar |
+| =RESTLY_EWF_HANDLER=  | deferred verb-provider base: holds the pipeline front; JSON body parsing; =url= patching |
+| =RESTLY_EWF_ACTION_HANDLER= | adapts one verb agent to a WSF handler; tag→status mapping; CORS wiring |
 | =RESTLY_JSON_PIPELINE_FRONT= | concrete v1 front: =[STRING, JSON_OBJECT]= web side; =merge= = JSON merge (RFC 7386); =fresh_key= = auto-increment as STRING |
 
 *** Mount signatures (decided 2026-07-03, round 2)
@@ -579,6 +580,60 @@ mount_resource (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJ
   (=attached {RESTLY_EXTENDABLE [STRING, JSON_OBJECT]} a_storage=);
   they succeed because the front itself conforms (decision 16).
   A verb whose interface the mounted object lacks answers 405.
+
+*** RESTLY_EWF_ACTION_HANDLER (explicit route table, 2026-07-06)
+
+Routing was refactored from "one handler class per endpoint with an
+internal verb =if/elseif=" to an explicit route table: one
+=(template, methods, action)= row per verb, registered through
+
+#+begin_src eiffel
+map_verb (a_template: STRING; a_methods: WSF_REQUEST_METHODS;
+          an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])
+#+end_src
+
+Verb matching is now the router's job (the =WSF_REQUEST_METHODS=
+argument that was previously passed as =Void=).
+
+*What it does.* =RESTLY_EWF_ACTION_HANDLER= is the adapter between
+one verb agent and EWF's handler machinery. It holds a single
+=action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE]= and its
+=response= feature wraps the call with:
+
+1. the =rescue=/=retry= contract-to-HTTP mapping —
+   =status_from_tag= parses =error_NNN_description= assertion
+   labels into status codes, so a violated =error_404_not_found=
+   precondition in the pipeline becomes a real 404 (DbC /is/ the
+   error handling);
+2. CORS headers plus =Connection: close= on every response.
+
+*Where it is used.* Exactly one place: =RESTLY_EWF_SERVER.map_verb=
+creates one instance per route row. The todobackend therefore has 8
+instances: GET/POST/DELETE/OPTIONS on =/todos=,
+GET/PATCH/DELETE/OPTIONS on =/todos/{id}=.
+(=TEST_TAG_PARSER_HELPER= also inherits it to unit-test the tag
+parser.)
+
+*Why it is needed.* EWF's router does not dispatch to bare agents
+that /return/ responses — its native agent handler
+(=WSF_URI_TEMPLATE_AGENT_HANDLER=) takes a procedure that writes to
+=res= imperatively, and neither variant knows about rescue/retry or
+the contract-tag grammar. Before the refactor this envelope lived in
+the deferred =RESTLY_EWF_HANDLER= base, tangled with verb dispatch.
+With one route per verb the wrapper had to become route-shaped: one
+small class that wraps /any/ action in the same rescue/CORS
+envelope. Eiffel rescue clauses cannot be composed as agents, so a
+wrapping class is the only way to share it; without it every verb
+feature would duplicate its own =rescue= clause.
+
+*OPTIONS trap.* When routes carry explicit request methods, the
+router auto-answers preflight OPTIONS (=Allow= + CORS from the union
+of mapped verbs) — but that reply keeps the connection alive, and
+the standalone connector stalls ~5s on the next request of a reused
+socket (every preflighted verb then times out in the todobackend
+suite). OPTIONS is therefore mapped explicitly to
+=RESTLY_EWF_SERVER.preflight_ok=, which goes through the action
+handler and closes the connection like every other RESTLY response.
 
 *** Verb → required conformance (doubles as the 405 spec)
 

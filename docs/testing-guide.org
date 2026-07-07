@@ -43,6 +43,24 @@ TEST_SERVER_URL=http://localhost:8080/todos npm test
 AutoTest does not support filtering by test class or feature — it
 runs everything in the target.
 
+* Getting a dot graph of the architecture
+
+Every =RESTLY_PROTOCOL= has a =graph_description= query that returns
+the composition rooted at that store as GraphViz dot (an =a -> b=
+edge reads "a is backed by b"). The todobackend server prints its
+pipeline's graph to stdout on the first request, so:
+
+#+begin_example
+cd examples/todobackend
+./EIFGENs/todobackend_standalone/W_code/todobackend > server.log &
+curl -s http://localhost:8080/todos > /dev/null
+sed -n '/^digraph/,/^}/p' server.log > pipeline.dot
+dot -Tpdf pipeline.dot -o pipeline.pdf
+#+end_example
+
+For any other composition, print it directly:
+=io.put_string (my_store.graph_description)=.
+
 * ECF test target structure
 
 Each test target follows the same pattern:

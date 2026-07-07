@@ -52,11 +52,11 @@ feature -- Tests
 feature {NONE} -- Helpers
 
 	handler: TEST_TAG_PARSER_HELPER
-		local
-			l_table: RESTLY_HASH_TABLE [STRING, JSON_OBJECT]
 		once
-			create l_table
-			create Result.make (l_table)
+			create Result.make (agent (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
+				do
+					Result := {WSF_JSON_RESPONSE}.ok
+				end)
 		end
 
 end
