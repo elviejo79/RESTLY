@@ -1,8 +1,8 @@
 note
-	description: "Tests for RESTLY_EXTENDABLE via SAMPLE_FRONT."
+	description: "Tests for RESTLY_POSTABLE via SAMPLE_FRONT."
 
 class
-	TEST_RESTLY_EXTENDABLE
+	TEST_RESTLY_POSTABLE
 
 inherit
 	EQA_TEST_SET

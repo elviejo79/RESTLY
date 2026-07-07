@@ -1,7 +1,7 @@
 note
 	description: "[
 		The FRONT of a pipeline: the ONE home of the capability
-		interfaces (EXTENDABLE, PATCHABLE, TRAVERSABLE).
+		interfaces (POSTABLE, PATCHABLE, LISTABLE).
 		Everything behind it is pure RESTLY_PROTOCOL.
 		Holds store and both converters as explicit creation arguments.
 	]"
@@ -12,7 +12,7 @@ deferred class
 inherit
 	ANY
 
-	RESTLY_EXTENDABLE [KR, R]
+	RESTLY_POSTABLE [KR, R]
 		redefine
 			extend_new,
 			graph_dot_lines
@@ -23,7 +23,7 @@ inherit
 			graph_dot_lines
 		end
 
-	RESTLY_TRAVERSABLE [KR, R]
+	RESTLY_LISTABLE [KR, R]
 		redefine
 			graph_dot_lines
 		end
@@ -96,7 +96,7 @@ feature -- REST verbs
 			store.remove (key_converter.to_store (k))
 		end
 
-feature -- Extension (RESTLY_EXTENDABLE)
+feature -- Extension (RESTLY_POSTABLE)
 
 	extend_new (a_v: R; a_request_id: HASHABLE)
 			-- <Precursor>
@@ -112,7 +112,7 @@ feature -- Extension (RESTLY_EXTENDABLE)
 			end
 		end
 
-feature -- Traversal (RESTLY_TRAVERSABLE)
+feature -- Listing (RESTLY_LISTABLE)
 
 	new_cursor: V_MAP_ITERATOR [KR, R]
 			-- Materialized snapshot of the inner storage with converted keys/values.
@@ -158,10 +158,10 @@ feature -- Output
 
 feature {NONE} -- Implementation
 
-	store_traversable: RESTLY_TRAVERSABLE [KS, S]
+	store_traversable: RESTLY_LISTABLE [KS, S]
 			-- Store as traversable.
 		do
-			check attached {RESTLY_TRAVERSABLE [KS, S]} store as l_trav then
+			check attached {RESTLY_LISTABLE [KS, S]} store as l_trav then
 				Result := l_trav
 			end
 		end

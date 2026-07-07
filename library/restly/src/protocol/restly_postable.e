@@ -5,7 +5,7 @@ note
 	]"
 
 deferred class
-	RESTLY_EXTENDABLE [K -> HASHABLE, V]
+	RESTLY_POSTABLE [K -> HASHABLE, V]
 
 inherit
 	RESTLY_PROTOCOL [K, V]

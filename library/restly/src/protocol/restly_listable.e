@@ -6,7 +6,7 @@ note
 	]"
 
 deferred class
-	RESTLY_TRAVERSABLE [K -> HASHABLE, V]
+	RESTLY_LISTABLE [K -> HASHABLE, V]
 
 inherit
 	RESTLY_PROTOCOL [K, V]

@@ -2,7 +2,7 @@ note
 	description: "[
 		Mixin: partial update of an existing entry.
 		The patch is a PARTIAL VALUE of the same representation type.
-		No RESTLY_MERGEABLE constraint on V.
+		No constraint on V.
 		Inherit alongside RESTLY_PROTOCOL [K, V].
 	]"
 

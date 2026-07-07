@@ -1,8 +1,8 @@
 note
-	description: "Tests for RESTLY_TRAVERSABLE via RESTLY_HASH_TABLE."
+	description: "Tests for RESTLY_LISTABLE via RESTLY_HASH_TABLE."
 
 class
-	TEST_RESTLY_TRAVERSABLE
+	TEST_RESTLY_LISTABLE
 
 inherit
 	EQA_TEST_SET

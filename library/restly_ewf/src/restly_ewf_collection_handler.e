@@ -22,7 +22,7 @@ feature -- Verb handlers
 			l_obj: JSON_OBJECT
 		do
 			create l_array.make_empty
-			if attached {RESTLY_TRAVERSABLE [STRING, JSON_OBJECT]} storage as l_trav then
+			if attached {RESTLY_LISTABLE [STRING, JSON_OBJECT]} storage as l_trav then
 				across l_trav as ic loop
 					l_obj := ic
 					patch_url (l_obj, @ ic.key, req)
@@ -46,7 +46,7 @@ feature -- Verb handlers
 			end
 			l_request_id.append_character ('_')
 			l_request_id.append_integer (l_json.hash_code)
-			if attached {RESTLY_EXTENDABLE [STRING, JSON_OBJECT]} storage as l_ext then
+			if attached {RESTLY_POSTABLE [STRING, JSON_OBJECT]} storage as l_ext then
 				l_ext.extend_new (l_json, l_request_id)
 				check attached l_ext.extend_requests [l_request_id] as l_new_key then
 					l_key := l_new_key
@@ -64,7 +64,7 @@ feature -- Verb handlers
 	delete_all (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- DELETE /resource — wipe all items.
 		do
-			if attached {RESTLY_TRAVERSABLE [STRING, JSON_OBJECT]} storage as l_trav then
+			if attached {RESTLY_LISTABLE [STRING, JSON_OBJECT]} storage as l_trav then
 				l_trav.wipe_out
 			end
 			Result := {WSF_JSON_RESPONSE}.ok.with_body ("[]")
