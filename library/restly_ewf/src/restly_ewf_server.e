@@ -16,42 +16,30 @@ inherit
 
 feature -- Mounting
 
-	map_verb (a_template: STRING; a_methods: WSF_REQUEST_METHODS; an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])
+	map_verb (a_template: URI_TEMPLATE; a_methods: WSF_REQUEST_METHODS; an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])
 			-- Route `a_methods' requests on `a_template' to `an_action'.
 		do
-			map_uri_template_response (a_template, create {RESTLY_EWF_ACTION_HANDLER}.make (an_action), a_methods)
+			map_uri_template_response (a_template.template, create {RESTLY_EWF_ACTION_HANDLER}.make (an_action), a_methods)
 		end
 
-	mount_collection (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
-			-- Mount collection verbs (GET list, POST, DELETE all) at `a_template`.
+	mount_resource (a_collection: URI_TEMPLATE; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
+			-- Collection at `a_template`, element at `a_template + "/{id}"`.
 		local
-			l_collection: RESTLY_EWF_COLLECTION_HANDLER
+      l_handler: RESTLY_EWF_HANDLER
+      l_single_element_uri:URI_TEMPLATE
 		do
-			create l_collection.make (a_storage)
-			map_verb (a_template, router.methods_get, agent l_collection.get_list)
-			map_verb (a_template, router.methods_post, agent l_collection.post_new)
-			map_verb (a_template, router.methods_delete, agent l_collection.delete_all)
-			map_verb (a_template, router.methods_options, agent preflight_ok)
-		end
+         l_single_element_uri := a_collection.template + "/{id}"
+         create l_handler.make (a_storage)
+            
+         map_verb (a_collection, router.methods_get, agent l_handler.get_list)
+			map_verb (a_collection, router.methods_post, agent l_handler.post_new)
+			map_verb (a_collection, router.methods_delete, agent l_handler.delete_all)
+			map_verb (a_collection, router.methods_options, agent preflight_ok)
+			map_verb (l_single_element_uri, router.methods_get, agent l_handler.get_one)
+			map_verb (l_single_element_uri, methods_patch, agent l_handler.patch_one)
+			map_verb (l_single_element_uri, router.methods_delete, agent l_handler.delete_one)
+			map_verb (l_single_element_uri, router.methods_options, agent preflight_ok)
 
-	mount_element (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
-			-- Mount element verbs (GET one, PATCH, DELETE one) at `a_template`.
-		local
-			l_element: RESTLY_EWF_ELEMENT_HANDLER
-		do
-			create l_element.make (a_storage)
-			map_verb (a_template, router.methods_get, agent l_element.get_one)
-			map_verb (a_template, methods_patch, agent l_element.patch_one)
-			map_verb (a_template, router.methods_delete, agent l_element.delete_one)
-			map_verb (a_template, router.methods_options, agent preflight_ok)
-		end
-
-	mount_resource (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
-			-- Rails-resources sugar: collection at `a_template`,
-			-- element at `a_template + "/{id}"`.
-		do
-			mount_collection (a_template, a_storage)
-			mount_element (a_template + "/{id}", a_storage)
 		end
 
 feature {NONE} -- Implementation

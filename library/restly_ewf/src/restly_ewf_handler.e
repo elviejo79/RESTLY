@@ -1,12 +1,15 @@
 note
 	description: "[
-		Deferred base for RESTLY-EWF verb providers.
+		Verb provider for RESTLY-EWF routes.
 		Holds the backing pipeline and shared JSON/url helpers.
 		Verb features are mapped per route via {RESTLY_EWF_ACTION_HANDLER}.
 	]"
 
-deferred class
+class
 	RESTLY_EWF_HANDLER
+
+create
+	make
 
 feature {NONE} -- Initialization
 
@@ -20,6 +23,117 @@ feature -- Access
 
 	storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT]
 			-- Backing pipeline.
+
+	id_parameter_name: STRING = "id"
+			-- URI template variable for the element key.
+
+feature -- Collection verbs
+
+	get_list (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- GET /resource — return all items as a JSON array.
+		local
+			l_array: JSON_ARRAY
+			l_obj: JSON_OBJECT
+		do
+			create l_array.make_empty
+			if attached {RESTLY_LISTABLE [STRING, JSON_OBJECT]} storage as l_list then
+				across l_list as ic loop
+					l_obj := ic
+					patch_url (l_obj, req.absolute_script_url (req.request_uri.to_string_8 + "/" + @ ic.key))
+					l_array.extend (l_obj)
+				end
+			end
+			Result := {WSF_JSON_RESPONSE}.ok.with_body (l_array.representation)
+		end
+
+	post_new (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- POST /resource — create a new item.
+		local
+			l_json: JSON_OBJECT
+			l_key: STRING
+			l_request_id: STRING
+			l_element_url: STRING
+		do
+			l_json := parse_json_body (req)
+			create l_request_id.make (36)
+			if attached req.request_time as l_time then
+				l_request_id.append (l_time.out)
+			end
+			l_request_id.append_character ('_')
+			l_request_id.append_integer (l_json.hash_code)
+			if attached {RESTLY_POSTABLE [STRING, JSON_OBJECT]} storage as l_post then
+				l_post.extend_new (l_json, l_request_id)
+				check attached l_post.extend_requests [l_request_id] as l_new_key then
+					l_key := l_new_key
+				end
+				l_json := storage [l_key]
+				l_element_url := req.absolute_script_url (req.request_uri.to_string_8 + "/" + l_key)
+				patch_url (l_json, l_element_url)
+				Result := {WSF_JSON_RESPONSE}.created
+					.with_json_object (l_json)
+					.with_location (l_element_url)
+			else
+				Result := {WSF_JSON_RESPONSE}.method_not_allowed
+			end
+		end
+
+	delete_all (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- DELETE /resource — wipe all items.
+		do
+			if attached {RESTLY_LISTABLE [STRING, JSON_OBJECT]} storage as l_list then
+				l_list.wipe_out
+			end
+			Result := {WSF_JSON_RESPONSE}.ok.with_body ("[]")
+		end
+
+feature -- Element verbs
+
+	get_one (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- GET /resource/{id}
+		local
+			l_key: STRING
+			l_obj: JSON_OBJECT
+		do
+			l_key := element_key (req)
+			if storage.has_key (l_key) then
+				l_obj := storage [l_key]
+				patch_url (l_obj, req.absolute_script_url (req.request_uri.to_string_8))
+				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (l_obj)
+			else
+				Result := {WSF_JSON_RESPONSE}.not_found
+			end
+		end
+
+	patch_one (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- PATCH /resource/{id}
+		local
+			l_key: STRING
+			l_patch: JSON_OBJECT
+			l_result_obj: JSON_OBJECT
+		do
+			l_key := element_key (req)
+			if storage.has_key (l_key) and then attached {RESTLY_PATCHABLE [STRING, JSON_OBJECT]} storage as l_patchable then
+				l_patch := parse_json_body (req)
+				l_patchable.merge (l_patch, l_key)
+				l_result_obj := storage [l_key]
+				patch_url (l_result_obj, req.absolute_script_url (req.request_uri.to_string_8))
+				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (l_result_obj)
+			else
+				Result := {WSF_JSON_RESPONSE}.not_found
+			end
+		end
+
+	delete_one (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- DELETE /resource/{id}
+		local
+			l_key: STRING
+		do
+			l_key := element_key (req)
+			if storage.has_key (l_key) then
+				storage.remove (l_key)
+			end
+			Result := {WSF_JSON_RESPONSE}.no_content
+		end
 
 feature {NONE} -- Helpers
 
@@ -40,18 +154,20 @@ feature {NONE} -- Helpers
 			end
 		end
 
-	patch_url (a_obj: JSON_OBJECT; a_key: STRING; req: WSF_REQUEST)
-			-- Add/replace "url" field with the absolute URL for this element.
-		local
-			l_url: STRING
+	patch_url (a_obj: JSON_OBJECT; a_url: STRING)
+			-- Add/replace "url" field with `a_url'.
 		do
-			l_url := req.absolute_script_url (element_uri (a_key, req))
-			a_obj.replace_with_string (l_url, "url")
+			a_obj.replace_with_string (a_url, "url")
 		end
 
-	element_uri (a_key: STRING; req: WSF_REQUEST): STRING
-			-- URI for an element with `a_key' based on the current request.
-		deferred
+	element_key (req: WSF_REQUEST): STRING
+			-- Extract the element key from the URI template match.
+		do
+			if attached {WSF_STRING} req.path_parameter (id_parameter_name) as l_str then
+				Result := l_str.string_representation.to_string_8
+			else
+				Result := ""
+			end
 		end
 
 end
