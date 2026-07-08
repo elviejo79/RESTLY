@@ -1,0 +1,253 @@
+#+TITLE: Lessons: Making RESTLY_HTTP_CLIENT Actually Talk HTTP
+#+DATE: 2026-07-07
+
+* The symptom
+
+Every request made through the Eiffel HTTP client stack returned:
+
+#+begin_example
+status: 0
+error_occurred: False
+body: (empty)
+#+end_example
+
+No exception, no error flag — just silence. Against httpbin.org and
+against localhost, with both ~DEFAULT_HTTP_CLIENT~ and
+~CURL_HTTP_CLIENT~, in the AutoTest harness and in a standalone
+binary. Yet the same libcurl had worked in the past (GitHub API
+client), and command-line ~curl~ worked fine on the machine.
+
+* The decisive experiment: a minimal probe project
+
+After hypotheses piled up (missing libcurl.so symlink? broken process
+spawning? AutoTest interference?), the thing that cut through was a
+throwaway project in =/tmp/curlprobe=: one ECF, one class, one GET.
+
+- Own ECF with ~<concurrency support="thread" use="thread"/>~
+- ~LIBCURL_HTTP_CLIENT~, one ~session.get~, print status/body
+
+It worked immediately (status 200). That split the world in two:
+*the environment was fine; the project configuration was broken.*
+
+Lesson: when a library "doesn't work", a ten-line probe project with
+its own ECF isolates environment-vs-configuration in minutes, and is
+cheaper than reading wrapper source code for hours.
+
+* Root cause 1: ~concurrency support="none"~ silently disables libcurl
+
+=restly.ecf= declared:
+
+#+begin_src xml
+<capability>
+  <concurrency support="none"/>
+</capability>
+#+end_src
+
+Under a none-concurrency build:
+
+- The Eiffel cURL wrapper's calls *no-op silently* — status 0,
+  ~error_occurred: False~, empty body. No error is ever raised.
+- Spawned-process stdout capture also degrades: exit codes work
+  (which is why ~session.is_available~ returned True — cruelly
+  misleading), but captured output is empty. This is why the
+  command-line ~CURL_HTTP_CLIENT~ backend failed the same way.
+- Thread-only libraries (=process.ecf=, and the conditional includes
+  inside =curl_http_client.ecf=) are dropped from the universe, which
+  showed up as baffling VTCT "unknown class BASE_PROCESS" errors.
+
+The fix: raise concurrency to thread. But ECF capabilities *cascade* —
+every client of a thread library must itself declare thread, or you
+get VD01 ("supplier Thread insufficient for client None"):
+
+| ECF                        | capability                                    |
+|----------------------------+-----------------------------------------------|
+| library/restly/restly.ecf  | ~support="thread"~ (tests: ~use="thread"~)    |
+| library/restly_ewf/…       | ~support="thread"~                            |
+| examples/todobackend/…     | ~support="thread" use="thread"~               |
+
+Lesson: ~support="none"~ is not a harmless default. It changes which
+clusters exist and how C wrappers behave, and the failure mode is
+silence, not an error.
+
+* Root cause 2: unrouted HEAD flattens status to 200
+
+~RESTLY_HTTP_CLIENT.has_key~ maps to HTTP HEAD. The server never
+mapped HEAD; ~WSF_ROUTER~'s automatic HEAD→GET fallback ran the GET
+handler but *flattened the status to 200* — the body length showed the
+handler's real answer (404 JSON, 34 bytes) while the status line lied.
+So ~has_key~ said True for everything.
+
+Fix, in =restly_ewf_server.e= ~mount_resource~: map HEAD explicitly to
+the same GET agents using the router's ready-made combined method set:
+
+#+begin_src eiffel
+map_verb (a_collection, router.methods_head_get, agent l_handler.get_list)
+map_verb (l_single_element_uri, router.methods_head_get, agent l_handler.get_one)
+#+end_src
+
+Lesson: don't trust framework auto-fallbacks for semantically loaded
+verbs. If ~has_key~ = HEAD, HEAD must travel through your own handler
+so the 404 survives. Diagnosis trick: compare ~Content-Length~ against
+the status — a 200 with a 404-sized body is a routing layer lying.
+
+* Root cause 3: ~once~ is once-per-THREAD
+
+After enabling thread concurrency the server "lost" every POSTed item:
+POST returned 201 with a valid Location, the immediate echo body was
+correct, and the very next GET on that URL was 404.
+
+~TODOBACKEND_EXECUTION.todo_resource~ was a plain ~once~. Under thread
+concurrency each connection thread gets *its own* once — so each
+request ran against its own fresh, empty store.
+
+Fix:
+
+#+begin_src eiffel
+todo_resource: RESTLY_JSON_RESOURCE
+		-- Shared across all request executions.
+	once ("PROCESS")
+		create Result.make_with_converter (create {TODOBACKEND_CONVERTER})
+	end
+#+end_src
+
+Lesson: code that relied on plain ~once~ for shared server state was
+only correct by accident under ~support="none"~ (single thread).
+Changing the concurrency capability changes ~once~ semantics — audit
+every server-side ~once~ when you flip that switch.
+
+* Where the client landed
+
+~RESTLY_HTTP_CLIENT.proxy~ uses ~LIBCURL_HTTP_CLIENT~ (from
+=libcurl_http_client.ecf=), not the command-line ~CURL_HTTP_CLIENT~.
+The command-line backend was only ever a workaround attempt for root
+cause 1 and is no longer needed.
+
+* Verification
+
+- 72/72 Eiffel tests pass (~ec -batch -config ./restly.ecf -tests~),
+  including all six ~TEST_RESTLY_HTTP_CLIENT~ tests: HEAD/GET/DELETE
+  against the local todobackend, seeded via raw POST.
+- 16/16 external npm todobackend suite passes
+  (~TEST_SERVER_URL=http://localhost:8080/todos npm test~).
+
+* Typed keys: from STRING to RESTLY_URI_PATH
+
+~RESTLY_HTTP_CLIENT~ started as ~RESTLY_PROTOCOL [STRING, STRING]~.
+But not every string is a legal key for an HTTP client — only relative
+uri-paths like =/my_dir/my_page.php?my_var=value= make sense, and a
+key like =http://other-host/x= would be silently reinterpreted against
+~base_url~. The type system should say so.
+
+** Candidate 1: ~URI~ — rejected
+
+The obvious type, but ~RESTLY_PROTOCOL~ constrains ~K -> HASHABLE~ and
+{URI} inherits only ~ANY~ — it is *not* HASHABLE. Using it would have
+required a wrapper descendant just to add ~hash_code~.
+
+** Candidate 2: ~URI_TEMPLATE~ — chosen
+
+{URI_TEMPLATE} (contrib =uri_template.ecf=) already inherits
+~HASHABLE~ (~hash_code~ delegates to ~template.hash_code~), treats the
+template as an opaque string (so "no foreign host" is just a shape
+constraint on the string), and gives symmetry: the server side already
+mounts routes with ~URI_TEMPLATE~ keys. Client keys and server routes
+are now the same family of type.
+
+The descendant:
+
+#+begin_src eiffel
+class
+	RESTLY_URI_PATH
+
+inherit
+	URI_TEMPLATE
+
+create
+	make,
+	make_from_uri_template
+
+convert
+	make ({READABLE_STRING_8, STRING_8}),
+	template: {READABLE_STRING_8}
+
+invariant
+	key_is_relative_reference: True
+			-- TODO(owner): contract
+			-- suggested: template.starts_with ("/") and not template.starts_with ("//")
+
+end
+#+end_src
+
+The client now inherits ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~.
+Once the owner fills in the invariant, a foreign-host key dies at
+object creation — the DbC version of the rule — instead of producing a
+confusing remote 404.
+
+* Convertibility: both directions, zero friction
+
+The ~convert~ clause above is bidirectional, and it is what keeps the
+typed key ergonomic:
+
+- ~make ({READABLE_STRING_8, STRING_8})~ — conversion *from* strings.
+  Test code like ~api.has_key ("/todos/999999")~ and
+  ~api [seeded_path]~ compiles unchanged; the string converts to a
+  ~RESTLY_URI_PATH~ at the call site (invariant checked at creation).
+- ~template: {READABLE_STRING_8}~ — conversion *to* strings. Every
+  ~HTTP_CLIENT_SESSION~ verb takes ~a_path: READABLE_STRING_8~, so
+  ~proxy.head (k, ctx)~ works directly — no ~k.template~ unwrapping
+  anywhere in the client.
+
+One constraint is real: the conversion query's result type must
+conform to the listed target, so ~template~ (a ~READABLE_STRING_8~)
+can convert to ~{READABLE_STRING_8}~ but not to ~{STRING}~.
+
+** A wrong claim, corrected empirically
+
+During this work the claim "Eiffel forbids the same type in both
+convert directions" was made — and it is *false*. Listing
+~READABLE_STRING_8~ both in ~make (...)~ and as ~template~'s target
+compiles clean (EiffelStudio 25.12) and all 72 tests pass. The
+misremembered rule is ECMA's *conversion asymmetry*, which is about
+something else:
+
+- What is actually forbidden: defining the *same direction* twice,
+  once in each class. If ~RESTLY_URI_PATH~ declared
+  ~template: {READABLE_STRING_8}~ *and* ~READABLE_STRING_8~ declared
+  ~make_from_path ({RESTLY_URI_PATH})~, the attachment ~s := p~ would
+  have two competing recipes — rejected by the validity rules.
+- What is allowed: mutual convertibility A ⇄ B, one definition per
+  direction — even both declared in the same class, as here. The
+  standard library does the same (~STRING_8~ ⇄ ~STRING_32~).
+
+Things to keep in mind when both directions exist:
+
+1. Conversion is an attachment-time factory, not a cast — round trips
+   create *new* objects, reference identity is not preserved.
+2. Round trips can be lossy (~STRING_32 → STRING_8 → STRING_32~ mangles
+   Unicode). Safe here only because ~template~ *is* the whole essence
+   of the object.
+3. Conversion fires only on attachment (assignment, argument passing)
+   — never on ~~~ / ~=~ comparisons, ~inspect~, or dynamic binding,
+   and it never chains.
+4. Conformance and conversion are mutually exclusive for a pair:
+   "is-a" and "can-be-made-into" cannot both hold.
+
+Lesson: when unsure about a validity rule, a two-line edit and a
+compile settles it faster (and more honestly) than quoting memory.
+
+* Debugging morals, in order of value
+
+1. Build a minimal probe project first, not last. It answers
+   "environment or configuration?" decisively.
+2. Silent zero is a configuration smell. A real network failure sets
+   error flags; ~status 0~ + ~error_occurred: False~ means the call
+   never happened.
+3. Read the exact status codes side by side (~curl -I~ vs ~curl~,
+   missing vs existing keys). The 200-with-404-body contradiction
+   pointed straight at the routing layer.
+4. One capability flag (~concurrency~) produced three *different*
+   failures: no-op libcurl, dropped classes (VTCT), and — after fixing
+   it — per-thread state loss. Config changes deserve the same
+   root-cause discipline as code changes.
+5. Language-lawyer claims are testable code. The "no type in both
+   convert directions" belief died in one compile.

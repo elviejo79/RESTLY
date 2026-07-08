@@ -23,7 +23,7 @@ feature {NONE} -- Diagnostics
 	print_pipeline_graph
 			-- Dump the composition as GraphViz dot (first request only).
 			-- Render with: dot -Tpdf
-		once
+		once ("PROCESS")
 			io.put_string (todo_resource.graph_description)
 		end
 
@@ -31,7 +31,9 @@ feature -- Access
 
 	todo_resource: RESTLY_JSON_RESOURCE
 			-- Shared across all request executions.
-		once
+			-- once ("PROCESS"): plain `once' is once-per-thread, so each
+			-- connection thread would get its own empty store.
+		once ("PROCESS")
 			create Result.make_with_converter (create {TODOBACKEND_CONVERTER})
 		end
 

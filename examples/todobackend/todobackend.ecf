@@ -3,7 +3,7 @@
 	<target name="todobackend_standalone">
 		<root class="TODOBACKEND_SERVER" feature="make"/>
 		<capability>
-			<concurrency support="none"/>
+			<concurrency support="thread" use="thread"/>
 		</capability>
 		<file_rule>
 			<exclude>/EIFGENs$</exclude>

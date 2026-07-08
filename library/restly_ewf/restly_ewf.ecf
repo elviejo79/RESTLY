@@ -3,7 +3,7 @@
 	<target name="restly_ewf">
 		<root all_classes="true"/>
 		<capability>
-			<concurrency support="none"/>
+			<concurrency support="thread"/>
 		</capability>
 		<file_rule>
 			<exclude>/EIFGENs$</exclude>
