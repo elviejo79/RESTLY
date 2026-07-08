@@ -19,8 +19,17 @@ feature {NONE} -- Initialization
 
 	make_with_url (a_base_url: STRING)
 			-- Initialize with base URL `a_base_url`.
+		local
+			http_client: LIBCURL_HTTP_CLIENT
 		do
 			base_url := a_base_url
+			create http_client
+			proxy := http_client.new_session (a_base_url)
+			proxy.set_timeout (10)
+			proxy.set_connect_timeout (30)
+			create context_proxy.make
+			context_proxy.set_credentials_required (False)
+			context_proxy.add_header ("User-Agent", "Eiffel RESTLY HTTP Client")
 		end
 
 feature -- Access
@@ -82,20 +91,8 @@ feature {NONE} -- Implementation
 	proxy: HTTP_CLIENT_SESSION
 			-- Session against `base_url`.
 			-- Needs thread concurrency: libcurl no-ops under support="none".
-		local
-			http_client: LIBCURL_HTTP_CLIENT
-		once
-			create http_client
-			Result := http_client.new_session (base_url)
-			Result.set_timeout (10)
-			Result.set_connect_timeout (30)
-		end
 
 	context_proxy: HTTP_CLIENT_REQUEST_CONTEXT
-		once
-			create Result.make
-			Result.set_credentials_required (False)
-			Result.add_header ("User-Agent", "Eiffel RESTLY HTTP Client")
-		end
+			-- Default request context (no credentials, RESTLY user agent).
 
 end
