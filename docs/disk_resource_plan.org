@@ -1,0 +1,97 @@
+#+TITLE: RESTLY_DIRECTORY: Filesystem-Backed Store
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-08
+#+OPTIONS: toc:2 num:t
+
+* Context
+
+RESTLY has one edge resource so far: ~RESTLY_HTTP_CLIENT~ (store over the wire). This adds the second scheme's resource --- a directory on disk --- realizing the ~RESTLY_DIRECTORY~ / ~RESTLY_FILE~ fragment of =scheme_handlers_design.org= without the registry/FILE_SCHEME machinery (same way the HTTP client was built before its scheme handler).
+
+* Decisions
+
+- ~RESTLY_DIRECTORY~ inherits ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~ --- ~"[]"~ returns file contents only.
+- Root: *strict* ~file:///~ URI, typed via the URI_TEMPLATE library (HASHABLE, validated structure) --- a new ~RESTLY_FILE_URI~ descendant, same pattern as ~RESTLY_URI_PATH~. String call sites still work through the convert clause. Being HASHABLE, it is also the future identity-map memo key (design doc Decision 1).
+- Navigation: ~subdirectory alias "/" (a_segment): RESTLY_DIRECTORY~ (doc's ruling; the ~Disk["/sub/"].as_subdir~ shape was rejected by the doc's own trailing-slash ruling).
+- Listing: ~entries: ITERABLE [RESTLY_FILE_NODE]~ view query --- NOT the ~RESTLY_LISTABLE~ mixin (it inherits ~RESTLY_PROTOCOL~, would force V=node -> incoherent ~force~; doc open problem 7).
+- ~RESTLY_FILE~: plain CELL-shaped leaf (~item~/~put~/~exists~/~remove~), not protocol-conforming.
+- V = STRING confirmed (bytes): writes decide it --- ~force~ of a handle is incoherent, and composition (~RESTLY_CACHE~, converters, ~github.cached_by (disk)~) needs V matching ~RESTLY_HTTP_CLIENT~. ~RESTLY_FILE~ appears only in navigation/traversal, never as protocol value.
+- ~force~/~put~ with missing parent directory or key naming an existing subdirectory: *owner-precondition ~error_409_conflict~* (WebDAV RFC 4918 S9.7.1 precedent --- PUT does not create intermediate collections). No auto-mkdir.
+
+* Files (implementation order)
+
+All new; ~src/~ and ~testing/~ clusters are recursive --- auto-discovered.
+
+1. =library/restly/src/resource/restly_file_uri.e= --- Layer-A absolute identifier (first one)
+   - mirrors ~restly_uri_path.e~: inherit ~URI_TEMPLATE~; create ~make~, ~make_from_uri_template~; convert ~make ({READABLE_STRING_8, STRING_8})~ and ~template: {READABLE_STRING_8}~
+   - invariant ~names_a_local_directory: True -- TODO(owner): contract -- suggested: template.starts_with ("file:///")~
+2. =library/restly/src/resource/restly_file_node.e= --- deferred ancestor
+   - ~path: STRING~ (absolute), ~name: STRING~ (last segment, computed), ~exists: BOOLEAN~ deferred
+   - invariant ~path_is_absolute: True -- TODO(owner): contract~
+3. =library/restly/src/resource/restly_file.e= --- leaf
+   - ~make_with_path (a_path: STRING)~
+   - ~item: STRING~ via ~RAW_FILE.make_open_read~ + ~read_stream (f.count)~ + ~last_string~ (byte-faithful; ~PLAIN_TEXT_FILE~ would newline-translate)
+   - ~put (v: STRING)~ via ~make_open_write~ + ~put_string~; ~exists~ via ~f.exists and then f.is_plain~; ~remove~ via ~f.delete~
+4. =library/restly/src/resource/restly_directory.e=
+   - inherit ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~ + ~RESTLY_FILE_NODE~ + ~ANY~ (explicit ~ANY~ supplies the concrete ~copy~/~out~/~default_create~ that ~RESTLY_PROTOCOL~ undefines)
+   - create ~make_with_base_url (a_url: RESTLY_FILE_URI)~ --- path = template minus ~file://~ prefix, trailing ~/~ dropped; validation lives in ~RESTLY_FILE_URI~'s (owner) invariant --- and ~make_with_path (a_path: STRING)~ (public --- tests and future FILE_SCHEME both need it)
+   - verbs over ~file_system_path (k) = path + k.template~ (keys carry leading ~/~ per ~RESTLY_URI_PATH~ invariant): ~has_key~ = exists and is_plain, ~item~ = read, ~force~/~put~/~extend~ = write (~put~/~extend~ delegate to ~force~; differing contracts are inherited from ~RESTLY_PROTOCOL~), ~remove~ = delete
+   - ~subdirectory alias "/" (a_segment: STRING): RESTLY_DIRECTORY~ -> ~create Result.make_with_path (path + "/" + a_segment)~; suggested tags ~error_404_not_found~ / ~error_409_conflict~
+   - ~entries: ITERABLE [RESTLY_FILE_NODE]~: ~DIRECTORY.make_with_name (path)~, iterate ~d.entries~ (skip ~PATH.is_current_symbol~/~is_parent_symbol~), per entry create ~RESTLY_DIRECTORY~ if ~RAW_FILE.is_directory~ else ~RESTLY_FILE~, collect in ~ARRAYED_LIST~ (ITERABLE via CONTAINER). Eager node list, lazy contents --- bytes read only at ~RESTLY_FILE.item~.
+5. =library/restly/testing/test_restly_directory.e= --- ~EQA_TEST_SET~, fixture style of =testing/test_restly_cache.e=
+   - fixture creates the store with a string converting to ~RESTLY_FILE_URI~: ~create dir.make_with_base_url ("file://" + sandbox_path + "/")~ --- exercises the convert clause
+   - sandbox under ~/tmp~ with uniquifier; create via ~DIRECTORY.recursive_create_dir~, teardown via ~recursive_delete~
+
+* Contract policy
+
+All require/ensure/invariant clauses: placeholder ~True~ + ~-- TODO(owner): contract~ with suggested expression in comment, tags per the ~error_NNN_description~ grammar. ~item~/~remove~/~extend~ preconditions are inherited from ~RESTLY_PROTOCOL~ --- add nothing there.
+
+* Recorded ceilings (v1, deliberate)
+
+- *Path traversal:* ~dir ["/../x"]~ escapes the root --- a real trust boundary, parallel to ~RESTLY_URI_PATH~'s no-foreign-host rule. Surface as a prominent owner-contract suggestion (~not k.template.has_substring ("..")~ plus no ~{~/~?~) on the verb preconditions, not buried in ~file_system_path~.
+- *Percent-encoding:* templates are opaque; ~%%20~ lands literally in filesystem paths. Spaces/Unicode filenames unsupported --- note in class description.
+- *Node->key asymmetry:* ~entries~ nodes carry absolute paths; the protocol key for a node is reconstructed as ~"/" + node.name~. Acceptable; document it on ~entries~.
+- *remove is file-only* (inherited ~has_key~ precondition excludes directories) --- deviation from the doc's kind-agnostic remove, deliberate for v1.
+
+* Explicitly skipped (add when the scheme-handler layer lands)
+
+FILE_SCHEME factory + identity map; ~create_subdirectory~ (MKCOL); typed ~file (name)~/~node (name)~ accessors; LISTABLE/traversable decoupling (doc open problem 7).
+
+* Test cases
+
+Fixture: sandbox dir under ~/tmp/restly_test_<uniquifier>~, created fresh per test, ~recursive_delete~ on teardown. Store created via string->~RESTLY_FILE_URI~ conversion.
+
+| Test                                    | Given                         | When                                  | Then                                                       |
+|-----------------------------------------+-------------------------------+---------------------------------------+------------------------------------------------------------|
+| ~test_force_then_item_roundtrip~        | empty sandbox                 | ~dir.force ("hello", "/a.txt")~       | ~dir ["/a.txt"] ~ "hello"~                                 |
+| ~test_has_key_false_for_missing~        | empty sandbox                 | ---                                   | ~not dir.has_key ("/nope.txt")~                            |
+| ~test_has_key_true_after_force~         | force ~/a.txt~                | ---                                   | ~dir.has_key ("/a.txt")~                                   |
+| ~test_has_key_false_for_subdirectory~   | subdir ~sub~ exists on disk   | ---                                   | ~not dir.has_key ("/sub")~ (keys name files)               |
+| ~test_extend_creates_fresh_key~         | empty sandbox                 | ~dir.extend ("v", "/new.txt")~        | ~has_key~ and roundtrip                                    |
+| ~test_put_overwrites_existing~          | force ~"v1"~ at ~/a.txt~     | ~dir.put ("v2", "/a.txt")~            | ~dir ["/a.txt"] ~ "v2"~                                   |
+| ~test_remove_deletes~                   | force ~/a.txt~                | ~dir.remove ("/a.txt")~              | ~not dir.has_key ("/a.txt")~; file gone on disk            |
+| ~test_subdirectory_read_through~        | subdir ~sub~ created on disk  | ~(dir / "sub").force ("x", "/f.txt")~ | ~dir ["/sub/f.txt"] ~ "x"~ (both access paths agree)      |
+| ~test_slash_alias_equals_subdirectory~  | subdir ~sub~                  | ---                                   | ~(dir / "sub").path ~ dir.subdirectory ("sub").path~       |
+| ~test_entries_yields_both_kinds~        | 1 file + 1 subdir in sandbox  | iterate ~dir.entries~                 | exactly one ~{RESTLY_FILE}~, one ~{RESTLY_DIRECTORY}~, total 2 |
+| ~test_entries_file_node_reads_contents~ | file ~/a.txt~ = ~"hello"~    | find its node in ~entries~            | ~node.item ~ "hello"~, ~node.name ~ "a.txt"~              |
+| ~test_restly_file_leaf_lifecycle~       | ~create {RESTLY_FILE}~        | put -> item -> remove                 | exists flips true->false, contents roundtrip               |
+| ~test_empty_file_item_is_empty_string~  | ~dir.force ("", "/e.txt")~   | ---                                   | ~dir ["/e.txt"].is_empty~                                  |
+| ~test_binary_bytes_roundtrip~           | value with bytes 0--255       | force then item                       | identical STRING (RAW_FILE byte-faithfulness)               |
+
+* Checklist
+
+- [X] ~src/resource/restly_file_uri.e~
+- [X] ~src/resource/restly_file_node.e~
+- [X] ~src/resource/restly_file.e~
+- [X] ~src/resource/restly_directory.e~
+- [X] Clean compile
+- [X] ~testing/test_restly_directory.e~ (all 14 cases)
+- [X] 86 tests total (72 existing + 14 new), 0 failing
+- [ ] Contract handoff: verify every suggested tag is present as placeholder ~True~ + ~-- TODO(owner): contract~
+- [ ] Commit (on user request)
+
+* Key references
+
+- Pattern: =src/resource/restly_http_client.e=
+- Parent contracts: =src/restly_protocol.e=
+- Key type: =src/resource/restly_uri_path.e= (bidirectional string convert)
+- Rulings encoded: =docs/scheme_handlers_design.org= S RESTLY_DIRECTORY
