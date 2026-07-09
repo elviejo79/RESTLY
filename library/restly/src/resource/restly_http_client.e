@@ -3,6 +3,12 @@ note
 		A RESTLY_PROTOCOL that proxies to a remote HTTP API.
 		Inherits RESTLY_HTTP_URI — the client IS its root URL,
 		giving it HASHABLE identity and URI_TEMPLATE structure.
+
+		Response status handling:
+		  2xx — success
+		  3xx — followed automatically (libcurl, max 5 redirects)
+		  4xx — PRECONDITION_VIOLATION  (client sent a bad request)
+		  5xx — retry up to 3 attempts, then POSTCONDITION_VIOLATION
 	]"
 
 class
@@ -57,48 +63,64 @@ feature -- REST verbs
 	has_key (k: RESTLY_URI_PATH): BOOLEAN
 		local
 			response: HTTP_CLIENT_RESPONSE
+			l_retries: INTEGER
+			l_status: INTEGER
 		do
 			response := proxy.head (k, context_proxy)
-			Result := 200 ~ response.status
+			l_status := response.status
+			if l_status >= 200 and l_status < 300 then
+				Result := True
+			elseif l_status >= 500 then
+				raise_server_error (l_status)
+			elseif l_status >= 400 and l_status /= 404 then
+				raise_client_error (l_status)
+			end
+		rescue
+			l_retries := l_retries + 1
+			if l_status >= 500 and l_retries < Max_server_retries then
+				(create {EXECUTION_ENVIRONMENT}).sleep (Retry_wait_nanoseconds)
+				retry
+			end
 		end
 
 	item alias "[]" (k: RESTLY_URI_PATH): STRING assign force
 		local
 			response: HTTP_CLIENT_RESPONSE
 		do
-			create Result.make_empty
-			response := proxy.get (k, context_proxy)
-			if response.status = 200 and then attached response.body as body then
+			response := checked (agent proxy.get (k, context_proxy))
+			if attached response.body as body then
 				create Result.make_from_string (body)
+			else
+				create Result.make_empty
 			end
 		end
 
 	force (v: STRING; k: RESTLY_URI_PATH)
 		local
-			response: HTTP_CLIENT_RESPONSE
+			l_response: HTTP_CLIENT_RESPONSE
 		do
-			response := proxy.put (k, context_proxy, v)
+			l_response := checked (agent proxy.put (k, context_proxy, v))
 		end
 
 	put (v: STRING; k: RESTLY_URI_PATH)
 		local
-			response: HTTP_CLIENT_RESPONSE
+			l_response: HTTP_CLIENT_RESPONSE
 		do
-			response := proxy.put (k, context_proxy, v)
+			l_response := checked (agent proxy.put (k, context_proxy, v))
 		end
 
 	extend (v: STRING; k: RESTLY_URI_PATH)
 		local
-			response: HTTP_CLIENT_RESPONSE
+			l_response: HTTP_CLIENT_RESPONSE
 		do
-			response := proxy.post (k, context_proxy, v)
+			l_response := checked (agent proxy.post (k, context_proxy, v))
 		end
 
 	remove (k: RESTLY_URI_PATH)
 		local
-			response: HTTP_CLIENT_RESPONSE
+			l_response: HTTP_CLIENT_RESPONSE
 		do
-			response := proxy.delete (k, context_proxy)
+			l_response := checked (agent proxy.delete (k, context_proxy))
 		end
 
 feature -- Navigation
@@ -112,6 +134,56 @@ feature -- Navigation
 		do
 			create Result.make_with_url (create {RESTLY_HTTP_URI}.make (template.to_string_8 + "/" + a_segment))
 		end
+
+feature {NONE} -- Response handling
+
+	checked (a_call: FUNCTION [TUPLE, HTTP_CLIENT_RESPONSE]): HTTP_CLIENT_RESPONSE
+			-- Execute `a_call`; retry on 5xx, raise on 4xx.
+		local
+			l_retries: INTEGER
+			l_status: INTEGER
+		do
+			Result := a_call ([])
+			l_status := Result.status
+			if l_status >= 500 then
+				raise_server_error (l_status)
+			elseif l_status >= 400 then
+				raise_client_error (l_status)
+			end
+		rescue
+			l_retries := l_retries + 1
+			if l_status >= 500 and l_retries < Max_server_retries then
+				(create {EXECUTION_ENVIRONMENT}).sleep (Retry_wait_nanoseconds)
+				retry
+			end
+		end
+
+	raise_client_error (a_status: INTEGER)
+			-- Raise precondition violation for 4xx client error.
+		local
+			l_exc: PRECONDITION_VIOLATION
+		do
+			create l_exc
+			l_exc.set_description ("HTTP " + a_status.out)
+			l_exc.raise
+		end
+
+	raise_server_error (a_status: INTEGER)
+			-- Raise postcondition violation for 5xx server error.
+		local
+			l_exc: POSTCONDITION_VIOLATION
+		do
+			create l_exc
+			l_exc.set_description ("HTTP " + a_status.out)
+			l_exc.raise
+		end
+
+feature {NONE} -- Constants
+
+	Max_server_retries: INTEGER = 3
+
+	Retry_wait_nanoseconds: INTEGER_64 = 2_000_000_000
+			-- 2 seconds between retry attempts.
 
 feature {NONE} -- Implementation
 

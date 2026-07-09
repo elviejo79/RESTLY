@@ -1,0 +1,91 @@
+#+TITLE: Parameterized Dispatch (the =send= mechanism)
+#+DATE: 2026-07-09
+
+* What it is
+
+A refactoring technique explored (and shelved) for =RESTLY_HTTP_CLIENT=:
+collapse a family of near-identical routines into ONE routine that takes
+the varying part — the HTTP method name — as an argument.
+
+#+begin_src eiffel
+	put (v: STRING; k: RESTLY_URI_PATH)
+		do
+			send ("PUT", k, v)
+		end
+
+	extend (v: STRING; k: RESTLY_URI_PATH)
+		do
+			send ("POST", k, v)
+		end
+#+end_src
+
+All verbs funnel into a single choke point:
+
+#+begin_src eiffel
+	send (a_method: STRING; k: RESTLY_URI_PATH; v: detachable STRING)
+			-- Issue `a_method` on `k` with optional body `v`; raise on error responses.
+#+end_src
+
+which dispatches on the method name in exactly one place:
+
+#+begin_src eiffel
+	http_response (a_method: STRING; k: RESTLY_URI_PATH; v: detachable STRING): HTTP_CLIENT_RESPONSE
+			-- Raw response from `proxy` for `a_method` on `k` with optional body `v`.
+		do
+			if a_method ~ "GET" then
+				Result := proxy.get (k, context_proxy)
+			elseif a_method ~ "PUT" then
+				Result := proxy.put (k, context_proxy, v)
+			-- ... HEAD, POST, DELETE ...
+			else
+				Result := proxy.custom (a_method, k, context_proxy)
+			end
+		end
+#+end_src
+
+* Names for the technique
+
+- *Parameterize Method* (Fowler, /Refactoring/): the move itself —
+  several routines differing only in a value become one routine taking
+  that value as an argument.
+- *Dynamic message dispatch* (Smalltalk's =perform:= idiom): the shape
+  of the result — one routine receives the operation /name/ and
+  dispatches it. The operation becomes data.
+- *Gateway* (Fowler, /P of EAA/): the role the choke point plays — a
+  single object/routine through which every interaction with an
+  external system passes.
+- Turned inward, it is REST's own /uniform interface/ constraint: a
+  fixed, small set of verbs parameterized by resource.
+
+* Why it is valuable
+
+- One place to add cross-cutting behavior: retries, error mapping,
+  logging, auth headers, metrics — write it once in the funnel.
+- The operation name is data: it can be stored, configured, replayed,
+  logged, or forwarded verbatim (useful for proxies and caches — the
+  method string from an incoming request can be passed straight
+  through).
+- Unknown methods degrade gracefully to =proxy.custom (a_method, ...)=,
+  so PATCH or vendor verbs cost zero new code.
+- No agents/closures needed to centralize a retry loop: the funnel can
+  re-issue the request itself because it holds all the arguments.
+
+* Trade-offs (why RESTLY_HTTP_CLIENT does not use it)
+
+- Stringly-typed: ="PUT"= is checked at runtime, not by the type
+  system. A typo compiles.
+- One extra level of indirection between a verb and its =proxy.*= call.
+- In RESTLY the chosen alternative is the *Execute Around Method*
+  pattern — =checked (agent proxy.get (k, context_proxy))= — which
+  keeps the real call visible at the call site and still centralizes
+  retry/error handling.
+
+* When to reach for it
+
+- A family of operations shares identical surrounding machinery and
+  differs only by an operation name that is /already a string in the
+  protocol/ (HTTP methods, FTP commands, SMTP verbs, SQL keywords).
+- The operation name must travel: request forwarding, replay logs,
+  declarative configuration.
+- Candidate in this repo: an FTP-backed RESTLY_PROTOCOL, where
+  RETR/STOR/DELE/LIST could funnel through one =send (a_command, ...)=.
