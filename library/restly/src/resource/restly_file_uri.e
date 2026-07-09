@@ -10,6 +10,9 @@ class
 
 inherit
 	URI_TEMPLATE
+		export
+			{NONE} set_template
+		end
 
 create
 	make,
