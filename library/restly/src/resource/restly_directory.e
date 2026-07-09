@@ -124,7 +124,7 @@ feature -- Navigation
 			f: RAW_FILE
 			l_full: PATH
 		do
-			l_full := extended (a_path)
+			create l_full.make_from_string (utf_8_name + a_path)
 			create f.make_with_path (l_full)
 			if f.is_directory then
 				create {RESTLY_DIRECTORY} Result.make_with_path (l_full)
@@ -183,7 +183,8 @@ feature {NONE} -- Implementation
 
 	file_system_path (k: RESTLY_URI_PATH): PATH
 			-- Absolute path for key `k`: root + relative reference.
-			-- Keys carry their leading "/" per RESTLY_URI_PATH convention.
+			-- Keys carry their leading "/" per RESTLY_URI_PATH convention,
+			-- which PATH.extended rejects (has_root); build via string.
 		require
 			error_400_bad_request: True
 					-- TODO(owner): contract
@@ -191,7 +192,7 @@ feature {NONE} -- Implementation
 					--            and not k.template.has ('{')
 					--            and not k.template.has ('?')
 		do
-			Result := extended (k.template)
+			create Result.make_from_string (utf_8_name + k.template)
 		end
 
 end
