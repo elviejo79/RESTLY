@@ -1,0 +1,609 @@
+#+TITLE: RESTLY Scheme Handlers: Design Document
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-06
+#+OPTIONS: toc:2 num:t
+#+STARTUP: overview
+
+* Status and jurisdictional revision record
+:PROPERTIES:
+:STATUS: Design — revises a settled ruling
+:REVISES: weiher_corpus_design_document.org §3.3, §8 (rows: Polymorphic identifiers; RelativeStore)
+:END:
+
+This document records a *deliberate jurisdictional revision*, not drift. The corpus document's §3.3 ruled: no polymorphic identifiers, no schemes, no hierarchical identifier space in the RESTLY core. That ruling is hereby *revised*, and the revision is recorded here per círculos discipline — the prior ruling, the new ruling, and the reason, all in one place.
+
+*Prior ruling:* reject the PI mechanism entirely; keys are flat typed values; hierarchy exists only at the EWF bridge.
+
+*New ruling:* adopt the PI mechanism under a type discipline — typed per-scheme identifier classes, typed per-scheme handlers, and a single untyped resolver confined to the edge. Untyped uniformity remains rejected everywhere except that one edge component.
+
+*Reason the revision strengthens rather than weakens the thesis:* the 2019 future-work paragraph speculates that one way to type storage combinators is that the types move from the operations onto the polymorphic identifiers. The thesis so far took the opposite branch — types on the store interface (~RESTLY_PROTOCOL [K, V]~). This design takes *both* branches simultaneously: typed interfaces (already built) and typed identifiers (this library). The thesis can now claim to have explored the entire fork Weiher named, not one prong of it. Without this framing the library is círculos; with it, it is the completion of the answer to the corpus's own open problem. Put this framing in the thesis before any reviewer asks why a project that rejected PIs contains a scheme handler.
+
+*What remains rejected, explicitly:* untyped uniformity mid-pipeline. No pipeline interior ever sees a URI string. Strings exist in exactly two places: the EWF bridge (existing) and the scheme registry (this design). Both are edges.
+
+*Vocabulary correction, non-negotiable:* the mechanism is a URI *scheme* (RFC 3986 §3.1), not a *schema*. "Schema" means something else in every adjacent field (databases, XML, JSON Schema) and using it invites a reviewer to assume you don't know the difference. All class names and thesis prose use SCHEME. This file keeps the requested name ~schema_handlers_design.org~; the code must not repeat the error.
+
+* Requirements (acceptance criteria)
+
+The four motivating resolutions, restated as testable criteria:
+
+| URI                                   | Resolves to                  | Typed as                                        |
+|---------------------------------------+------------------------------+-------------------------------------------------|
+| ~file://home/agarciafdz/~             | directory resource           | ~RESTLY_DIRECTORY~ (a store of entries)          |
+| ~file://home/agarciafdz/myfile.json~  | file resource                | ~RESTLY_FILE~ (a single-value leaf)              |
+| ~http://github.com/api/v1/~           | HTTP client resource         | ~RESTLY_HTTP_RESOURCE~ (a store over the wire)   |
+| ~mailto:agarciafdz@gmail.com~         | mail resource                | ~RESTLY_OUTBOX~ (a store; see §6.3 relocation)   |
+
+Plus three structural criteria: (1) each resolution above is available through a statically typed entry point where the scheme is fixed at compile time; (2) a single untyped ~resolve (uri: STRING)~ exists only in the edge registry and returns the deferred common ancestor; (3) every failure mode at the identifier layer maps to a contract tag naming an HTTP status, consistent with the existing tag→status architecture.
+
+* Architecture: three layers
+
+#+BEGIN_EXAMPLE
+  Layer C (edge, untyped)   RESTLY_SCHEME_REGISTRY        strings enter here, once
+                                 |  (itself a RESTLY store: scheme -> handler)
+  Layer B (typed handlers)  FILE_SCHEME  HTTP_SCHEME  MAILTO_SCHEME
+                                 |            |            |
+  Layer A (typed identifiers) FILE_URI    HTTP_URI     MAILTO_URI
+                                 |            |            |
+  Resources (typed stores)  RESTLY_DIRECTORY / RESTLY_FILE / RESTLY_HTTP_RESOURCE / RESTLY_OUTBOX
+#+END_EXAMPLE
+
+The registry is Weiher's SwitchingStore; the handlers are his scheme handlers; the typed URIs are his polymorphic identifiers with the types moved onto them. The self-hosting property is deliberate and should be stated in the thesis: *the registry is itself a RESTLY store* (~RESTLY_HASH_TABLE [STRING, RESTLY_SCHEME_HANDLER]~), so the identifier layer is built from the storage layer it serves — the same move as router-as-hash-table, applied one level up.
+
+* Layer A — typed identifiers
+
+One deferred ancestor, one class per scheme. This is where Weiher's speculated "types on the identifiers" becomes concrete Eiffel.
+
+#+BEGIN_SRC eiffel
+deferred class RESTLY_URI
+feature
+    scheme: STRING_8
+        deferred end
+    as_string: STRING_8
+        deferred end
+invariant
+    scheme_lowercase: scheme.same_string (scheme.as_lower)
+end
+#+END_SRC
+
+#+BEGIN_SRC eiffel
+class FILE_URI inherit RESTLY_URI
+create
+    make_from_string, make_from_segments
+convert
+    make_from_string ({STRING_8})
+feature
+    segments: LIST [STRING_8]      -- hierarchical path, parsed once
+    is_terminal_slash: BOOLEAN     -- "/" suffix: directory intent
+    make_from_string (a_uri: STRING_8)
+        require
+            error_400_bad_request: is_well_formed (a_uri)
+            scheme_matches: has_file_scheme (a_uri)
+        ...
+end
+#+END_SRC
+
+Three Eiffel mechanisms doing real work here:
+
+*Conversion (~convert~ clause).* A ~STRING_8~ attach-converts to ~FILE_URI~ wherever a ~FILE_URI~ is expected, so ~file_scheme.directory ("file://home/agarciafdz/")~ compiles with a bare string while the call site is still statically committed to the file scheme. The conversion runs ~make_from_string~, whose precondition carries the tag ~error_400_bad_request~: *a malformed URI is a 400, caught by the same tag machinery as every other status.* This extends the contract→status architecture downward into the identifier layer — a contribution the corpus has no analog for, since Weiher's identifiers have no failure vocabulary at all. Caveat that must appear in the thesis: Eiffel conversion is applied at reattachment, is non-transitive, and a class may convert from ~STRING_8~ in only one way — so each scheme's URI class owns its own string conversion, and no ambiguity arises precisely *because* the target type is scheme-specific. The untyped registry cannot use conversion (the target type is unknown); that asymmetry is the type-theoretic content of the design, not an inconvenience.
+
+*Aliases.* Hierarchical descent as a typed operator on directory resources (§5.1): ~aliased "/"~ descent yields the RelativeStore reconstruction. Bracket alias ~item alias "[]"~ on all stores, as already conventional in RESTLY.
+
+*Multiple inheritance.* Resources mix in exactly the capability interfaces their scheme supports (§5); the compile-time-405 property extends from mounts to schemes.
+
+Scheme mismatch discipline: ~FILE_URI~ refuses (precondition) a string whose scheme is not ~file~. There is deliberately *no* ~RESTLY_URI.make_from_string~ on the ancestor — constructing a URI without committing to a scheme is exactly the untyped operation this design confines to the registry.
+
+* Layer B — typed scheme handlers and their resources
+
+A handler is a resolver: typed URI in, typed resource out. Resolution is a query (CQS: no side effects; opening/connecting happens lazily inside the resource, not in ~resolve~).
+
+** FILE_SCHEME
+
+#+BEGIN_SRC eiffel
+class FILE_SCHEME inherit RESTLY_SCHEME_HANDLER
+feature
+    directory (u: FILE_URI): RESTLY_DIRECTORY
+        require
+            error_404_not_found: exists (u)
+            error_409_conflict:  is_directory (u)
+    file (u: FILE_URI): RESTLY_FILE
+        require
+            error_404_not_found: exists (u)
+            error_409_conflict:  is_file (u)
+    node (u: FILE_URI): RESTLY_FILE_NODE
+        require
+            error_404_not_found: exists (u)
+end
+#+END_SRC
+
+Directory-vs-file is filesystem state, hence runtime. Two disciplines coexist: the typed queries ~directory~/~file~ for clients that statically know what they want (wrong kind = contract violation, tagged 409: the name exists but conflicts with the requested kind), and ~node~ returning the deferred ~RESTLY_FILE_NODE~ ancestor for clients that genuinely don't know, with the two concrete descendants distinguished by object test *at the caller* — the edge pattern, applied locally. Do not add an ~is_directory: BOOLEAN~ + single ~resolve~ returning ANY; that is the untyped design wearing a hat.
+
+*~RESTLY_DIRECTORY~* was provisionally typed here as ~RESTLY_PROTOCOL [STRING_8, RESTLY_FILE_NODE]~; that instantiation is *revised* by the full specification below (§ RESTLY_DIRECTORY specification) — node-valued writes are incoherent, so the protocol value type is bytes and nodes appear only in the navigation and traversal views. The descent alias survives the revision unchanged:
+
+#+BEGIN_SRC eiffel
+    descended alias "/" (segment: STRING_8): RESTLY_DIRECTORY
+        require
+            error_404_not_found: has_key (segment)
+            error_409_conflict:  is_directory_entry (segment)
+#+END_SRC
+
+so ~root / "home" / "agarciafdz"~ is typed hierarchical navigation. *This is the RelativeStore, reconstructed under types* — the corpus document's §8 table ruled RelativeStore "out of scope"; this design re-scopes it, and the jurisdiction table delta (§9) records the change. Each descent returns a directory store scoped to the subpath; prefixing is by construction, not string surgery.
+
+*~RESTLY_FILE~* is a single-value leaf — the ~CELL~-shaped micro-store already contemplated in the core: ~item~ reads bytes, ~force~ writes them, ~remove~ deletes the file, key type is a unit. The PI '13 residue lands here: a file resource is the reified Load-Update Pair for one L-value, and this is the single-ref layer where the lens contract legitimately applies. Typed content is a *composition*, not a feature of the leaf: ~file resource ← REFLECTIVE_JSON_CONVERTER ← typed store of T~ turns ~myfile.json~ into a store of domain objects using the existing converter species unchanged. JSON stays inside the converter body at the edge; the settled rule survives intact.
+
+** RESTLY_DIRECTORY: specification
+:PROPERTIES:
+:STATUS: Normative — supersedes the provisional [STRING_8, RESTLY_FILE_NODE] instantiation above
+:END:
+
+The directory is the design's stress test: simultaneously an element store, a collection, and a namespace. This section is the recorded resolution of the ~make_for~/~new_for~/trailing-slash/traversal proposal, whose requirements were analyzed and partially rejected in conversation; the rulings and their reasons follow.
+
+*** Creation and identity
+
+~make_for~ is a creation procedure and Eiffel creation procedures *always* allocate — a constructor cannot return a pre-existing instance. Public self-registering creation therefore cannot coexist with the identity guarantee: the second ~create d.make_for (u)~ on an equal URI yields a duplicate the identity map never blessed. Ruling:
+
+#+BEGIN_SRC eiffel
+class RESTLY_DIRECTORY
+create {FILE_SCHEME}
+    make_for
+#+END_SRC
+
+Creation is exported to the handler only; the *sole* public path to a directory object is ~file_scheme.directory (u)~ — the memoized factory query. ~new_for~ is rejected twice over: as a mechanism (it is the registry-bypass defect of the previous revision, reintroduced one level down) and as a name ("new" promises fresh allocation; the point of the feature is that allocation usually does not happen — a lying name is a contract defect in a Design-by-Contract thesis). Child-yielding features (~subdirectory~, ~descended alias "/"~, and ~file~) *delegate to the shared handler factory* rather than creating; otherwise navigation and registry resolution mint distinct objects for one URI and the identity guarantee dies on the second access path, exactly as it did in the registry revision.
+
+*** Resolution never creates; creation is a command with an HTTP pedigree
+
+"~make_for~ has to create the directory" would make resolution a mutation — GET performing PUT. Rejected: resolution keeps its ~error_404_not_found~ precondition. Creation is an explicit command *on the parent*:
+
+#+BEGIN_SRC eiffel
+    create_subdirectory (a_name: STRING_8)
+        require
+            error_409_conflict: not has_key (a_name)
+        ensure
+            created: has_key (a_name) and then is_directory_entry (a_name)
+#+END_SRC
+
+The four-verb pressure here is resolved by precedent, not taste: HTTP itself could not fit collection creation into PUT — WebDAV minted MKCOL (RFC 4918 §9.3) for exactly this operation. The empirical authority already ruled that creating a collection is not putting a value at a key; ~create_subdirectory~ is RESTLY's MKCOL, honestly outside the verb protocol. No corresponding ~create_file~ exists: ~force (contents, name)~ creates files, because PUT creates documents — also HTTP-faithful. The verb set remains inviolate; the command is additional, not a fifth verb, and the delta table records the precedent so the "why isn't this just force" question is answered before a reviewer asks it: there is no coherent value to pass — directory objects are handles to filesystem state, not values.
+
+*** Element access: the protocol instantiation
+
+~RESTLY_DIRECTORY~ implements ~RESTLY_PROTOCOL [STRING_8, STRING_8]~ — entry name to *file contents*. The value type is decided by the writes: ~force (v, name)~ writing bytes is coherent; ~force (a_node, name)~ is not, and a protocol whose ~item~ returns what its ~force~ cannot accept is broken symmetry. Consequently:
+
+- ~item (name)~ / ~alias "[]"~ returns contents, with ~require error_409_conflict: is_file_entry (name)~ — reading a subdirectory as a value is a kind conflict.
+- ~force (v, name)~ writes/creates a file; ~error_409_conflict: not is_directory_entry (name)~.
+- ~remove (name)~ is kind-agnostic (DELETE is), guarded by ~error_409_conflict: is_removable (name)~ — a file, or an *empty* subdirectory. Recursive deletion is spelled explicitly: ~subdirectory (n).wipe_out~ then ~remove (n)~; a silent recursive ~remove~ hides a mass-destruction write behind an element verb.
+
+*Correction on record:* the conversational proposal that ~"[]"~ return ~RESTLY_FILE_NODE~ (composite-style navigation) is rejected *by this document against its own author*. ~"[]"~ aliases protocol ~item~ on every RESTLY store; rebinding it to a navigation query on this one class makes the same operator mean "value at key" everywhere except directories. Alias consistency outweighs navigational sugar. The requirement lines resolve as: ~d ["a_file.txt"]~ → contents; ~d.file ("a_file.txt")~ → ~RESTLY_FILE~; ~d.subdirectory ("a_directory")~ / ~d / "a_directory"~ → ~RESTLY_DIRECTORY~; ~d.node (name)~ → deferred ~RESTLY_FILE_NODE~ for the genuinely-dynamic case. The trailing-slash convention (~d ["a_directory/"]~ selecting a different return type) is rejected outright: one feature cannot have two static return types selected by runtime string content, and encoding filesystem state in key syntax invites the string and the disk to disagree.
+
+*** Traversal: split generics, lazy nodes
+
+~across d as entry~ that can filter by kind must yield *nodes* — subdirectories have no byte value, so a contents-typed cursor cannot even represent them. Ruling: the traversal view is decoupled from the protocol instantiation. ~RESTLY_DIRECTORY~ inherits ~RESTLY_PROTOCOL [STRING_8, STRING_8]~ *and* ~RESTLY_TRAVERSABLE [STRING_8, RESTLY_FILE_NODE]~ — multiple inheritance carrying two ~V~'s. The cursor yields name → node pairs, and nodes are constructed *lazily* (via the handler factory, preserving identity): eager construction of every child on listing is the corpus's DiskStore quadratic anecdote, replayed. The kind-filtering loop is then ordinary Eiffel: ~across d as entry loop if attached {RESTLY_DIRECTORY} entry.value then ... end end~.
+
+The mismatch is not a concession — it is Fielding-faithful: GET on ~/dir/~ returns a listing representation, GET on ~/dir/f~ returns contents; the collection view and the element view of a directory have *never* had the same value type in the protocol being modeled. But it breaks an assumption with a blast radius: the pipeline front and the EWF bridge currently presume ~RESTLY_TRAVERSABLE~'s generics match the protocol's, so ~mount_collection~ on a directory fails that expectation. Decoupling the traversable generics is a core-library revision, recorded as open problem 7 — it is *not* settled by this section, only demanded by it.
+
+*** Disposition of the original requirements
+
+| Requirement as proposed                                  | Ruling                                                                 |
+|-----------------------------------------------------------+------------------------------------------------------------------------|
+| ~make_for~ creates and self-registers                     | Rejected — impossible under Eiffel creation + identity; factory-only access |
+| ~registry.new_for~ returns the same object                | Satisfied by mechanism (per-handler memoized factory), name rejected    |
+| Resolution creates the directory on disk                  | Rejected — GET must not PUT; ~create_subdirectory~ command, MKCOL precedent |
+| ~d ["a_file.txt"]~ → RESTLY_FILE                          | Revised — ~"[]"~ = contents; ~d.file (name)~ → RESTLY_FILE under 409    |
+| ~d ["a_directory/"]~ → RESTLY_DIRECTORY                   | Rejected — untypeable slash convention; ~d / "a_directory"~ instead     |
+| ~across~ listing subdirectories by type                   | Adopted — the requirement that forced split traversal generics          |
+
+
+
+** HTTP_SCHEME
+
+#+BEGIN_SRC eiffel
+class HTTP_SCHEME inherit RESTLY_SCHEME_HANDLER
+feature
+    resource (u: HTTP_URI): RESTLY_HTTP_RESOURCE
+        -- store over the wire, rooted at u
+end
+#+END_SRC
+
+~RESTLY_HTTP_RESOURCE~ implements ~RESTLY_PROTOCOL [STRING_8, STRING_8]~ (path-under-root → representation bytes) plus ~RESTLY_PATCHABLE~; verbs map one-to-one onto the wire (GET/PUT/PATCH/DELETE). This is the design's honesty checkpoint and the thesis must not fumble it: *at the HTTP boundary the payload type is bytes, because the wire is untyped.* Claiming a typed ~[K, V]~ interface over a foreign HTTP API would be a lie; instead the resource is a bytes-store and typing is recovered the same way as everywhere else — converters stacked on top (~github_api ← converter ← store of ISSUE~). The remote server's failure statuses map inbound onto the same tag vocabulary (its 404 raises ~error_404_not_found~ on ~item~), which gives the pleasing symmetry that a remote store and a hash table violate *the same contracts the same way* — substitutability across the process boundary, which is the whole in-process-REST claim, now stated as a contract-preservation property. That sentence belongs in the Evaluation chapter.
+
+SCOOP: the HTTP resource performs blocking I/O and must be analyzed as a separate object; every precondition above is therefore a candidate wait-condition and must be classified per the settled discipline (§8).
+
+** MAILTO_SCHEME — with a relocation you should accept
+
+You chose "write-only store, contract-restricted." Taken literally — ~item~ guarded by ~require readable: False~ — that design has two known defects on the record: under SCOOP a False precondition on a separate object is a deadlock, not a violation (the settled 405-guard problem, reproduced verbatim), and mail send is non-idempotent, so ~force~ would break store substitutability exactly as the FIFO case did. Refutation without relocation being a process failure, here is the nearest true structure, and it is strictly better:
+
+*~RESTLY_OUTBOX~: a real, readable store.* Keys are message identifiers; values are ~MAIL_MESSAGE~ objects. ~force (m, id)~ queues-and-sends *with deduplication by key*, so a second ~force~ with the same key and value is a no-op — idempotence is real, not declared, and it is the existing ~extendNew~/request-id pattern (the Stripe move) reused: server-minted Message-IDs come from the allocator mixin already in the core. ~item (id)~ returns the message as queued or sent — an outbox *is* a map, and reading it is meaningful. ~remove (id)~ cancels an unsent message (precondition ~error_409_conflict: not is_sent (id)~ — you cannot DELETE a sent mail, and the contract says so). Nothing here lies.
+
+*Write-only-ness becomes a combinator, not a semantic.* If a deployment must forbid reads, wrap the outbox in ~RESTLY_WRITE_ONLY~ — the exact dual of the existing ~RESTLY_READONLY~, a capability-restricting PassThrough. This satisfies your choice ("contract-restricted write-only") while relocating the restriction from the leaf's semantics to a composition decision, which is where RESTLY puts every other capability decision. Bonus: ~RESTLY_WRITE_ONLY~ + ~RESTLY_READONLY~ form a symmetric pair in the combinator catalog, and ~RESTLY_WRITE_ONLY~'s read-guard inherits the same open SCOOP classification as every other False-guard — one open problem, not two.
+
+* Layer C — the untyped edge registry
+
+#+BEGIN_SRC eiffel
+class RESTLY_SCHEME_REGISTRY
+feature
+    handlers: RESTLY_HASH_TABLE [STRING_8, RESTLY_SCHEME_HANDLER]
+    resolve (uri: STRING_8): RESTLY_RESOURCE
+        require
+            error_400_bad_request: is_well_formed (uri)
+            error_404_not_found:   handlers.has_key (scheme_of (uri))
+end
+#+END_SRC
+
+Rules, stated as prohibitions because that is what they are. The registry is the *only* component that dispatches on a scheme string at runtime. Its return type is the deferred ~RESTLY_RESOURCE~ common ancestor; callers needing capabilities do an object test *at the call site*, never inside the registry. No pipeline interior ever receives a ~RESTLY_RESOURCE~ — resolution happens at configuration time (the same static-wiring property as ~backed_by~ composition; a resolved resource is then composed normally). The registry's own failures are contract-tagged: malformed string → 400, unregistered scheme → 404 — note the unknown-scheme case *is* a ~has_key~ miss on the registry-as-store, so the 404 is not an analogy, it is literally the store's own not-found contract. Registration (~register (scheme, handler)~) is ~force~ on the underlying table; the registry has no API of its own worth inventing.
+
+What the registry deliberately does not do: negotiate references (PI '13's reference objects are subsumed by the resources themselves), chain-resolve nested URIs, or auto-compose converters. Each of those is configuration-time work for the caller, in the open.
+
+* Registry lifetime and identity semantics
+
+Two decisions were bundled in the requirement "the registry is a singleton and ~http://github.com/api/v1/~ always gives back the same GITHUB_RESOURCE." They are independent, they have different justifications, and one of them is load-bearing while the other is a convenience. The document records them separately.
+
+** Decision 1 — the identity map: same URI, same resource object
+
+*Ruling: adopt, and it is not optional.* Resolution is memoized *in each scheme handler*, not in the registry: every handler maintains an identity map (normalized URI → resource), and repeated resolution of an equal URI returns the identical object, per-application. The location matters and was initially gotten wrong in this document: a registry-level map is bypassed by the typed entry points (~http_scheme.resource (u)~ never touches the registry), yielding two GITHUB_RESOURCEs — one per access path — and breaking identity exactly where it was promised. Per-handler maps make the typed and untyped paths converge on the same instances, because the registry's ~resolve~ bottoms out in the same handler call the typed client makes. Corollary: handler instances must themselves be shared — a per-client ~FILE_SCHEME~ would fragment the map again — so ~RESTLY_SHARED_REGISTRY~ exposes ~once ("PROCESS")~ typed accessors (~file_scheme~, ~http_scheme~, ~mailto_scheme~) alongside ~registry~, and registration wires those same instances.
+
+The justification is stronger than convenience and the thesis should state it at full strength: *the identity map is what makes in-process URI naming sound.* A URI names one resource (Fielding jurisdiction). For schemes whose resource state lives outside the process — a file, a remote API — two resolver instances would still converge on the shared external state, and identity is merely economical. But for schemes whose resource state lives *inside* the process — the ~RESTLY_OUTBOX~ above all — two instances would be two disjoint stores under one name: two outboxes for ~mailto:agarciafdz@gmail.com~, deduplication broken, the naming semantics violated. Without the identity map, the mailto scheme is incorrect, not merely wasteful. So the identity map is a soundness requirement introduced by this design's own stateful schemes, and it should be presented as such, not as caching.
+
+*The identity map is not a new mechanism — it is ~RESTLY_CACHE~, reused.* Structurally, each handler is a composition from the existing catalog: a cache combinator in front of a computed store (the resolver: a store that computes resources from URIs, per the store-need-not-store license), and the registry is the pure switch over them:
+
+#+BEGIN_EXAMPLE
+  resolve (uri)  =  item (uri)  on   SWITCH(scheme)  ->  per handler: CACHE -> resolver
+#+END_EXAMPLE
+
+This is the third self-hosting instance (after router-as-store and registry-as-store) and the second in-scope SwitchingStore. Consequences inherited from the catalog rulings: eviction and invalidation must be features of the cache class, *not* additions to the store protocol (the ~invalidateReference:~ rejection applies here verbatim), and the memoizing ~item~ is a query with a benign concrete side effect — the cache mutation is invisible to the abstract state, which is the standard Meyer-sanctioned exemption CQS already grants ~RESTLY_CACHE~.
+
+*The memo key must be the normalized typed URI, never the string.* String-keyed memoization is wrong on its face: ~HTTP://GitHub.com/api/v1/~ and ~http://github.com/api/v1/~ name the same resource (scheme and host are case-insensitive, RFC 3986 §6.2.2.1), while ~/api/v1~ and ~/api/v1/~ do *not* (path equivalence does not erase the trailing slash). The typed URI classes of Layer A are exactly the place where equality is definable correctly: redefine ~is_equal~ and the hash on each ~RESTLY_URI~ descendant to compare normalized components. This is a small, concrete payoff of the types-on-identifiers branch — string identifiers cannot carry an equality theory; typed ones can — and it belongs in the thesis as such. Corpus note: PI '13 creates references per request and guarantees no identity; the identity map is a RESTLY addition with no antecedent, claimable as one.
+
+*What is and is not memoized:* only root resources, at the registry. Compositions stacked on top (converters, capability views like ~RESTLY_WRITE_ONLY~) are per-client configuration and are deliberately outside the map — two clients wanting differently-typed views of the same GitHub resource share the root store and diverge above it. That is the correct sharing boundary: state is shared, typing decisions are not.
+
+** Decision 2 — the singleton: one registry per application
+
+*Ruling: adopt as a convenience access point only; the library must not depend on it.* Eiffel has no static features; the singleton is the standard shared-object idiom — a once function in a mixin:
+
+#+BEGIN_SRC eiffel
+class RESTLY_SHARED_REGISTRY
+feature
+    registry: separate RESTLY_SCHEME_REGISTRY
+        once ("PROCESS")
+            create Result.make
+        end
+end
+#+END_SRC
+
+Two hard constraints, both of which must appear in the thesis rather than being discovered by a reviewer:
+
+1. /The SCOOP tax is mandatory, not optional./ A once-per-thread function gives one registry per processor — which silently breaks the identity map across processors (two outboxes again, one per region). So the once must be ~once ("PROCESS")~, and SCOOP's validity rules then require the reference result to be of *separate* type. The process-wide registry is therefore necessarily a separate object: every ~resolve~ crosses a processor boundary, takes exclusive access, and serializes on the registry. The existing Layer C rule is what makes this tolerable — *resolution happens at configuration time only* — so the lock is held during wiring, never on the request path. That rule was stylistic before; it is now load-bearing, and the document upgrades it: resolution on the request path is prohibited, not discouraged.
+
+2. /The singleton must not contaminate testability./ The corpus's own testing story (Wunderlist: swap the entire stack for a memory configuration, no mocks) — inherited as RESTLY methodology — works by constructing per-test configurations. Therefore: every library class that needs a registry takes it as a creation argument; ~RESTLY_SHARED_REGISTRY~ is client-side sugar supplying the default; nothing in ~library/restly/~ or the scheme handlers references the shared once. The singleton is an application decision the library permits, not a dependency the library has. Weiher's own critique of wiring hidden inside dynamic execution applies squarely to ambient global state; the explicit-argument rule keeps the architecture visible.
+
+Cache growth is a real, unglamorous consequence: an identity map over ~file://~ URIs grows monotonically with every distinct path resolved for the lifetime of the process. Eviction under an identity guarantee is contradictory (evict-and-re-resolve breaks "always the same object" if anyone kept the old reference — for externally-stateful schemes it is safe, for the outbox it is not). The honest resolution: the identity guarantee is scheme-classified — hard identity for internally-stateful schemes (never evict), convergent identity for externally-stateful ones (evictable; equality of behavior, not of object). Open problem 5 records it.
+
+* Examples: compositions at configuration time
+
+Both examples are wiring code — they run once, during configuration, consistent with the request-path prohibition. Each is given first as sketched, then with its defects enumerated, then in normative form. The sketches are kept because the defects are instructive: every one of them is a place where the untyped mental model glosses an obligation the typed design makes explicit.
+
+** A composition between file and github (local cache of remote data)
+
+Sketch as proposed:
+
+#+BEGIN_EXAMPLE
+  github_resource := resource_registry ["http://github.com/api/v1]
+  file_resource   := resource_registry ["file://my_directory/"]
+  dashboard       := cache(file_resource) <- github_resource.
+#+END_EXAMPLE
+
+Defects, in decreasing order of severity:
+
+1. /Wrong layer./ Both URIs are compile-time literals; the design mandates typed entry points when the scheme is statically known. Going through ~resource_registry [...]~ returns the deferred ~RESTLY_RESOURCE~ ancestor and forces object tests that the typed path makes unnecessary. The registry is for URIs that arrive as data.
+2. /Type mismatch, silently glossed./ Under the directory specification (§ RESTLY_DIRECTORY), ~RESTLY_DIRECTORY~ is ~PROTOCOL [STRING_8, STRING_8]~, so the *value* types now align with the GitHub resource — an earlier draft of this document typed the directory node-valued and charged this example two conversions; the specification's bytes-valued ruling dissolves one of them. The *key* obligation stands: GitHub keys contain ~/~ (e.g. ~repos/x/issues~), which is not a legal directory entry name, so a key mapping (percent-encoding) is required. The obligation is the typed-uniformity trade made visible: the untyped version of this composition works by accident of everything being strings; the typed version names its assumptions. This is the thesis point, demonstrated in one example — use it in the Evaluation chapter.
+3. /Vocabulary drift./ ~<-~ is an ad-hoc operator; the settled accumulator is ~backed_by~. But note ~backed_by~ does not fit either: the cache combinator is the first *non-linear* composition — it takes two stores (cache and source), not one backend. The vocabulary needs a deliberate extension, not an improvised arrow: ~cached_by~ as a pure query, ~source.cached_by (a_cache_store): RESTLY_CACHE [K, V]~, symmetric in style with ~backed_by~.
+4. /The ~file://~ authority defect, again./ ~file://my_directory/~ parses "my_directory" as host (open problem 3). Third occurrence of this mistake across the project's documents; the strict form is ~file:///my_directory/~.
+5. /Syntax./ Unterminated string literal on the first line; trailing ~.~ on the last.
+
+Normative form:
+
+#+BEGIN_SRC eiffel
+local
+    github: RESTLY_HTTP_RESOURCE
+        -- conforms to RESTLY_PROTOCOL [STRING_8, STRING_8]
+    disk: RESTLY_PROTOCOL [STRING_8, STRING_8]
+    dashboard_store: RESTLY_CACHE [STRING_8, STRING_8]
+do
+    github := http_scheme.resource ("http://github.com/api/v1/")
+    disk := file_scheme.directory ("file:///my_directory/")
+                 .with_encoded_keys (create {PERCENT_ENCODED_KEYS}.default_create)
+    dashboard_store := github.cached_by (disk)
+end
+#+END_SRC
+
+where ~with_encoded_keys~ is a key-mapping view (MappingStore, reference mapping only) supplying the single obligation from defect 2; the value types already agree under the directory specification.
+
+Two recorded consequences. First, the precedent: cache-in-front-of-disk-in-front-of-remote is *the Wunderlist stack* — the corpus's flagship composition — reconstructed under types; cite it as such. Second, staleness: per the settled ruling, invalidation is a feature of the cache class, not the protocol, and nothing here invokes it — this dashboard serves stale GitHub data forever until an explicit cache policy is configured. That is correct behavior of the composition and a wrong dashboard; the gap belongs to the application, and the example must say so rather than imply freshness.
+
+** Composition between two APIs (schema adaptation)
+
+Sketch as proposed:
+
+#+BEGIN_EXAMPLE
+  first_api  := resource_registry ["http://github.com/api/v1]
+  second_api := resource_registry ["http://anotehr_service.com/api/"]
+  dashboard  := logging(first_api) <-converter(first_api, second_api) <- second_api
+#+END_EXAMPLE
+
+Defects:
+
+1. /Category error on ~converter~./ Converters map *representations*, not stores: a converter between two APIs is ~CONVERTER [V_OTHER, V_GITHUB]~ between their value types. It cannot take two stores as arguments; the sketch hands it the wrong kind of object twice.
+2. /Undeterminable dataflow./ ~first_api~ appears twice with incompatible roles — as the logged front and as a converter argument. A pipeline visits each store once. Two readings are possible: (a) *schema adaptation* — expose ~second_api~'s data under GitHub's representation schema, in which case ~first_api~'s *store* is not in the pipeline at all, only its value *type* is; or (b) *federation* — one store answering from both APIs, which is switching over heterogeneous stores and therefore edge-only by settled ruling: it cannot be a mid-pipeline combinator, full stop. This document records (a) as the chargeable reading; if (b) was intended, it lives at the bridge/registry layer and needs its own design.
+3. /~logging~ names a ruled-out component./ LoggingStore sits in the streams row, ruled out of scope. Relocation rather than refusal: a minimal ~RESTLY_LOGGER~ is admissible as a PassThrough descendant with an agent tap — forwards all verbs unchanged, emits an operation record via an agent, side effect observationally benign (the same CQS exemption the memoizing cache already uses). This re-scopes exactly one class and *not* the filter/stream architecture behind Weiher's version; the delta table records the partial re-scope. Anything more (operation replay, Copier, notification fan-out) re-opens the streams row and is refused here.
+4. /Typos:/ unterminated literal, "anotehr".
+
+Normative form, reading (a):
+
+#+BEGIN_SRC eiffel
+local
+    other: RESTLY_HTTP_RESOURCE
+        -- PROTOCOL [STRING_8, STRING_8], bytes at the wire
+    other_typed: RESTLY_PROTOCOL [STRING_8, OTHER_ITEM]
+    as_github_schema: RESTLY_PROTOCOL [STRING_8, GITHUB_ITEM]
+    dashboard_store: RESTLY_PROTOCOL [STRING_8, GITHUB_ITEM]
+do
+    other := http_scheme.resource ("http://another-service.com/api/")
+    other_typed := other.converted_by (create {OTHER_JSON_CONVERTER}.default_create)
+        -- JSON parsing at the edge, inside the converter body — rule intact
+    as_github_schema := other_typed.converted_by (create {OTHER_TO_GITHUB_CONVERTER}.default_create)
+        -- pure domain-to-domain mapping; no JSON mid-pipeline
+    dashboard_store := as_github_schema.logged_via (agent log_operation)
+end
+#+END_SRC
+
+Note what happened to ~first_api~: it vanished. Its only contribution is the type ~GITHUB_ITEM~ — the schema the dashboard consumes — and types are not wired, they are declared. The sketch's intuition that "GitHub is involved" was a type-level fact miscast as a store-level one; the typed design forces the distinction, which is precisely its job.
+
+** Delta entries introduced by these examples
+
+Recorded in the jurisdiction table (§ delta): ~cached_by~ as the non-linear composition query; ~RESTLY_LOGGER~ as a partial re-scope of the logging row; federation confirmed edge-only.
+
+* Eiffel mechanism ledger
+
+| Mechanism            | Where used                                     | Why it is load-bearing                                                     |
+|----------------------+------------------------------------------------+----------------------------------------------------------------------------|
+| ~convert~ clause     | STRING → per-scheme URI classes                | String literals at typed call sites; parse failure = tagged 400; unambiguous only because target types are scheme-specific |
+| Operator alias ~"/"~ | ~RESTLY_DIRECTORY.descended~                   | Typed RelativeStore; hierarchy without string surgery                       |
+| Bracket alias ~"[]"~ | all stores (existing convention)               | Uniform access syntax across schemes                                        |
+| Multiple inheritance | resources × capability mixins                  | Per-scheme capability sets; compile-time 405 extends to schemes             |
+| Creation-constrained genericity | typed content over ~RESTLY_FILE~ / HTTP resource via converters | Reuses the settled converter species unchanged                              |
+| Contract tags        | every precondition in layers A–C               | 400/404/409 pushed down into the identifier layer — no corpus antecedent    |
+
+* Status-code map at the identifier layer
+
+| Failure                                  | Layer | Tag                       |
+|------------------------------------------+-------+---------------------------|
+| Malformed URI string                     | A / C | ~error_400_bad_request~   |
+| Scheme not registered                    | C     | ~error_404_not_found~     |
+| Path does not exist (file, dir, entry)   | B     | ~error_404_not_found~     |
+| Exists but wrong kind (file vs dir)      | B     | ~error_409_conflict~      |
+| DELETE on already-sent mail              | B     | ~error_409_conflict~      |
+| Read on ~RESTLY_WRITE_ONLY~ view         | B     | open — same class as 405 guard (§8) |
+| Remote HTTP status (inbound)             | B     | mapped onto same tags     |
+
+* Open problems this design inherits or creates
+
+1. *SCOOP wait-condition classification, extended.* Every handler resource except the in-memory outbox does I/O and will be separate. Each precondition in this document must be classified correctness-guard vs. synchronization-point, per the settled discipline. The ~RESTLY_WRITE_ONLY~ read-guard joins the 405-guard open decision; it is the same problem and must get the same resolution, whatever that turns out to be.
+2. *Enumeration, now unavoidable.* ~RESTLY_DIRECTORY~ is the canonical enumerable store — a directory listing *is* enumeration. The corpus is empty here (its DiskStore couldn't even fetch entries by index). This design forces the open jurisdictional question onto the roadmap earlier than planned; Fielding vs. Eiffel, no Weiher ruling available. Do not ship the directory resource with an ad-hoc iteration feature and call it solved.
+3. *file:// authority component.* ~file://home/agarciafdz/~ as written parses "home" as the *authority* (host), not the first path segment — RFC 3986 wants ~file:///home/agarciafdz/~. Decide: strict RFC parsing (three slashes, empty authority) or a documented lenient mode. Strict is correct; the requirement examples as given are malformed URIs and would 400. Your call, but it must be a recorded call.
+4. *Outbox persistence and send semantics.* Whether ~force~ sends synchronously, queues for a separate sender, or both, is undecided; the queue variant reintroduces Weiher's pending-writes-are-source-of-truth caveat and must be designed with it in view.
+5. *Eviction vs. identity.* The identity map cannot be unboundedly grown and cannot be naively evicted (§ Registry lifetime, Decision 2). The scheme-classified guarantee (hard identity for internally-stateful schemes, convergent identity for externally-stateful ones) needs a contract formulation: what postcondition does ~resolve~ actually promise, per scheme class?
+6. *Separate registry ergonomics.* Every access to the process-wide registry requires a separate-argument scope. Confirm that the configuration-time-only rule can be *enforced* (e.g., resources are non-separate once resolved, so request-path code has nothing separate to touch) rather than merely documented.
+7. *Traversable generics decoupling.* The directory specification requires ~RESTLY_TRAVERSABLE [K, V2]~ with ~V2 ≠~ the protocol's ~V~ (nodes vs. contents). The pipeline front and EWF bridge currently assume they coincide; ~mount_collection~ on a directory violates that assumption. This is a *core-library* revision with a blast radius in the bridge's GET-list and DELETE-all paths — it must get its own recorded decision (probably: the traversable becomes an independent view object rather than a mixin sharing the store's generics) before the directory ships. Interim consequence: ~RESTLY_DIRECTORY~ is not mountable as a collection.
+
+* Jurisdiction table delta (against weiher_corpus_design_document.org §8)
+
+| Corpus element                          | Old ruling               | New ruling                                                          |
+|------------------------------------------+--------------------------+----------------------------------------------------------------------|
+| Polymorphic identifiers, schemes         | Reject                   | *Adopt under types* — per-scheme URI classes; heterogeneity edge-only |
+| First-class reference as reified LUP     | Adopt conceptually       | *Realized* — ~RESTLY_FILE~ is the single-ref layer, lens laws apply here |
+| RelativeStore                            | Out of scope             | *In scope, typed* — ~descended alias "/"~ on directory stores         |
+| SwitchingStore                           | Edge only (EWF)          | Unchanged in principle; *second instance* — the scheme registry       |
+| Typing of combinators (SC '19 §9 fork)   | Interface branch taken   | *Both branches taken* — interface types and identifier types          |
+| Streams vs stores (mailto pressure)      | Stores are not streams   | *Upheld* — outbox is a genuine store; write-only is a combinator view |
+| CachingStore                             | Adapt with correction    | *Third instance* — per-handler identity map is a cache combinator over the resolver; eviction stays out of the protocol |
+| LoggingStore                             | Out of scope             | *Partially re-scoped* — ~RESTLY_LOGGER~ as PassThrough descendant with agent tap; filter/stream architecture stays out |
+| Composition vocabulary                   | ~backed_by~ (linear)     | *Extended* — ~cached_by~ for the two-store cache case; ad-hoc arrows (~<-~) rejected as drift |
+| Four-verb inviolability (directory pressure) | Four verbs, no additions | *Upheld via command* — ~create_subdirectory~ outside the verbs, MKCOL (RFC 4918) as HTTP's own precedent |
+| ~"[]"~ alias semantics                   | Protocol ~item~ everywhere | *Upheld against in-conversation proposal* — node-returning ~"[]"~ rejected; navigation via ~file~/~subdirectory~/~"/"~ |
+| Traversable generics = protocol generics | Assumed coincident       | *Broken by directory* — split ~V~ (contents vs. nodes); core revision required, open problem 7 |
+| Reference identity (PI '13: none)        | —                        | *RESTLY addition* — identity map as naming-soundness requirement; no corpus antecedent |
+| Static composition / explicit wiring     | Adopt                    | *Hardened* — singleton is client sugar only; library takes registry as creation argument; resolution prohibited on request path |
+
+* Implementation record: RESTLY_HTTP_CLIENT and RESTLY_URI_PATH
+:PROPERTIES:
+:STATUS: Built and tested (2026-07-07) — first realized fragment of this design
+:REVISES: this document, §Layer A, §HTTP_SCHEME
+:END:
+
+The HTTP resource exists before the registry does. ~RESTLY_HTTP_CLIENT~
+inherits ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~ and maps the five
+verbs one-to-one onto a libcurl session; ~RESTLY_URI_PATH~ inherits the
+contrib ~URI_TEMPLATE~ with bidirectional string conversion. The server
+bridge mounts routes with the *same* key type. 72/72 tests pass against
+a live todobackend. Full debugging narrative:
+=learning-for-http-client.org=. What the build taught, recorded as
+revisions and confirmations:
+
+** Revision 1 — entry keys are typed; §HTTP_SCHEME's instantiation is superseded
+
+§HTTP_SCHEME typed the resource ~RESTLY_PROTOCOL [STRING_8, STRING_8]~.
+The built class is ~[RESTLY_URI_PATH, STRING]~. The document failed to
+apply its own thesis to entry keys: "types move onto the identifiers"
+was argued for the *store-naming* URIs while the keys *within* a store
+stayed raw strings. A key like ~http://other-host/x~ handed to an HTTP
+client would be silently reinterpreted against the session's base URL —
+exactly the class of error the identifier layer exists to make
+unrepresentable. The value type is upheld: bytes at the wire, typing
+recovered by converters above.
+
+** Revision 2 — Layer A needs a two-kind identifier taxonomy
+
+~RESTLY_URI_PATH~ cannot inherit the ~RESTLY_URI~ ancestor as
+specified: it is *scheme-less by construction* (a relative reference
+per RFC 3986 §4.2), so ~scheme: STRING_8~ and the ~scheme_lowercase~
+invariant do not apply to it. Layer A as drawn knows only absolute
+per-scheme URIs. The realized taxonomy is:
+
+| Kind                          | Names            | Example                      | Class          |
+|-------------------------------+------------------+------------------------------+----------------|
+| Absolute, scheme-bearing      | a *store* (root) | ~http://github.com/api/v1/~  | ~HTTP_URI~ (unbuilt) |
+| Relative reference / template | *entries within* a store; server routes | ~/todos/{id}~ | ~RESTLY_URI_PATH~ (built) |
+
+The second kind was not anticipated at all, and it carries a result the
+document should claim: because ~RESTLY_URI_PATH~ is a *template*, the
+client's key type and the server's route type are one class — the
+in-process and over-the-wire halves of the thesis address entries with
+the same identifier. The document had no template concept.
+
+** Revision 3 — bidirectional conversion belongs in the mechanism ledger
+
+The ledger records only inbound conversion (string → URI class, tagged
+400). The built class also converts *outbound*
+(~template: {READABLE_STRING_8}~), so every ~HTTP_CLIENT_SESSION~ verb
+and ~map_uri_template_response~ accepts the typed key directly — no
+~.template~ unwrapping at any call site. Both directions in one class
+are legal Eiffel (verified by compile; the misremembered prohibition is
+ECMA's cross-class same-direction rule). Ergonomics of the typed
+identifier layer depend on both directions; the ledger row is amended
+accordingly.
+
+** Revision 4 — once functions are a trap for per-root state
+
+First implementation held the session in a plain ~once~ function
+reading ~base_url~. A once function is once-per-*class* per thread: two
+clients with different roots in one thread silently shared the first
+client's session — the resource was an accidental one-root-per-thread
+singleton. Fixed: session and request context are per-instance
+attributes created at ~make_with_url~. Consequence for Decision 1: the
+identity map must be an explicit shared object (the ~RESTLY_CACHE~
+composition already ruled), *never* once functions on the resource
+class — once gives the wrong axis of sharing (per class, not per URI)
+and the failure is silent.
+
+** Naming collision, unresolved
+
+The document says ~RESTLY_HTTP_RESOURCE~; the built class is
+~RESTLY_HTTP_CLIENT~. One must yield before the thesis quotes either.
+
+** What RESTLY_HTTP_CLIENT still owes this design
+
+1. ~RESTLY_PATCHABLE~ — the server already routes PATCH; the client has
+   no ~patch~.
+2. Inbound status→tag mapping — remote 404 must surface as
+   ~error_404_not_found~ on ~item~; currently non-200 collapses to an
+   empty result. Contracts are the owner's to write.
+3. Typed root — ~make_with_url~ takes ~STRING~; the design wants the
+   absolute ~HTTP_URI~ once Layer A is built.
+4. Handler-factory creation and the per-handler identity map — deferred
+   until the registry exists. Public creation is tolerable meanwhile:
+   HTTP is the *convergent-identity* class of open problem 5 (external
+   state), so duplicate instances converge on the same remote state.
+
+** Delta additions
+
+| Element                        | Old ruling                      | New ruling                                                        |
+|---------------------------------+---------------------------------+--------------------------------------------------------------------|
+| Entry keys within a store       | ~STRING_8~ (§HTTP_SCHEME)       | *Typed* — ~RESTLY_URI_PATH~; thesis applied to keys, not only roots |
+| Identifier taxonomy             | Absolute per-scheme URIs only   | *Two kinds* — absolute names stores; relative template names entries and routes |
+| ~convert~ ledger row            | Inbound only                    | *Bidirectional* — outbound ~template: {READABLE_STRING_8}~ removes all unwrapping |
+| Resource-held connection state  | Unspecified                     | *Per-instance attributes* — once functions prohibited for per-root state |
+
+* Implementation record: RESTLY_DIRECTORY and identity-by-inheritance
+:PROPERTIES:
+:STATUS: Built and tested (2026-07-08) — second realized fragment of this design
+:REVISES: this document, §Layer A, §FILE_SCHEME, §HTTP_SCHEME, §Decision 1
+:END:
+
+~RESTLY_DIRECTORY~ inherits ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~
+and implements every verb over the filesystem via ~RAW_FILE~ / ~DIRECTORY~.
+~RESTLY_FILE~ is the CELL-shaped leaf (~item~/~put~/~remove~). Both
+extend ~RESTLY_FILE_NODE~ which inherits the stdlib ~PATH~.
+~RESTLY_HTTP_CLIENT~ was then backported to the same pattern: it now
+inherits ~RESTLY_HTTP_URI~, itself a ~URI_TEMPLATE~ descendant. 87 tests
+pass (72 existing + 15 new). What the build taught:
+
+** Revision 5 — edge resources ARE their root identity (inheritance over composition)
+
+The design document anticipated typed identifiers (Layer A) separate
+from the resources that use them. Implementation proved the relationship
+is stronger: a filesystem directory IS-A ~PATH~, not has-a ~PATH~. The
+initial implementation used composition (~path: PATH~ attribute); the
+refactoring to inheritance eliminated the attribute, the hand-rolled
+~name~ computation, and every indirection through ~path.whatever~.
+~PATH~ supplies ~is_equal~ (path equality), ~hash_code~ (HASHABLE), and
+~parent~/~entry~/~extended~ — all genuinely meaningful on file nodes.
+The same pattern was then applied to ~RESTLY_HTTP_CLIENT~: it inherits
+~RESTLY_HTTP_URI~ (which inherits ~URI_TEMPLATE~), making the client
+its own HASHABLE identity. Two clients on the same URL are ~is_equal~ —
+the correct semantics for the identity map (Decision 1) without any
+additional mechanism. The ~base_url: STRING~ attribute vanished;
+~template~ (inherited from ~URI_TEMPLATE~) replaced it.
+
+Consequence for Decision 1: the memo key "must be the normalized typed
+URI" (§Decision 1). With identity-by-inheritance, the resource *is* the
+key — ~RESTLY_HTTP_CLIENT~ conforms to ~HASHABLE~ through ~URI_TEMPLATE~,
+~RESTLY_DIRECTORY~ conforms through ~PATH~. No separate key extraction
+is needed; the identity map can use the resource objects directly.
+
+** Revision 6 — immutable identity via export restriction
+
+~URI_TEMPLATE~ exposes ~set_template~, which would let clients mutate a
+resource's identity after creation — a soundness defect for any identity
+map keyed on the resource itself. All three ~URI_TEMPLATE~ descendants
+now hide it: ~export {NONE} set_template~. ~PATH~ is already effectively
+immutable (no ~set_name~ or similar). Ruling: identity-bearing types
+must not expose mutation of their identity features. The mechanism is
+Eiffel's selective export, not a language addition — record it in the
+mechanism ledger.
+
+** Revision 7 — PATH.extended rejects rooted arguments; key convention requires string fallback
+
+~RESTLY_URI_PATH~ keys carry a leading ~/~ (the invariant says
+~template.starts_with ("/")~). ~PATH.extended~ has precondition
+~a_name_has_no_root~, and a string starting with ~/~ is treated as
+having a root. Consequence: ~file_system_path~ and ~node~ cannot use
+~PATH.extended~ with protocol keys directly. They fall back to string
+concatenation via ~utf_8_name + k.template~, then wrap in a fresh
+~PATH~. The ~entries~ loop and ~subdirectory alias "/"~ use
+~PATH.extended~ and ~extended_path alias "+"~ correctly because
+directory entry names and segment arguments do not carry leading
+slashes. Recorded ceiling: if ~RESTLY_URI_PATH~'s convention changes
+to omit the leading ~/~, ~file_system_path~ can be simplified to
+~extended (k.template)~.
+
+** Revision 8 — ~/~ navigation generalizes across schemes
+
+~RESTLY_DIRECTORY~ has ~subdirectory alias "/"~; the backport adds
+~subpath alias "/"~ to ~RESTLY_HTTP_CLIENT~. Both return a new store
+rooted deeper. Usage: ~github / "repos" / "elv79"~ produces a client
+at ~https://github.com/api/v1/repos/elv79~. The ~"/"~ alias on
+directory stores was anticipated by this document (§FILE_SCHEME,
+~descended alias "/"~); that it transfers naturally to HTTP stores
+confirms the design's claim that the operator represents typed
+RelativeStore navigation, not a filesystem-specific feature. The
+directory also gains a ~node~ query (returns ~RESTLY_FILE_NODE~, caller
+object-tests for ~RESTLY_FILE~ vs ~RESTLY_DIRECTORY~) — the
+single-entry version of ~entries~, matching ~FILE_SCHEME.node~ in the
+design.
+
+** What is now resolved from the "still owes" list
+
+| Item                  | Status                                                                |
+|-----------------------+-----------------------------------------------------------------------|
+| Typed root            | *Done* — ~RESTLY_HTTP_URI~ with invariant; ~make_with_url~ takes it   |
+| ~/~ navigation        | *Done* — ~subpath alias "/"~ on HTTP client, ~subdirectory alias "/"~ on directory |
+
+Items 1 (~RESTLY_PATCHABLE~), 2 (status→tag mapping), and 4
+(handler-factory + identity map) remain open.
+
+** Delta additions
+
+| Element                           | Old ruling                                | New ruling                                                                      |
+|-----------------------------------+-------------------------------------------+---------------------------------------------------------------------------------|
+| Resource-to-identity relationship | Separate objects (resource uses identifier) | *IS-A* — resource inherits its identity type; is its own memo key              |
+| Identity mutability               | Unspecified                               | *Immutable* — ~set_template~ hidden via ~export {NONE}~ on all URI descendants  |
+| ~"/"~ navigation scope            | Filesystem only (§FILE_SCHEME)            | *Cross-scheme* — HTTP client gains ~subpath alias "/"~; same operator, same semantics |
+| Mechanism ledger: selective export | —                                         | *Added* — ~export {NONE}~ for identity immutability                              |
+| ~node~ query on directory         | Anticipated (§FILE_SCHEME)                | *Realized* — returns ~RESTLY_FILE_NODE~; caller object-tests for kind            |
