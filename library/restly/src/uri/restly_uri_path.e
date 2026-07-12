@@ -23,8 +23,6 @@ convert
 	template: {READABLE_STRING_8}
 
 invariant
-	key_is_relative_reference: True
-			-- TODO(owner): contract
-			-- suggested: template.starts_with ("/") and not template.starts_with ("//")
+	key_is_relative_reference: template.starts_with ("/") and not template.starts_with ("//")
 
 end
