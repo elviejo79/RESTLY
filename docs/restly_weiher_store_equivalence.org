@@ -1,0 +1,237 @@
+#+TITLE: RESTLY ↔ Weiher Store Catalog: Equivalence Map
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-08
+#+OPTIONS: toc:2 num:t ^:nil
+#+STARTUP: overview
+#+TODO: GAP CONFIRM OPEN | SETTLED
+
+# Three-authority framing for every row below:
+#   Weiher decides what to build. Fielding decides what survives. Eiffel decides what is true.
+
+* Purpose
+
+  Fix the correspondence between Weiher's store/combinator catalog (the four
+  papers) and RESTLY's typed reconstruction, so that (a) every RESTLY class
+  traces to a named Weiher construct or a deliberate departure, (b) gaps are
+  visible rather than discovered late, and (c) citation claims in the thesis
+  distinguish what Weiher *code-defines* from what he only *names*.
+
+  This document records the state established in the store-catalog review. It is
+  a map, not a specification: the RESTLY column asserts only what is confirmed
+  built; unconfirmed cells are marked CONFIRM, not silently filled.
+
+* The taxonomy — four kinds of thing, not one
+
+  The decisive learning: "store" is not a single category. Weiher's Figure 13
+  hierarchy collapses four structurally different roles under one superclass, and
+  conflating them is exactly the vocabulary drift the /círculos/ discipline
+  exists to catch.
+
+  1. *Endpoint (leaf) store* — terminates the chain. Actually stores or computes.
+     Holds *no* ~source~. Example: ~DiskStore~, ~DictStore~, ~rawhttp~.
+  2. *Storage combinator* — implements /and uses/ the Storage protocol. Holds one
+     or more ~source~ stores and forwards/transforms. Example: ~CachingStore~,
+     ~RelativeStore~, ~PassThrough~.
+  3. *Filter* — NOT a store. Implements only ~write:~, single-in/single-out.
+     Does not conform to the four-verb protocol; hangs off a logging store's
+     ~write:~ channel. Example: ~Copier~, ~StoreNotifications~.
+  4. *Server adapter (reverse)* — NOT a store, NOT a client. Receives inbound
+     HTTP and maps it *onto* the Storage protocol of the store it fronts. The
+     mirror image of an HTTP client endpoint. Example: ~SchemeHTTPServer~.
+
+  Jurisdiction: the endpoint/combinator distinction is *Weiher* (composability).
+  The client/server (endpoint vs server-adapter) distinction is *Fielding*
+  (client/server separation). Collapsing #4 into #1 violates REST, not just taste.
+
+* The verb vocabulary (foundation for the whole map)
+
+  | HTTP   | Weiher Storage protocol | HASH_TABLE analogy | RESTLY layer            |
+  |--------+-------------------------+--------------------+-------------------------|
+  | GET    | ~at:ref~                | ~item~             | RESTLY_PROTOCOL [K, V]  |
+  | PUT    | ~at:ref put:object~     | ~force~            | RESTLY_PROTOCOL [K, V]  |
+  | DELETE | ~deleteAt:ref~          | ~remove~           | RESTLY_PROTOCOL [K, V]  |
+  | PATCH  | ~at:ref merge:object~   | ~merge~            | RESTLY_PATCHABLE [K, V] |
+
+  RESTLY_PROTOCOL [K, V] bundles the GET/PUT/DELETE three-verb core; PATCH is the
+  opt-in RESTLY_PATCHABLE mixin, claimed only by resources with defined merge
+  semantics. The HASH_TABLE column is the *analogy* (Eiffel decides what is true),
+  not an assertion of RESTLY's method signatures — those are CONFIRM below.
+
+* Weiher's source catalog
+
+** Endpoints — what Weiher actually names
+
+   Citation column is load-bearing: only ~DictStore~ is given a class body. Every
+   other row is used or named in prose. In the thesis, cite the named-only rows
+   as "a pre-built endpoint backing the <scheme> scheme," never with an attributed
+   implementation.
+
+   | Store / scheme          | Backing medium                | Where                | Code-defined? |
+   |-------------------------+-------------------------------+----------------------+---------------|
+   | ~DictStore~ (dict/mem)  | in-memory dictionary          | SC §2–3, everywhere  | YES (Figs 4–5)|
+   | ~DiskStore~ (~file~)    | filesystem                    | SC Figs 6/8, §5.4    | no — used     |
+   | ~rawhttp~ (~http~)      | web resources                 | SC Figs 28/29; PI F1 | no — named    |
+   | ~ftp~                   | FTP resources                 | SC §3 prose          | no — named    |
+   | ~env~                   | environment variables         | SC §3; BPC L29       | no — named    |
+   | ~var~                   | memory variables              | SC §3; PI            | no — see note |
+   | key-value DB store      | KV database                   | SC §3 prose          | no — named    |
+   | SQLite store            | SQLite (relational template)  | SC §3 prose          | no — named    |
+   | window store            | system-managed windows        | SC §3 prose          | no — named    |
+   | AppleScript store       | other applications' data      | SC §3 prose          | no — named    |
+   | object/ivar (~task:~)   | instance variables of object  | BPC L29              | no — used     |
+   | ~sftp~                  | remote filesystem via SSH     | BPC L42              | no — used     |
+
+   Not distinct endpoints (do NOT reconstruct as separate classes):
+   - *S3* (BPC L30) = ~rawhttp~ pointed at an S3 URL with auth headers set.
+   - full *~http:~ scheme with caching* (PI Fig 1) = composite: ~rawhttp~ + disk
+     cache + memory cache. The endpoint underneath is ~rawhttp~ alone.
+   - ~var:~ is implemented in PI as a /sequential/ scheme (searches base schemes),
+     not a pure leaf. Treat as combinator-over-leaves, not endpoint.
+
+   SC = Storage Combinators '19 · PI = Polymorphic Identifiers '13 · BPC = Beyond
+   Procedure Calls '24.
+
+** Combinators — corrected to include Sequential
+
+   | # / §     | Combinator            | What it does                                           | Code-defined? |
+   |-----------+-----------------------+--------------------------------------------------------+---------------|
+   | SC §3.1.1 | ~PassThrough~         | identity forwarding of all four verbs to ~source~      | YES (Fig 11)  |
+   | SC §3.1.2 | ~MappingStore~ (abs.) | three hooks: ~mapRef:~, ~mapRetrieved:~, ~mapToStore:~  | YES (Fig 14)  |
+   | SC §3.1.3 | ~RelativeStore~       | Mapping subclass; maps ref only (prefix)               | YES (Fig 15)  |
+   | SC §3.1.4 | Serialiser (JSON)     | Mapping subclass; maps data only (JSON/XML ↔ objects)  | partial       |
+   | SC §3.1.5 | ~SwitchingStore~      | dispatch to sub-store by first path-component          | YES (Fig 17)  |
+   | SC §3.1.6 | ~CachingStore~        | source + cache; write-through; NO auto-invalidation    | YES (Fig 18)  |
+   | SC §3.2   | ~LoggingStore~        | PassThrough adapter that logs writes as RESTOperation   | YES (Fig 19)  |
+   | PI (not SC §3.1.x) | Sequential   | searches several base stores in order for a value      | described     |
+
+   *Correction on record:* the earlier combinator list omitted *Sequential*. It is
+   a genuine combinator (multiple sources), not an endpoint. Weiher gives it no
+   §3.1.x subsection in the '19 paper; it is described in Polymorphic Identifiers.
+   Figure 13's ~URL-Based~ node is the abstract *endpoint* superclass over
+   ~http~/~https~/~ftp~ — the parent your RESTLY_HTTP_CLIENT descends from.
+
+** Filters and the server adapter (separate buckets)
+
+   | Construct              | Role                                                    | § / Where |
+   |------------------------+---------------------------------------------------------+-----------|
+   | ~Copier~               | filter; copies ~source~→~target~ on PUT/DELETE          | SC §3.2.2 |
+   | ~StoreNotifications~   | filter; RESTOperation → MVC notification                | SC §3.2.1 |
+   | ~SchemeHTTPServer~     | server adapter; inbound HTTP → Storage protocol         | SC §4.2   |
+
+* RESTLY equivalence map
+
+** Confirmed equivalents (built)
+
+   | Weiher construct        | RESTLY class / operator     | Notes                                        |
+   |-------------------------+-----------------------------+----------------------------------------------|
+   | Storage protocol (typed)| ~RESTLY_PROTOCOL [K, V]~     | GET/PUT/DELETE core                          |
+   | PATCH / ~merge:~        | ~RESTLY_PATCHABLE [K, V]~    | opt-in mixin                                 |
+   | directory listing (GET) | ~RESTLY_LISTABLE [K]~        | opt-in mixin; HTTP_RESOURCE excluded (OPEN)  |
+   | POST                    | ~RESTLY_POSTABLE [P]~        | opt-in mixin                                 |
+   | (base combinator)       | ~RESTLY_BASIC_COMBINATOR~    | bundles three-verb core                      |
+   | ~CachingStore~          | ~RESTLY_CACHE~               | see cache-merge correction under SETTLED     |
+   | ~RelativeStore~         | ~RESTLY_RELATIVE~            | derived typed-navigation layer over flat keys|
+   | ~DiskStore~             | ~RESTLY_DIRECTORY~           | flat deep-relative-path keys (SETTLED)       |
+   | ~rawhttp~ / URL-Based   | ~RESTLY_HTTP_CLIENT~         | outbound client only — see gap below         |
+   | ~→~ connector           | ~backed_by~ / ~alias "<-"~   | ~front.backed_by(mid.backed_by(back))~       |
+   | Serialiser / JSONConverter | converter classes        | round-trip postconditions as lens laws (OPEN)|
+
+** Gaps — Weiher has it, RESTLY does not (or not yet)
+
+*** GAP In-memory dictionary endpoint (≈ ~DictStore~) :highest_priority:
+    The single most-used store in the corpus: default ~CachingStore~ cache, the
+    test-configuration double (SC §5.2, Fig 33 — "no special-purpose mocks"), and
+    the "Simplest Thing That Could Possibly Work" origin of the whole abstraction
+    (SC §5.2). Directly targeted by the HASH_TABLE-as-REST analogy. Without a
+    ~RESTLY_DICT~ / in-memory ~[K, V]~ endpoint there is nothing to back
+    ~RESTLY_CACHE~ with and no fast test double. Argue this should be the *first*
+    endpoint, ahead of disk.
+
+*** GAP PassThrough combinator (≈ ~PassThrough~) :combinator_catalog:
+    Flagged absent from the RESTLY combinator catalog. Note it is *distinct* from
+    ~RESTLY_BASIC_COMBINATOR~: PassThrough is the identity-forwarding combinator
+    (the parent of adapters like logging), not the three-verb core bundle. The
+    logging/tracing story (SC §9 future work: auto-inserted logging stores for
+    debugging compositions) depends on having it.
+
+*** GAP HTTP server adapter (≈ ~SchemeHTTPServer~) :fielding_boundary:
+    RESTLY_HTTP_CLIENT is only the outbound half. The server adapter is the
+    reverse (inbound HTTP → RESTLY_PROTOCOL). The TodoBackend and the ~curl~
+    sessions (BPC L45–46) imply RESTLY serves as well as consumes. This is a
+    Fielding client/server line — a distinct component, not a mode of the client.
+    Do not name it RESTLY_HTTP_CLIENT-anything.
+
+** CONFIRM — existence in RESTLY unknown, resolve before claiming coverage
+
+*** CONFIRM Abstract mapping parent (≈ ~MappingStore~)
+    RESTLY_RELATIVE is a Weiher mapping-store /subclass/. Does RESTLY have the
+    abstract three-hook parent (~mapRef:~ / ~mapRetrieved:~ / ~mapToStore:~), or is
+    reference-mapping and data-mapping factored differently (e.g. RESTLY_RELATIVE
+    for refs, converters for data, no shared parent)? The three-mapping structure
+    is what makes Relative and Serialiser siblings; if there is no parent, say so
+    and justify the departure.
+
+*** CONFIRM Switching combinator (≈ ~SwitchingStore~)
+    Dispatch-by-first-path-component. Interacts with the schemes stratum
+    ("scheme handlers are factories only"). Confirm whether a typed switch exists
+    or whether the schemes library subsumes it.
+
+*** CONFIRM Logging combinator (≈ ~LoggingStore~) and filters (~Copier~, ~StoreNotifications~)
+    Filters do not conform to the four-verb protocol, so they do not participate
+    in ~backed_by~ nesting. If reconstructed, they are a different shape and must
+    not be forced into RESTLY_PROTOCOL conformance.
+
+*** CONFIRM Sequential combinator
+    Searches base stores in order (PI). Underlies ~var:~ and the composite caching
+    scheme. Confirm whether RESTLY needs it independently of RESTLY_CACHE.
+
+* Settled decisions bearing on this map                              :binding:
+
+  Recorded rulings, treated as constraints unless explicitly reopened.
+
+  - SETTLED *Flat directory keys.* ~RESTLY_DIRECTORY~ uses deep relative-path keys,
+    not nested-only. Rationale: ~DiskStore~ enumerates a directory as a unit and
+    has no indexed per-entry access (SC §5.4 quadratic-browser pathology);
+    nested-only keys inherit that whole-directory read at every level and bypass
+    every combinator composed over the root below level one. Typed navigation is a
+    derived layer via ~RESTLY_RELATIVE~.
+  - SETTLED *Stores are not streams.* Streaming is architecturally partitioned from
+    the store interface, consistent with Weiher's own partition. Deferred to v2;
+    STRING sufficient for v1. Relevant here: ~RESTLY_HTTP_CLIENT~ and
+    ~RESTLY_DIRECTORY~ move whole values, matching the v1 STRING decision.
+  - SETTLED *Schemes stratum is monomorphic.* ~restly_schemes~ fixes generics to
+    ~[STRING, STRING]~ to recover Weiher's universal composability above the typed
+    core. Scheme handlers are factories only, not components of resources.
+  - SETTLED *Cache-merge correction.* Weiher's own ~CachingStore~ decomposes merge
+    as load–merge–put with load reading from the authoritative source. The fix in
+    ~RESTLY_CACHE~ is ensuring the front's load phase reads authoritatively — NOT
+    restoring merge-forwarding.
+
+* Open jurisdictional questions surfaced by the catalog                 :open:
+
+  - OPEN *Enumeration authority (≈ listing).* ~DiskStore~ proves enumeration is a
+    runtime capability (GET-on-directory returns whatever exists now). Eiffel's
+    static typing vs HTTP's runtime discovery. ~HTTP_RESOURCE~ is excluded from
+    ~RESTLY_LISTABLE~ precisely because RESTLY refuses to make that runtime
+    guarantee statically. Weiher does not type enumeration at all — it is just a
+    GET whose result is a listing.
+  - OPEN *SCOOP atomicity for PATCH.* The ~load → merge → force~ pipeline has a
+    read-modify-write atomicity problem under SCOOP.
+  - OPEN *405-guard deadlock.* ~require False~ on a separate SCOOP path deadlocks
+    rather than raising 405; runtime exceptions currently accepted for refused
+    verbs.
+
+* Citation hygiene — carry into the thesis
+
+  - Only ~DictStore~ and the combinators in §"Combinators" (except Serialiser and
+    Sequential, which are partial/described) have Weiher class bodies. Everything
+    in the endpoint table marked "no" is named or used, not defined.
+  - "Weiher defines N combinators" is false framing — Weiher states the set is
+    explicitly non-exhaustive ("by no means exhaustive"). Correct framing:
+    "Weiher presents these as representative generic intermediaries," with
+    ~CascadingRemoveStore~ and the id-redirector (SC §5.3) cited as evidence the
+    set is deliberately open and extended per application.
+  - The thesis novelty claim traces to RESTLY's deliberate rejection of untyped
+    uniformity — the one thing HTTP and Weiher agree on. The endpoint/combinator
+    typing (~[K, V]~ core, monomorphic ~[STRING, STRING]~ schemes stratum) is where
+    that rejection is made concrete.

@@ -1,0 +1,94 @@
+#+TITLE: What should I do next?
+
+* I'm confused
+
+There are many things I can do next, in no particular order:
+
+** other servers
+
+*** a file-system server for resources
+Imagine seeing hash table keys as directories or files and their contents as text files.
+Even better imagine writing a file and that file becomes part of the data structure in memory?
+
+*** an FTP Server for resources
+the same as the RESTLY_EWF_RESOURCE we have currently that exposes a HASH_TABLE as a Json web-api.
+Imagine the same but for an FTP client. Here the problem is that FTP has two modes passive and active and different verbs.
+But the power is that once done you have FTP server that goes directly to your app. maybe directly to your database if that is how you define your database.
+
+*** another Web-Server
+maybe use NinoWebServer or create my own with EiffelNet since I could use the same to create the FTP server.
+
+** other resources
+*** Logging-Resource
+One of Weiher's original. combinators. This one can write a message and the data to a single output stream.
+That also echoes one of Weiher's papers with writeStreamOn and the logging Combinator is important for all the other kinds of systems.
+since it allows a new form of dispatch like an Smalltalk "perform on".
+
+*** work on a SQLite resource handler
+I currently have something that serves APIs web, but I don't have any storage.
+I need to be able to store this things in databases, and in text files, in some specific cases in CSV files or parquet, files ore other formats.
+but to begin just a SQLite resource would be nice. Probably this will need to change to Eiffel Store or Abel to save in the data bases
+
+*** an env resource
+One of Weiher's original resource, and used for configurations and so on.
+
+** Accessories
+
+*** work more with domain objects
+Create really a todo_item.e class and actually expose an array of that to the web.
+
+*** work on the auth part of the URLs
+SQLite, web APIS, etc are going to need a way for authentication to happen. and that should be part of the URLs
+
+*** Generate Swagger documentation automatically from the data structure
+Or generate automatically the Swagger Documentation from the APIs
+or JsonForms spec from the objects
+or JsonSchema from the objects
+
+** Inovation / harder
+
+*** create the WIRE concept
+a wire is queue that allows async communication between resources.
+and it also, includes the converter functionality.
+This is inspired by Paul Tarvydias
+**** MAYBE
+that way I can simplify the combinators type, that way I don't make conversion on every component.
+but only on wires.
+- Maybe that way I can generate a complete architectural diagram, because wires are the links between things.
+- maybe for the graph architectural diagram the Resource Registry , Resource Name Server has a list of all the entities and of all the wires among them.
+
+*** create a Data-Star server
+Since this architecture seems to be the most easy to develop web servers.
+
+*** something like iTask
+If we think it in a way I'm creating something that is like a workflow of services.
+It looks a little bit like ITasks.
+but then for ITasks it needs:
+- A reflection based way to produce a formulary. So that it can automatically create some user interface.
+
+*** Implement other protocols
+As we have said the key of Arhiteture Oriented Programming is that, it shrinks to the level of a program.
+Architectures that have worked for large systems.
+So another avenue of research is to include in this research other Protocols that have been used succesfully.
+So far I have identified:
+
+**** Plan 9
+plan 9 that makes everything a file, processes, emails,etc.
+**** Git protocol
+Git is the distributed-async system par-excellence. It acknowledges that there can be days between synchornizations, and it requires Merge Semantics.
+If I shma
+
+
+** more study on how streams work
+Nadia Polikarpova's EiffelBase2 is divided in containers and Streams.
+I think I have a good handle on containers, and that HTTP protocol matches it perfectly.
+But I need to understand streams better.
+Because another key component are queues (WIRES) or Streams in Polikarpova's.
+Except that Polikarpova's streams are GET sources (ie. you lazily ask for something) and real streams are Push based.
+
+
+* A rare moment of pride
+
+It is very rare that we see Architecture-Integrity in action.
+I really like how this framework works,
+It makes it consistent to speak to the file-system, the database, and a hash table.

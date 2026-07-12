@@ -1,0 +1,217 @@
+#+TITLE: RESTLY_FTP: FTP-Backed Store
+#+AUTHOR: Alejandro
+#+DATE: 2026-07-08
+#+OPTIONS: toc:2 num:t
+
+* Context
+
+Third edge resource, third URI scheme. ~RESTLY_HTTP_CLIENT~ is the store over
+the wire; ~RESTLY_DIRECTORY~ is the store on disk. ~RESTLY_FTP~ is both at
+once: a remote store whose keys and values are files --- structurally a
+~RESTLY_DIRECTORY~ reached through a socket. Same pre-scheme-handler approach
+as its two siblings: build the resource, defer the FTP_SCHEME factory.
+
+* Decisions
+
+- ~RESTLY_FTP~ inherits ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~ +
+  ~RESTLY_FTP_URI~ --- the client IS its root URL, same
+  identity-by-inheritance pattern as ~RESTLY_HTTP_CLIENT~ (~set_template~
+  hidden, ~make_from_uri_template~ redefined to re-initialize the session).
+- ~RESTLY_FTP_URI~: clone of ~RESTLY_HTTP_URI~, invariant
+  ~names_an_ftp_endpoint: template.starts_with ("ftp://")~ (owner contract).
+- No new dependency: libcurl speaks FTP natively and is already in the tree
+  via =libcurl_http_client.ecf=. Uses ~CURL_EASY_EXTERNALS~ directly (not
+  ~HTTP_CLIENT_SESSION~; spike proved the session's DELETE is broken for FTP
+  and response codes are incompatible). Verb -> FTP command mapping:
+  | Verb                 | FTP command | libcurl mechanism                          |
+  |----------------------+-------------+--------------------------------------------|
+  | ~item~ (GET)         | RETR        | plain transfer on ~ftp://~ URL             |
+  | ~force~/~put~/~extend~ | STOR      | ~CURLOPT_UPLOAD~ + ~READFUNCTION~          |
+  | ~remove~             | DELE        | ~CURLOPT_QUOTE~ ("DELE <path>")            |
+  | ~has_key~            | SIZE        | ~CURLOPT_NOBODY~ (no body transfer)        |
+  | ~entries~ (deferred) | NLST        | dir URL (trailing ~/~) + ~DIRLISTONLY~     |
+- V = STRING (bytes), matching both siblings --- required for composition
+  (~RESTLY_CACHE~, converters, ~github.cached_by (ftp)~).
+- Transfers are binary (TYPE I), libcurl's default --- never ASCII mode;
+  the binary-roundtrip test pins this.
+- Navigation: ~subpath alias "/" (a_segment): RESTLY_FTP~, same shape as
+  ~RESTLY_HTTP_CLIENT.subpath~.
+
+* Spike results (2026-07-08, resolved)
+
+** Question
+Does ~HTTP_CLIENT_SESSION~ (libcurl backend) pass ~ftp://~ URLs through?
+
+** Live test (pyftpdlib on port 2123, curl CLI)
+
+| Verb          | curl mechanism                  | FTP response code | Works?                                  |
+|---------------+---------------------------------+-------------------+-----------------------------------------|
+| GET existing  | default (~CURLOPT_HTTPGET~)     |               226 | Body correct; status ≠ 200              |
+| GET missing   | default                         |               550 | curl rc=78                              |
+| HEAD existing | ~-I~ (~CURLOPT_NOBODY~)         |               350 | Metadata returned (Content-Length, etc.) |
+| HEAD missing  | ~-I~ (~CURLOPT_NOBODY~)         |               550 | Consistent with GET missing             |
+| UPLOAD (STOR) | ~-T~ (~CURLOPT_UPLOAD~)         |               226 | Works                                   |
+| DELETE        | ~-X DELETE~ (~CUSTOMREQUEST~)   |              (226) | *Broken*: sends RETR, not DELE          |
+| DELE          | ~-Q "DELE"~ (~CURLOPT_QUOTE~)   |               250 | Works; but CURLOPT_QUOTE not in bindings|
+| ~--include~   | ~CURLOPT_HEADER=1~              |               --- | Harmless for FTP; body stays clean      |
+
+** Conclusions
+
+1. *FTP response codes ≠ HTTP.* ~curlinfo_response_code~ returns FTP codes
+   (226 success, 350 SIZE ok, 550 not found). The session's
+   ~response_status_code~ returns these raw --- ~RESTLY_HTTP_CLIENT~ checks
+   ~200 ~ response.status~ which fails for FTP's 226.
+2. *DELETE is broken.* ~CURLOPT_CUSTOMREQUEST "DELETE"~ tells curl to use
+   DELETE as the *request command* before transfer --- but that's an FTP
+   ~RETR~ with "DELETE" sent as a preamble. FTP deletion requires
+   ~CURLOPT_QUOTE "DELE <path>"~.
+3. *~CURLOPT_QUOTE~ is not exposed* in the Eiffel ~CURL_OPT_CONSTANTS~ class
+   (203 constants exposed, ~curlopt_quote~ is not among them).
+4. *PUT with inline data* goes through the session's temp-file hack
+   (=libcurl_http_client_session.e= line 140--159), ending in
+   ~CURLOPT_UPLOAD~ --- should work for FTP STOR.
+5. *~CURLOPT_HEADER=1~* is harmless for FTP --- body stays clean.
+
+** Verdict: raw ~CURL_EASY_EXTERNALS~
+
+All verbs go through ~CURL_EASY_EXTERNALS~ directly. ~RESTLY_FTP~ owns
+~curl: CURL_EXTERNALS~ + ~curl_easy: CURL_EASY_EXTERNALS~ (same attributes
+~LIBCURL_HTTP_CLIENT_SESSION~ has, exported to its request class).
+
+Verb mapping via raw curl:
+- ~item~ (RETR): ~CURLOPT_URL~ + default GET, read into ~CURL_STRING~.
+  Success when ~curl_easy.perform~ returns ~curle_ok~.
+- ~force~/~put~/~extend~ (STOR): ~CURLOPT_UPLOAD=1~ + read function from
+  temp file (same hack the session uses). Success = ~curle_ok~.
+- ~has_key~ (SIZE): ~CURLOPT_NOBODY=1~. File exists when ~perform~ returns
+  ~curle_ok~; missing when it returns ~curle_remote_file_not_found~ (78).
+- ~remove~ (DELE): need ~CURLOPT_QUOTE~ which is *not exposed*. Two options:
+  a. Add ~curlopt_quote~ to a local ~CURL_OPT_CONSTANTS~ descendant (one
+     external ~"return CURLOPT_QUOTE;"~) --- cleanest.
+  b. Shell out to ~curl -Q "DELE <path>"~ for just this verb --- ugly but
+     zero new C glue.
+  Recommendation: option (a), one three-line class.
+
+Status codes are not checked; success/failure determined by ~curle_ok~ vs
+~curle_*~ error codes from ~perform~ (same way ~LIBCURL_HTTP_CLIENT_REQUEST~
+could have done it).
+
+* Files (implementation order)
+
+All new; =src/= and =testing/= clusters are recursive --- auto-discovered.
+
+1. =library/restly/src/resource/restly_ftp_uri.e=
+   - mirrors =restly_http_uri.e=: inherit ~URI_TEMPLATE~ hiding
+     ~set_template~; create ~make~, ~make_from_uri_template~; convert
+     ~make ({READABLE_STRING_8, STRING_8})~ and ~template: {READABLE_STRING_8}~
+   - invariant ~names_an_ftp_endpoint: True -- TODO(owner): contract~
+     ~-- suggested: template.starts_with ("ftp://")~
+2. =library/restly/src/resource/restly_ftp_opt_constants.e=
+   - inherits ~CURL_OPT_CONSTANTS~, adds ~curlopt_quote: INTEGER~ (one
+     external: ~"return CURLOPT_QUOTE;"~). This is the only constant
+     the Eiffel bindings are missing for FTP support.
+3. =library/restly/src/resource/restly_ftp.e=
+   - inherit ~RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]~ + ~RESTLY_FTP_URI~
+     (export ~{NONE} set_template~, redefine ~make_from_uri_template~)
+   - create ~make_with_url (a_base_url: RESTLY_FTP_URI)~,
+     ~make_from_uri_template~
+   - owns ~curl: CURL_EXTERNALS~ + ~curl_easy: CURL_EASY_EXTERNALS~
+     directly (NOT ~HTTP_CLIENT_SESSION~)
+   - each verb: init handle, set ~CURLOPT_URL~, set verb-specific options,
+     perform, cleanup. URL for key ~k~ is
+     ~template.to_string_8 + k.template~ (keys carry leading ~/~)
+   - ~remove~: uses ~curlopt_quote~ via ~RESTLY_FTP_OPT_CONSTANTS~ to send
+     ~"DELE <path>"~ as a pre-transfer FTP command; ~CURLOPT_NOBODY=1~ to
+     suppress the (empty) transfer
+   - ~has_key~: ~CURLOPT_NOBODY=1~; success = ~curle_ok~
+   - ~item~: default GET; read body from ~CURL_STRING~
+   - ~force~/~put~/~extend~: ~CURLOPT_UPLOAD=1~ + write data to temp file +
+     read function (same approach as ~LIBCURL_HTTP_CLIENT_SESSION~)
+   - ~subpath alias "/"~ --- suggested tag ~error_404_not_found~
+4. =library/restly/testing/test_restly_ftp.e= --- see below
+
+* Test strategy
+
+**Server:** =pyftpdlib= (installed), anonymous with write access, one line:
+
+#+BEGIN_SRC sh
+python3 -m pyftpdlib --port 2121 --write --directory /tmp/restly_ftp_sandbox
+#+END_SRC
+
+Same contract as ~TEST_RESTLY_HTTP_CLIENT~: server must be running, stated
+in the class note. No launch machinery in the tests (v1 ceiling below).
+
+**Cross-check through RESTLY_DIRECTORY.** The FTP server serves a temp
+directory that ~RESTLY_DIRECTORY~ can already read and write. The fixture
+holds two views of the same sandbox:
+
+#+BEGIN_SRC eiffel
+ftp: RESTLY_FTP           -- ftp://localhost:2121
+disk: RESTLY_DIRECTORY    -- file:///tmp/restly_ftp_sandbox/
+#+END_SRC
+
+- Seeding bypasses the protocol under test (HTTP-test philosophy): seed via
+  ~disk~, exercise ~ftp~.
+- Verification is independent: ~ftp.force~ then assert ~disk.has_key~ ---
+  proves bytes crossed the wire, not a roundtrip through one code path.
+
+Setup/teardown: sandbox recreation copied from ~TEST_RESTLY_DIRECTORY~
+(~on_prepare~ recursive_delete + recursive_create_dir, ~on_clean~ delete).
+Sandbox path is fixed (=/tmp/restly_ftp_sandbox=) because the externally
+launched server is rooted there --- unlike the directory tests, no
+per-class uniquifier.
+
+* Test cases
+
+| Test                                  | Given (via ~disk~)        | When (via ~ftp~)                        | Then                                             |
+|---------------------------------------+---------------------------+------------------------------------------+--------------------------------------------------|
+| ~test_has_key_false_for_missing~      | empty sandbox             | ---                                      | ~not ftp.has_key ("/nope.txt")~                  |
+| ~test_has_key_true_for_seeded~        | ~disk ["/a.txt"] := "x"~  | ---                                      | ~ftp.has_key ("/a.txt")~ (SIZE)                  |
+| ~test_item_returns_seeded_contents~   | ~disk ["/a.txt"] := "hi"~ | ~ftp ["/a.txt"]~                         | ~~ "hi"~ (RETR)                                  |
+| ~test_force_lands_on_disk~            | empty sandbox             | ~ftp ["/w.txt"] := "hello"~              | ~disk ["/w.txt"] ~ "hello"~ (STOR)               |
+| ~test_put_overwrites_existing~        | ~disk ["/a.txt"] := "v1"~ | ~ftp.put ("v2", "/a.txt")~               | ~disk ["/a.txt"] ~ "v2"~                         |
+| ~test_extend_creates_fresh_key~       | empty sandbox             | ~ftp.extend ("v", "/new.txt")~           | ~disk.has_key ("/new.txt")~ and roundtrip        |
+| ~test_remove_deletes_on_disk~         | ~disk ["/a.txt"] := "x"~  | ~ftp.remove ("/a.txt")~                  | ~not disk.has_key ("/a.txt")~ (DELE)             |
+| ~test_subpath_read_through~           | subdir ~sub~ + seeded file | ~(ftp / "sub") ["/f.txt"]~              | matches ~disk ["/sub/f.txt"]~                    |
+| ~test_binary_bytes_roundtrip~         | empty sandbox             | force bytes 0--255, read back via ~disk~ | identical STRING (pins TYPE I, no ASCII mangling) |
+| ~test_roundtrip_within_ftp~           | empty sandbox             | ~ftp.force~ then ~ftp.item~              | roundtrip through the wire both ways             |
+
+* Contract policy
+
+Placeholder ~True~ + ~-- TODO(owner): contract~ with suggested expression,
+tags per the ~error_NNN_description~ grammar. Verb preconditions are
+inherited from ~RESTLY_PROTOCOL~ --- add nothing there.
+
+* Recorded ceilings (v1, deliberate)
+
+- *Server lifecycle is manual:* tests require a running pyftpdlib, same as
+  the todobackend requirement for HTTP tests. Auto-spawn from ~on_prepare~
+  when this gets annoying.
+- *Anonymous only:* no credentials in v1. libcurl takes ~user:pass@host~
+  URLs when needed; add a ~make_with_credentials~ then.
+- *No ~entries~ in v1:* NLST parsing (line splitting, dir-vs-file probing)
+  is real work; add with the traversal story, not before.
+- *No FTPS/SFTP:* invariant admits only ~ftp://~. Widen the invariant when
+  a use case shows up (FTPS is free in libcurl; SFTP is a different
+  protocol entirely).
+- *Status codes ignored on writes:* same ceiling ~RESTLY_HTTP_CLIENT~
+  already has (its ~force~ discards the response too). Fix both together.
+
+* Checklist
+
+- [X] Spike: ~HTTP_CLIENT_SESSION~ with ~ftp://~ URL --- *raw curl* (see results above)
+- [ ] ~src/resource/restly_ftp_uri.e~
+- [ ] ~src/resource/restly_ftp_opt_constants.e~ (adds ~curlopt_quote~)
+- [ ] ~src/resource/restly_ftp.e~
+- [ ] Clean compile
+- [ ] ~testing/test_restly_ftp.e~ (10 cases, pyftpdlib running)
+- [ ] All tests green (existing + 10 new)
+- [ ] Contract handoff: every suggested tag present as placeholder ~True~ + ~-- TODO(owner): contract~
+- [ ] Commit (on user request)
+
+* Key references
+
+- Pattern (identity + session): =library/restly/src/resource/restly_http_client.e=
+- Pattern (two-view testing): =library/restly/testing/test_restly_directory.e=, =test_restly_http_client.e=
+- Parent contracts: =library/restly/src/restly_protocol.e=
+- Sibling plan: =docs/disk_resource_plan.org=
