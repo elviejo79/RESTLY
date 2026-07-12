@@ -79,6 +79,11 @@
    The database cannot create a generic it cannot name (RESTLY_DIRECTORY.node can, but only because file/directory is a closed non-generic set).
    db's navigation returns untyped table nodes for listing/exists only; the client writes create persons.make_with_repository (db.repository).
    See "Consequence for RESTLY_SQLITE".
+** Should Q stay bound to PS_CRITERION, or does RESTLY need its own query representation? (see HTTP QUERY section)
+   RESOLVED: neither — Q stays a generic parameter of RESTLY_SEARCHABLE.
+   Each backend binds its native representation: PS_CRITERION for ABEL-backed stores, PREDICATE [V] for EiffelBase2-backed stores.
+   A RESTLY-owned query representation is deferred until a third binding forces one.
+** How does the EWF bridge parse a QUERY request body into a Q, and which media types does Accept-Query advertise?
 
 that way seems cleaner to append data to a database.
 
@@ -264,3 +269,110 @@ that way seems cleaner to append data to a database.
  #+END_EXAMPLE
 
    This replaces the untyped db ["persons/1"] path keys from the examples above: one store, one key type, one value type.
+
+* HTTP QUERY (RFC 10008): RESTLY_SEARCHABLE, predicate reads on any store
+
+** Why a new verb
+   RFC 10008 (Proposed Standard, June 2026) defines QUERY: a SAFE and IDEMPOTENT method whose request body carries the query — GET's semantics with POST's payload.
+   The RESTLY store contract covers GET/PUT/POST/DELETE (item / force-put / extend / remove) but has no verb for "safe read with a predicate"; today that read leaks out as ad-hoc feature calls with no HTTP mapping.
+   QUERY names it, and safety plus idempotency make it a QUERY in the CQS sense too: a pure function of the store's state, freely retryable and cacheable.
+
+** Shape: RESTLY_SEARCHABLE [Q, V], the RESTLY_POSTABLE mold
+   A small mixin, one deferred feature; Q is the query REPRESENTATION, V the value type, following the R/S convention: converting Q into whatever the backend executes happens at the store boundary.
+   Named SEARCHABLE/search, not QUERYABLE/query: `search` avoids the noun "query" doubling as a feature name that takes a query, and SEARCH was the method's pre-RFC name anyway.
+   Result type is ITERABLE [V]: the meet point of ABEL's query cursor and EiffelBase2's V_ITERATOR, without handing either live cursor to the client (see the EiffelBase2 caveat below).
+
+ #+BEGIN_EXAMPLE
+ note
+ 	description: "[
+ 		QUERY (RFC 10008) protocol: safe, idempotent predicate reads.
+ 		Q is the query representation; execution is the store's business.
+ 	]"
+
+ deferred class
+ 	RESTLY_SEARCHABLE [Q, V]
+
+ feature -- REST verbs
+
+ 	search (a_query: Q): ITERABLE [V]
+ 			-- All values matching `a_query` (safe, idempotent).
+ 		require
+ 			error_400_bad_request: True
+ 					-- TODO(owner): contract
+ 					-- suggested: a_query is well-formed per the store's query language
+ 		deferred
+ 		end
+
+ end
+ #+END_EXAMPLE
+
+** Draft for RESTLY_TABLE (ABEL binding)
+   The backend already exists: ABEL's PS_QUERY with a PS_CRITERION is a QUERY body in all but name (abel_extension's exactly_like / starts_with helpers are canned instances of it).
+   Laziest v1 binds Q directly to PS_CRITERION — zero translation code, criteria built with PS_CRITERION_FACTORY at the call site.
+
+ #+BEGIN_EXAMPLE
+ class
+ 	RESTLY_TABLE [V -> ANY]
+
+ inherit
+ 	RESTLY_POSTABLE [INTEGER, V]
+
+ 	RESTLY_SEARCHABLE [PS_CRITERION, V]
+
+ feature -- REST verbs
+
+ 	search (a_query: PS_CRITERION): ITERABLE [V]
+ 			-- All rows matching `a_query` (rows -> V is ABEL's job).
+ 		require
+ 			error_400_bad_request: True
+ 					-- TODO(owner): contract
+ 					-- suggested: a_query only names attributes of V
+ 		do
+ 			-- create l_q: PS_QUERY [V]; l_q.set_criterion (a_query)
+ 			-- repository.execute_query (l_q); Result := drained cursor
+ 		end
+
+ end
+ #+END_EXAMPLE
+
+   Client side:
+
+ #+BEGIN_EXAMPLE
+ adults := persons.search (factory.attribute_equals ("age", 18))
+ 	-- ABEL criterion feature names indicative — verify against PS_CRITERION_FACTORY.
+ #+END_EXAMPLE
+
+** Draft for hash-backed stores (EiffelBase2 binding)
+   In-memory stores bind Q := PREDICATE [V] and execute by scanning the backing table.
+   This generalizes EiffelBase2's cursor-given-a-key idiom ({V_MAP}.at_key returns a cursor positioned at a key) to cursor-given-a-predicate.
+
+ #+BEGIN_EXAMPLE
+ class
+ 	RESTLY_RESOURCE [K -> HASHABLE, V]
+
+ inherit
+ 	RESTLY_SEARCHABLE [PREDICATE [V], V]
+
+ feature -- REST verbs
+
+ 	search (a_query: PREDICATE [V]): ITERABLE [V]
+ 			-- All values satisfying `a_query`.
+ 		require
+ 			error_400_bad_request: True
+ 					-- TODO(owner): contract
+ 		do
+ 			-- scan table.new_cursor, extend matches into a fresh V_LINKED_LIST
+ 		end
+
+ end
+ #+END_EXAMPLE
+
+   Why drain into a fresh list instead of returning the live V_ITERATOR: EiffelBase2 cursors register as observers on their container, and {V_TABLE}.put requires observers.is_empty — a live cursor leaked past the store boundary would freeze every PUT/DELETE until the client remembers to forget_iterator.
+   Draining inside `search` kills the observer at the boundary; the client gets a snapshot, which also matches QUERY's cacheable-result-set semantics.
+
+** Caveats
+   - Q propagates through combinators: a cache or forwarder wrapping a searchable store can only forward `search` by carrying Q in its own generic signature, so a combinator is searchable exactly over its backend's Q (PREDICATE [V] in-memory, PS_CRITERION on ABEL).
+   - Binding Q to PS_CRITERION leaks an ABEL type into RESTLY_TABLE client signatures; acceptable for v1 because those clients already hold a PS_RELATIONAL_REPOSITORY to create the table.
+     A RESTLY-owned query representation is deferred until a third binding forces one.
+   - Accept-Query negotiation (which media types a store accepts) is HTTP surface, so it belongs to the EWF bridge, not to the store protocol.
+   - RFC 10008's Location-for-results (a result set minted as its own sub-resource URI) fits the combinator style but is out of scope for v1.
