@@ -95,13 +95,6 @@ feature -- REST verbs
 			end
 		end
 
-	force (v: STRING; k: RESTLY_URI_PATH)
-		local
-			l_response: HTTP_CLIENT_RESPONSE
-		do
-			l_response := checked (agent proxy.put (k, context_proxy, v))
-		end
-
 	put (v: STRING; k: RESTLY_URI_PATH)
 		local
 			l_response: HTTP_CLIENT_RESPONSE

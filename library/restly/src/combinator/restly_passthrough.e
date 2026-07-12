@@ -62,12 +62,6 @@ feature -- REST verbs
 			backend.extend (v, k)
 		end
 
-	force (v: V; k: K)
-			-- <Precursor>
-		do
-			backend.force (v, k)
-		end
-
 	put (v: V; k: K)
 			-- <Precursor>
 		do

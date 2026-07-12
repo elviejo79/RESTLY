@@ -78,12 +78,6 @@ feature -- REST verbs
 			store.extend (converter.to_store (v), key_converter.to_store (k))
 		end
 
-	force (v: R; k: KR)
-			-- PUT: upsert with conversion.
-		do
-			store.force (converter.to_store (v), key_converter.to_store (k))
-		end
-
 	put (v: R; k: KR)
 			-- PUT with exists: update with conversion.
 		do

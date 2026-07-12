@@ -11,6 +11,9 @@ class
 
 inherit
 	RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]
+		redefine
+			force
+		end
 
 	RESTLY_FILE_NODE
 

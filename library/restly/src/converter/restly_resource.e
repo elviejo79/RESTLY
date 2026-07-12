@@ -53,11 +53,6 @@ feature -- REST
       store.extend(converter.to_store(a_r), k)
 		end
 
-	force (a_r: R; k: K)
-      do
-        store.force(converter.to_store(a_r), k)
-		end
-
 	put (a_r: R; k: K)
 		do
         store.put(converter.to_store(a_r), k)

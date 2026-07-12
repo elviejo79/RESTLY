@@ -40,10 +40,15 @@ feature -- REST verbs
 		end
 
 	force (v: V; k: K)
-			-- PUT: upsert resource; creates or replaces.
-		deferred
+			-- Upsert row `k` from `v`.
+		do
+			if has_key (k) then
+				put (v, k)
+			else
+				extend (v, k)
+			end
 		ensure
-         error_500_didnt_actually_insert: has_key(k) and then item(k) ~ v 
+			error_500_didnt_actually_insert: has_key(k) and then item(k) ~ v
 		end
 
 	put (v: V; k: K)
@@ -54,7 +59,7 @@ feature -- REST verbs
 			has_key: has_key (k)
 		deferred
 		ensure
-         error_500_didnt_actually_update: item(k) ~ v
+			error_500_didnt_actually_update: item(k) ~ v
 		end
 
 	remove (k: K)

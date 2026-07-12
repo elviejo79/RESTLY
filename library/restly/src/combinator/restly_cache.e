@@ -92,14 +92,6 @@ feature -- REST verbs
 			end
 		end
 
-	force (v: V; k: K)
-		do
-			front.force (v, k)
-			if attached back as b then
-				b.force (v, k)
-			end
-		end
-
 	put (v: V; k: K)
 		do
 			if front.has_key (k) then

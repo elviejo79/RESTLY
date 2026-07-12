@@ -9,6 +9,9 @@ class
 
 inherit
 	RESTLY_LISTABLE [K, V]
+		undefine
+			force
+		end
 
 	V_HASH_TABLE [K, V]
 
