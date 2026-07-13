@@ -1,0 +1,6 @@
+
+# Ignored by gitless cli
+restly/restly_table_TEST_RESTLY_TABLE.test_extend_new_stores_row.db
+restly/restly_table_TEST_RESTLY_TABLE.test_put_updates_row.db
+restly/restly_table_TEST_RESTLY_TABLE.test_remove_deletes_row.db
+restly/restly_table_TEST_RESTLY_TABLE.test_search_filters_rows.db
