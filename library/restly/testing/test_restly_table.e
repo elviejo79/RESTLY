@@ -87,15 +87,18 @@ feature -- Tests
 			-- search returns exactly the rows matching the criterion.
 		local
 			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_cursor: TABLE_ITERATION_CURSOR [SAMPLE_ROW, INTEGER]
 			l_count: INTEGER
 		do
 			l_table := table
 			l_table.extend_new (create {SAMPLE_ROW}.make (10), "req-1")
 			l_table.extend_new (create {SAMPLE_ROW}.make (20), "req-2")
 			l_table.extend_new (create {SAMPLE_ROW}.make (30), "req-3")
-			across l_table.search (criterion_factory ("amount", criterion_factory.greater, 15)) as row loop
+			l_cursor := l_table.search (criterion_factory ("amount", criterion_factory.greater, 15))
+			from until l_cursor.after loop
 				l_count := l_count + 1
-				assert ("only matching rows", row.amount > 15)
+				assert ("only matching rows", l_cursor.item.amount > 15)
+				l_cursor.forth
 			end
 			assert ("two matches", l_count = 2)
 		end

@@ -31,6 +31,10 @@
 		</option>
 		<setting name="console_application" value="true"/>
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<library name="abel_core" location="$ISE_LIBRARY\unstable\library\persistency\abel\core\core.ecf"/>
+		<library name="abel_connector_sqlite" location="$ISE_LIBRARY\unstable\library\persistency\abel\connector_sqlite\connector_sqlite.ecf"/>
+		<library name="libcurl_http_client" location="$ISE_LIBRARY\contrib\library\network\http_client\libcurl_http_client.ecf"/>
+		<library name="sqlite" location="$ISE_LIBRARY\unstable\library\persistency\database\sqlite3\sqlite.ecf"/>
 		<cluster name="restly_testing" location="..\restly\testing\" recursive="true">
 			<file_rule>
 				<exclude>/application\.e$</exclude>

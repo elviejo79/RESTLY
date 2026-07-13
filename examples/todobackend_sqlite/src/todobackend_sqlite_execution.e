@@ -30,8 +30,13 @@ feature {NONE} -- Pipeline
 
 	todo_pipeline: RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW]
 			-- JSON front → RESTLY_TABLE → SQLite.
+		local
+			l_keys: RESTLY_INT_KEY_CONVERTER
+			l_json: TODOBACKEND_JSON_CONVERTER
 		once ("PROCESS")
-			create Result.make (todo_table, create {RESTLY_INT_KEY_CONVERTER}, create {TODOBACKEND_JSON_CONVERTER})
+			create l_keys
+			create l_json.make (agent: TODO_ROW do create Result.make_default end)
+			create Result.make (todo_table, l_keys, l_json)
 		end
 
 	todo_table: RESTLY_TABLE [TODO_ROW]
