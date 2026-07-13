@@ -14,7 +14,7 @@ inherit
 			extend_new
 		end
 
-	RESTLY_SEARCHABLE [PS_CRITERION, V]
+	RESTLY_SEARCHABLE [PS_CRITERION, INTEGER, V]
 
 	RESTLY_LISTABLE [INTEGER, V]
 
@@ -112,21 +112,15 @@ feature -- REST verbs
 			l_transaction.commit
 		end
 
-	search (a_query: PS_CRITERION): ITERABLE [V]
+	search (a_query: PS_CRITERION): TABLE_ITERATION_CURSOR [V, INTEGER]
 			-- <Precursor>
 		local
 			l_query: PS_QUERY [V]
-			l_matches: V_LINKED_LIST [V]
 		do
 			create l_query.make
 			l_query.set_criterion (a_query)
 			proxy.execute_query (l_query)
-			create l_matches
-			across l_query as v loop
-				l_matches.extend_back (v)
-			end
-			l_query.close
-			Result := l_matches
+			create {RESTLY_TABLE_CURSOR [V]} Result.make (l_query)
 		end
 
 feature -- Extension

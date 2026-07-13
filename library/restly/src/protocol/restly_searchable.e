@@ -5,12 +5,12 @@ note
 	]"
 
 deferred class
-	RESTLY_SEARCHABLE [Q, V]
+	RESTLY_SEARCHABLE [Q, K -> HASHABLE, V]
 
 feature -- REST verbs
 
-	search (a_query: Q): ITERABLE [V]
-			-- All values matching `a_query` (safe, idempotent).
+	search (a_query: Q): TABLE_ITERATION_CURSOR [V, K]
+			-- All entries matching `a_query` (safe, idempotent).
 		require
 			error_400_bad_request: True
 					-- TODO(owner): contract
