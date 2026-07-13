@@ -84,6 +84,25 @@ feature -- GET (item)
 			assert ("collection lists seeded element", body.has_substring ("seeded by test"))
 		end
 
+feature -- Transport failure
+
+	test_transport_failure_raises
+			-- A dead endpoint must raise, not silently answer False.
+		local
+			l_dead: RESTLY_HTTP_CLIENT
+			l_raised: BOOLEAN
+			l_ignored: BOOLEAN
+		do
+			if not l_raised then
+				create l_dead.make_with_url ("http://localhost:59999")
+				l_ignored := l_dead.has_key ("/todos")
+			end
+			assert ("transport failure raised", l_raised)
+		rescue
+			l_raised := True
+			retry
+		end
+
 feature -- DELETE (remove)
 
 	test_remove_deletes_element

@@ -9,6 +9,9 @@ note
 		  3xx — followed automatically (libcurl, max 5 redirects)
 		  4xx — PRECONDITION_VIOLATION  (client sent a bad request)
 		  5xx — retry up to 3 attempts, then POSTCONDITION_VIOLATION
+		  0   — transport failure (no HTTP conversation happened);
+		        retry up to 3 attempts, then DEVELOPER_EXCEPTION
+		        carrying libcurl's error message
 	]"
 
 class
@@ -68,7 +71,9 @@ feature -- REST verbs
 		do
 			response := proxy.head (k, context_proxy)
 			l_status := response.status
-			if l_status >= 200 and l_status < 300 then
+			if l_status = 0 then
+				raise_transport_error (response)
+			elseif l_status >= 200 and l_status < 300 then
 				Result := True
 			elseif l_status >= 500 then
 				raise_server_error (l_status)
@@ -77,7 +82,7 @@ feature -- REST verbs
 			end
 		rescue
 			l_retries := l_retries + 1
-			if l_status >= 500 and l_retries < Max_server_retries then
+			if (l_status >= 500 or l_status = 0) and l_retries < Max_server_retries then
 				(create {EXECUTION_ENVIRONMENT}).sleep (Retry_wait_nanoseconds)
 				retry
 			end
@@ -131,21 +136,24 @@ feature -- Navigation
 feature {NONE} -- Response handling
 
 	checked (a_call: FUNCTION [TUPLE, HTTP_CLIENT_RESPONSE]): HTTP_CLIENT_RESPONSE
-			-- Execute `a_call`; retry on 5xx, raise on 4xx.
+			-- Execute `a_call`; retry on 5xx and transport failure,
+			-- raise on 4xx.
 		local
 			l_retries: INTEGER
 			l_status: INTEGER
 		do
 			Result := a_call ([])
 			l_status := Result.status
-			if l_status >= 500 then
+			if l_status = 0 then
+				raise_transport_error (Result)
+			elseif l_status >= 500 then
 				raise_server_error (l_status)
 			elseif l_status >= 400 then
 				raise_client_error (l_status)
 			end
 		rescue
 			l_retries := l_retries + 1
-			if l_status >= 500 and l_retries < Max_server_retries then
+			if (l_status >= 500 or l_status = 0) and l_retries < Max_server_retries then
 				(create {EXECUTION_ENVIRONMENT}).sleep (Retry_wait_nanoseconds)
 				retry
 			end
@@ -168,6 +176,22 @@ feature {NONE} -- Response handling
 		do
 			create l_exc
 			l_exc.set_description ("HTTP " + a_status.out)
+			l_exc.raise
+		end
+
+	raise_transport_error (a_response: HTTP_CLIENT_RESPONSE)
+			-- Raise developer exception for transport failure:
+			-- status 0 means libcurl never got an HTTP status line
+			-- (connection refused, DNS failure, timeout, ...).
+		local
+			l_exc: DEVELOPER_EXCEPTION
+		do
+			create l_exc
+			if attached a_response.error_message as l_message then
+				l_exc.set_description ("HTTP transport failure: " + l_message)
+			else
+				l_exc.set_description ("HTTP transport failure: no status from " + template.to_string_8)
+			end
 			l_exc.raise
 		end
 
