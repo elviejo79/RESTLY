@@ -17,7 +17,7 @@ feature -- Tests
 	test_iteration_yields_inserted_items
 			-- Iteration yields exactly the inserted items.
 		local
-			l_cursor: V_MAP_ITERATOR [STRING, INTEGER]
+			l_cursor: TABLE_ITERATION_CURSOR [INTEGER, STRING]
 			l_count: INTEGER
 		do
 			table.extend (10, "a")
@@ -38,7 +38,7 @@ feature -- Tests
 	test_iteration_exposes_keys
 			-- For every cursor position, key and item form a valid pair.
 		local
-			l_cursor: V_MAP_ITERATOR [STRING, INTEGER]
+			l_cursor: TABLE_ITERATION_CURSOR [INTEGER, STRING]
 			l_found_a, l_found_b: BOOLEAN
 		do
 			table.extend (10, "a")
@@ -63,7 +63,7 @@ feature -- Tests
 	test_wipe_out_clears_table
 			-- After wipe_out, has_key is false and iteration yields nothing.
 		local
-			l_cursor: V_MAP_ITERATOR [STRING, INTEGER]
+			l_cursor: TABLE_ITERATION_CURSOR [INTEGER, STRING]
 		do
 			table.extend (1, "x")
 			table.extend (2, "y")

@@ -43,6 +43,19 @@ TEST_SERVER_URL=http://localhost:8080/todos npm test
 AutoTest does not support filtering by test class or feature — it
 runs everything in the target.
 
+*Warning: the core suite itself needs the todobackend server.*
+=TEST_RESTLY_HTTP_CLIENT= connects to =http://localhost:8080= (the JSON todobackend above).
+With the server down those tests do not fail fast — the whole =ec -tests= run can hang for an hour with no output.
+A second symptom of the same shape: two concurrent =ec -tests= runs collide (same per-test db files, same EIFGENs), so if a run seems stuck, check =ps= for stale =restly_tests= evaluators and kill them before rerunning.
+Start the server first:
+#+begin_example
+cd examples/todobackend
+lsof -ti:8080 | xargs --no-run-if-empty kill -9
+./EIFGENs/todobackend_standalone/W_code/todobackend &
+sleep 3
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/todos   # expect 200
+#+end_example
+
 * Getting a dot graph of the architecture
 
 Every =RESTLY_PROTOCOL= has a =graph_description= query that returns

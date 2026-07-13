@@ -94,30 +94,32 @@ feature -- Extension (RESTLY_POSTABLE)
 
 	extend_new (a_v: R; a_request_id: HASHABLE)
 			-- <Precursor>
+			-- A POSTABLE store mints its own keys (e.g. database
+			-- autoincrement): delegate and convert the minted key back.
+			-- Otherwise mint here via `fresh_key`.
 		local
 			l_store_key: KS
 			l_repr_key: KR
 		do
 			if not extend_requests.has_key (a_request_id) then
-				l_repr_key := fresh_key
-				l_store_key := key_converter.to_store (l_repr_key)
-				store.extend (converter.to_store (a_v), l_store_key)
+				if attached {RESTLY_POSTABLE [KS, S]} store as l_postable then
+					l_postable.extend_new (converter.to_store (a_v), a_request_id)
+					l_repr_key := key_converter.to_representation (l_postable.extend_requests [a_request_id])
+				else
+					l_repr_key := fresh_key
+					l_store_key := key_converter.to_store (l_repr_key)
+					store.extend (converter.to_store (a_v), l_store_key)
+				end
 				extend_requests.extend (l_repr_key, a_request_id)
 			end
 		end
 
 feature -- Listing (RESTLY_LISTABLE)
 
-	new_cursor: V_MAP_ITERATOR [KR, R]
-			-- Materialized snapshot of the inner storage with converted keys/values.
-		local
-			l_snapshot: V_HASH_TABLE [KR, R]
+	new_cursor: TABLE_ITERATION_CURSOR [R, KR]
+			-- Lazily converting stream over the store's cursor.
 		do
-			create l_snapshot.with_object_equality
-			across store_traversable as ic loop
-				l_snapshot.extend (converter.to_representation (ic), key_converter.to_representation (@ ic.key))
-			end
-			Result := l_snapshot.new_cursor
+			create {RESTLY_CONVERTING_CURSOR [KR, R, KS, S]} Result.make (store_traversable.new_cursor, key_converter, converter)
 		end
 
 	count: INTEGER

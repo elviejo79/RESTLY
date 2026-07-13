@@ -6,7 +6,7 @@ note
 	]"
 
 class
-	RESTLY_TABLE [V -> ANY]
+	RESTLY_TABLE [V -> RESTLY_IDENTIFIABLE [INTEGER]]
 
 inherit
 	RESTLY_POSTABLE [INTEGER, V]
@@ -15,6 +15,14 @@ inherit
 		end
 
 	RESTLY_SEARCHABLE [PS_CRITERION, V]
+
+	RESTLY_LISTABLE [INTEGER, V]
+
+	PS_ABEL_EXPORT
+			-- Grants access to ABEL internals: {PS_DEFAULT_REPOSITORY}.delete
+			-- and {PS_TRANSACTION}.transaction, needed because ABEL's public
+			-- API only deletes via garbage collection, which the relational
+			-- backend cannot support (root status is not persisted in rows).
 
 create
 	make_with_repository
@@ -76,7 +84,7 @@ feature -- REST verbs
 			l_cursor := l_query.new_cursor
 			if not l_cursor.after then
 				l_cursor.item.copy (v)
-				set_id (l_cursor.item, k)
+				l_cursor.item.set_id (k)
 				l_transaction.update (l_cursor.item)
 			end
 			l_query.close
@@ -84,7 +92,7 @@ feature -- REST verbs
 		end
 
 	remove (k: INTEGER)
-			-- Delete row `k` (ABEL deletes by unrooting plus garbage collection).
+			-- Delete row `k`.
 		local
 			l_query: PS_QUERY [V]
 			l_cursor: ITERATION_CURSOR [V]
@@ -95,12 +103,13 @@ feature -- REST verbs
 			l_query.set_criterion (key_criterion (k))
 			l_transaction.execute_query (l_query)
 			l_cursor := l_query.new_cursor
-			if not l_cursor.after and then l_transaction.is_root (l_cursor.item) then
-				l_transaction.unmark_root (l_cursor.item)
+			if not l_cursor.after then
+				check repository_is_default: attached {PS_DEFAULT_REPOSITORY} proxy as l_repository then
+					l_repository.delete (l_cursor.item, l_transaction.transaction)
+				end
 			end
 			l_query.close
 			l_transaction.commit
-			proxy.collect_garbage
 		end
 
 	search (a_query: PS_CRITERION): ITERABLE [V]
@@ -129,7 +138,47 @@ feature -- Extension
 		do
 			if not extend_requests.has_key (a_request_id) then
 				insert (a_v)
-				extend_requests.extend (id_of (a_v), a_request_id)
+				extend_requests.extend (a_v.id, a_request_id)
+			end
+		end
+
+feature -- Listing
+
+	new_cursor: TABLE_ITERATION_CURSOR [V, INTEGER]
+			-- <Precursor>
+			-- Streams the rows of a criterion-less query.
+		local
+			l_query: PS_QUERY [V]
+		do
+			create l_query.make
+			proxy.execute_query (l_query)
+			create {RESTLY_TABLE_CURSOR [V]} Result.make (l_query)
+		end
+
+	count: INTEGER
+			-- <Precursor>
+			-- SELECT COUNT(*); no row ever travels.
+		local
+			l_transaction: PS_TRANSACTION
+			l_connection: PS_SQL_CONNECTION
+		do
+			l_transaction := proxy.new_transaction
+			check connector_is_relational: attached {PS_RDBMS_CONNECTOR} repository_connector as l_connector then
+				l_connection := l_connector.get_connection (l_transaction.transaction)
+				l_connection.execute_sql ("SELECT COUNT(*) FROM " + table_name)
+				across l_connection as l_row loop
+					Result := l_row [1].to_integer
+				end
+			end
+			l_transaction.commit
+		end
+
+	wipe_out
+			-- <Precursor>
+			-- The relational backend deletes all rows of every managed table.
+		do
+			check repository_is_default: attached {PS_DEFAULT_REPOSITORY} proxy as l_repository then
+				l_repository.wipe_out
 			end
 		end
 
@@ -137,18 +186,9 @@ feature -- Key minting
 
 	fresh_key: INTEGER
 			-- <Precursor>
-			-- ponytail: O(n) max-scan, advisory only — the database mints
-			-- the real id on insert; `extend_new` never calls this.
-		local
-			l_query: PS_QUERY [V]
+			-- ABEL mints ids on insert; `extend_new` reads them back.
 		do
-			create l_query.make
-			proxy.execute_query (l_query)
-			across l_query as v loop
-				Result := Result.max (id_of (v))
-			end
-			l_query.close
-			Result := Result + 1
+			(create {EXCEPTIONS}).raise ("RESTLY_TABLE.fresh_key must never be called; the database mints ids.")
 		end
 
 feature {NONE} -- Implementation
@@ -163,6 +203,23 @@ feature {NONE} -- Implementation
 			-- Criterion selecting the row with id `k`.
 		do
 			Result := criterion_factory ("id", criterion_factory.equals, k)
+		end
+
+	repository_connector: PS_REPOSITORY_CONNECTOR
+			-- Backend connector of `proxy`, reached through {PS_ABEL_EXPORT}.
+		do
+			check repository_is_default: attached {PS_DEFAULT_REPOSITORY} proxy as l_repository then
+				Result := l_repository.connector
+			end
+		end
+
+	table_name: STRING
+			-- Relational table storing V: the type name lowercased,
+			-- matching ABEL's own naming.
+		do
+			Result := ({V}).name.to_string_8.as_lower
+				-- TYPE.name carries the attachment mark ("!SAMPLE_ROW").
+			Result.prune_all ('!')
 		end
 
 	executed_key_query (k: INTEGER): PS_QUERY [V]
@@ -184,30 +241,5 @@ feature {NONE} -- Implementation
 			l_transaction.commit
 		end
 
-	id_of (a_v: V): INTEGER
-			-- Value of `a_v`'s integer `id` field (the managed primary key).
-		local
-			l_reflected: REFLECTED_REFERENCE_OBJECT
-		do
-			create l_reflected.make (a_v)
-			across 1 |..| l_reflected.field_count as i loop
-				if l_reflected.field_name (i).same_string ("id") then
-					Result := l_reflected.integer_32_field (i)
-				end
-			end
-		end
-
-	set_id (a_v: V; a_id: INTEGER)
-			-- Write `a_id` into `a_v`'s integer `id` field.
-		local
-			l_reflected: REFLECTED_REFERENCE_OBJECT
-		do
-			create l_reflected.make (a_v)
-			across 1 |..| l_reflected.field_count as i loop
-				if l_reflected.field_name (i).same_string ("id") then
-					l_reflected.set_integer_32_field (i, a_id)
-				end
-			end
-		end
 
 end

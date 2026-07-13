@@ -11,17 +11,14 @@ deferred class
 inherit
 	RESTLY_PROTOCOL [K, V]
 
-	ITERABLE [V]
+	TABLE_ITERABLE [V, K]
+			-- `new_cursor: TABLE_ITERATION_CURSOR [V, K]` comes from
+			-- here: a forward-only stream exposing both keys and values.
 		undefine
 			is_equal, copy, out, default_create
 		end
 
 feature -- Iteration
-
-	new_cursor: V_MAP_ITERATOR [K, V]
-			-- Iterator exposing both keys and values.
-		deferred
-		end
 
 	count: INTEGER
 			-- Number of entries.

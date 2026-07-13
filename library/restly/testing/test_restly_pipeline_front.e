@@ -65,7 +65,7 @@ feature -- Tests
 	test_new_cursor_wraps_inner
 			-- Iteration on the front exposes STRING keys and converted values.
 		local
-			l_cursor: V_MAP_ITERATOR [STRING, STRING]
+			l_cursor: TABLE_ITERATION_CURSOR [STRING, STRING]
 			l_found_1, l_found_2: BOOLEAN
 		do
 			inner.extend (create {SAMPLE_ITEM}.make ("aaa"), 1)

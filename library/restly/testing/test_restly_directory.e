@@ -13,8 +13,12 @@ inherit
 feature {NONE} -- Fixtures
 
 	sandbox_path: STRING
-		once
-			Result := "/tmp/restly_test_dir_" + generating_type.name
+			-- Sandbox unique to this test.
+			-- The executor runs tests in several concurrent evaluator
+			-- processes; a shared path lets one test's `on_prepare` wipe
+			-- another test's files mid-flight.
+		attribute
+			Result := "/tmp/restly_test_dir_" + environment.item_not_empty (Test_name_key, asserter).to_string_8
 		end
 
 	dir: RESTLY_DIRECTORY

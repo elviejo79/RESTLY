@@ -114,6 +114,40 @@ feature -- Tests
 			assert ("payload updated", l_table [l_key].amount = 99)
 		end
 
+	test_listing_streams_rows
+			-- Iteration streams all rows, count matches, wipe_out empties.
+		local
+			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_total: INTEGER
+		do
+			l_table := table
+			l_table.extend_new (create {SAMPLE_ROW}.make (10), "req-1")
+			l_table.extend_new (create {SAMPLE_ROW}.make (20), "req-2")
+			assert ("two rows", l_table.count = 2)
+			across l_table as row loop
+				l_total := l_total + row.amount
+			end
+			assert ("all rows listed", l_total = 30)
+			l_table.wipe_out
+			assert ("empty after wipe_out", l_table.count = 0)
+		end
+
+	test_front_delegates_key_minting
+			-- extend_new over a POSTABLE store records the database-minted id;
+			-- the front's own fresh_key (which raises) is never touched.
+		local
+			l_front: SAMPLE_TABLE_FRONT
+			l_key: INTEGER
+		do
+			create l_front.make (table,
+				create {RESTLY_IDENTITY_KEY_CONVERTER [INTEGER]},
+				create {RESTLY_IDENTITY_CONVERTER [SAMPLE_ROW]})
+			l_front.extend_new (create {SAMPLE_ROW}.make (5), "req-1")
+			l_key := l_front.extend_requests [{STRING} "req-1"]
+			assert ("front sees the row", l_front.has_key (l_key))
+			assert ("payload round-trips", l_front [l_key].amount = 5)
+		end
+
 	test_remove_deletes_row
 			-- After remove, the key is gone.
 		local

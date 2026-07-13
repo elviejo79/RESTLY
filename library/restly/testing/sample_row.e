@@ -8,6 +8,9 @@ note
 class
 	SAMPLE_ROW
 
+inherit
+	RESTLY_IDENTIFIABLE [INTEGER]
+
 create
 	make
 
@@ -22,12 +25,18 @@ feature -- Initialization
 feature -- Access
 
 	id: INTEGER
-			-- Managed primary key; ABEL writes it back on insert.
+			-- <Precursor>
 
 	amount: INTEGER
 			-- Payload.
 
 feature -- Element Change
+
+	set_id (a_id: INTEGER)
+			-- <Precursor>
+		do
+			id := a_id
+		end
 
 	set_amount (a_amount: INTEGER)
 			-- Set `amount` to `a_amount`.
