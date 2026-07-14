@@ -1,0 +1,614 @@
+#+TITLE: Retrospective on the Fitness of Eiffel for RESTLY
+#+AUTHOR: Alejandro Garcia
+#+DATE: 2026-07-14
+#+STARTUP: overview
+
+* Purpose
+
+After building RESTLY (core combinators, the EWF bridge, the reflective converter, and the SQLite-backed todobackend example), we paused to ask two questions.
+Which parts of the implementation did Eiffel actively help?
+Where did we fight the language, or its ecosystem, more than it helped us?
+The answers close with a list of the attributes an ideal language for RESTLY would have.
+
+* What worked — the language pulled its weight
+
+** Contracts as the HTTP layer
+
+The =error_NNN_= assertion-label grammar (parsed by =status_from_tag= in {RESTLY_EWF_ACTION_HANDLER}) is the most Eiffel-native idea in the repo.
+A REST 4xx is literally "the client violated a precondition", so rescue/retry plus tag parsing turns Design by Contract into the error-handling layer for free.
+No exception hierarchy, no error-code enum.
+This would not work in any language where assertions are debug-only.
+
+** Verbs as types
+
+{RESTLY_LISTABLE}, {RESTLY_POSTABLE} and {RESTLY_PATCHABLE} with =attached {RESTLY_POSTABLE [...]} storage as l_post= make capability negotiation a conformance test.
+A store picks its verbs by inheritance; an unsupported route falls out as 405 naturally.
+Multiple inheritance used for exactly what it is good at.
+
+** The mismatch ledger
+
+{TODOBACKEND_JSON_CONVERTER} is three declarations; everything else flows by reflection, and =check_schema= fails at wiring time, not mid-request.
+That is the {MISMATCH_CORRECTOR} idea paying rent.
+Void safety helped everywhere here too — a whole category of =/= Void= contracts simply does not exist.
+
+** Small comforts that added up
+
+Convert clauses (=l_key := "foo"= for {JSON_STRING}), inline =create {CLASS}= expressions, and =once ("PROCESS")= wiring.
+The slimmed {TODOBACKEND_SQLITE_EXECUTION} reads like a wiring diagram.
+
+* Where we fought — mostly the ecosystem, twice the language
+
+** The language itself, genuinely
+
+The headline is the generics ceiling.
+Eiffel has generics ({RESTLY_CONVERTER} [R, S] is one), but four specific limitations hit us, and all four land on encode/decode:
+
+1. No feature-level type parameters.
+   A feature cannot introduce its own generic — only the class can.
+   There is no =decode [T] (a_json): T=; every (R, S) pairing must be a /class/.
+   That, more than VHPR(5), is why the converter hierarchy kept sprouting named classes — the "five inheritance classes is disappointing" moment.
+2. VHPR(5).
+   No two generic derivations of the same parent — it closed the mixin design, closed the convert-clause approaches, and means one converter can never speak two formats ({RESTLY_FORMAT} [JSON_OBJECT] and a hypothetical [XML_DOC] cannot coexist as parents).
+   We paid the class count down to four, but the floor is set by the rule, not the design.
+3. No ad-hoc polymorphism (type classes, overloading, specialization).
+   You cannot dispatch on a type to pick its codec, so the engine dispatches at runtime on =field_type (i)= constants — the =inspect= blocks in =to_store= / =to_representation= are hand-written what serde derives.
+4. Constrained genericity too weak to see inside S.
+   =S -> ANY= says nothing about fields, so schema agreement cannot be a compile-time fact; =check_schema= at wiring time is the best available approximation.
+
+One line: Eiffel can only /interpret/ a schema at runtime; it can never /derive/ from one.
+serde, Pydantic and kotlinx all derive.
+
+A fifth, separate fight: no metadata on attributes.
+Renames, skips and coercions belong /on the attribute/ (an annotation), but Eiffel has no such channel, so =correct_mismatches= exists as a parallel ledger the schema check must reconcile.
+The wiring-time check is us compensating for what the type system cannot say.
+
+** The ecosystem, repeatedly
+
+- ABEL's relational connector: no BOOLEAN round-trip (so =TODO_ROW.completed: INTEGER= — persistence leaking into the domain class, patched back by a coercion), no DDL generation (hand-written CREATE TABLE), and not thread-safe under EWF's threads — the open catcall bug that caps the acceptance suite at 7/16.
+- The bundled JSON serializer: rejected outright — character fields dropped, negative REAL_64 mangled, zero hooks.
+  We rebuilt that wheel because the shipped one was square.
+- Concurrency defaults: =support="none"= silently breaking libcurl; SCOOP-era libraries meeting a threaded server.
+  Every concurrency lesson was learned by a wedged process, not a compile error.
+- Tooling: AutoTest cannot filter one test; new classes need clean compiles; the string zoo (=to_string_8= sprinkled through the handler) is a friction tax on every boundary.
+
+** Honest summary
+
+The design vocabulary of Eiffel — contracts, conformance, multiple inheritance, void safety — matched REST unusually well; those parts feel discovered, not built.
+The fights concentrate at the edges: the generics ceiling (four limitations, all landing on encode/decode), one missing channel (attribute metadata), and a library ecosystem that has not been hardened by the traffic RESTLY puts through it.
+The unfixed SQLite threading bug is the truest symbol of the ecosystem half: our code is fine, the layer under it is not.
+
+And "at the edges" is not a small place.
+Fielding's uniform interface says resources are manipulated /only through representations/ — the Representation ↔ Store conversion (JSON in, SQLite down, and back) is one of REST's two load-bearing walls, contracts being the other.
+So the harsher verdict: Eiffel is the strongest language on one load-bearing wall of REST and among the weakest on the other.
+The mismatch ledger and reflective engine we are proud of are good masonry on a wall the language refused to hold up.
+
+* The fourteen attributes of an ideal language for RESTLY
+
+Points 1–10 came from the first retrospective pass; points 11–14 were added after the generics-ceiling analysis sharpened what "the conversions R → S → R need to be really good" actually demands.
+
+1. Runtime-checked Design by Contract with blame assignment and contract inheritance.
+   Contract violations generate =error_4xx= and =error_500=; the language must know /who/ violated the contract, because that is the 4xx/5xx split: precondition = client's fault = 4xx, postcondition or invariant = supplier's fault = 500.
+   Racket's contract system is the only one that does blame natively.
+   Contract inheritance (=require else= weakening) is what lets a subresource legally accept more than its parent.
+   /Runtime-checked/ is load-bearing (lesson from evaluating Prusti): a trust boundary needs checks that fire on untrusted input, not proofs that exclude violations at compile time — static and runtime contracts are complements, not substitutes.
+2. A pipe operator.
+   The combinator chain (cache → forwarder → table) /is/ a pipeline; we simulate it with constructor nesting in =todo_pipeline=.
+3. Best-in-class bidirectional data transformation: JSON → domain → database and back.
+   With the lesson from =check_schema= baked in: mismatch declarations (rename, skip, coerce) must be verified against the schema at wiring time, not discovered mid-request, and declared once for both directions — =convert_boolean_integer_field= takes both lambdas together for a reason.
+4. Verbs as types with runtime capability query.
+   =attached {RESTLY_POSTABLE} storage= is the whole routing story: a store /is/ its verb set, and unsupported = 405 falls out of a failed conformance test.
+   Needs interfaces or traits plus safe downcast (Rust deliberately makes this painful; Eiffel, Kotlin and C# shine).
+5. A metadata channel on fields.
+   Annotations or decorators, so the mismatch ledger lives on the attribute instead of in a parallel =correct_mismatches= hook that a schema check must reconcile.
+   The single thing Eiffel most lacks.
+6. Null/void safety.
+   Deleted a whole category of contracts and checks for us; non-negotiable.
+7. Compiler-checked concurrency.
+   Our only unfixed bug is a data race the compiler happily allowed (threads sharing a =once ("PROCESS")= repository, catcall at runtime).
+   Ideal: sharing violations are compile errors (Rust's Send/Sync; SCOOP promised this and the ecosystem abandoned it).
+8. No runtime type holes.
+   The catcall /was/ Eiffel's covariance unsoundness surfacing in production.
+   Ideal language: variance checked at compile time.
+9. Instance-free type introspection, ideally at compile time.
+   The reflective converter needed a fresh instance just to read the schema; =serde=-style derive does it at zero runtime cost and would also generate our DDL.
+10. Boring, hardened libraries.
+    Not a language feature, but the honest retrospective says ABEL and the JSON serializer cost more than every language limitation combined.
+    An ideal language has a dull, battle-tested HTTP server and DB driver.
+11. Feature-level generic parameters.
+    =decode [T] (input): T= as a /feature/, not a class; in Eiffel every (R, S) pairing costs a named class, so the domain converter is a tax, not a choice.
+    (We happen to like the named class for readability — the ideal language makes it optional, not mandatory.)
+12. Schema agreement as a compile-time fact.
+    The compiler can see the fields of both R and S, derive the codec and the DDL, and reject a rename typo or type mismatch at compile time.
+    =check_schema= at wiring time is the runtime consolation prize; derivation over interpretation.
+13. Multi-format coexistence.
+    One program — even one converter — speaks JSON, YAML and XML side by side; the format is a plugged-in value, not an inheritance decision.
+    VHPR(5) made it an inheritance decision, so an Eiffel converter can never speak two formats.
+14. Round-trip laws as checkable contracts.
+    =to_representation (to_store (r)) ≍ r= stated once per converter and enforced by property test or proof.
+    RESTLY's PATCH already bets on this law — RFC 7386 merge works by converter round-trip in {RESTLY_JSON_PIPELINE_FRONT} — but nothing checks it today.
+
+* Scoreboard
+
+One line each:
+Eiffel has 1 + 4 + 6 (uniquely 1, minus blame).
+Kotlin has 3 + 4 + 5 + 6 + 9 + 10, halves of 2 and 8 — the widest coverage on the board once 9 is counted (KSP derives at compile time; an earlier version of this row undersold it).
+Rust has 3 + 7 + 8 + 9 + 10.
+Racket has 1-with-blame and nothing typed.
+Rhombus has 1 + 2 + 4 + 5 + 9 — the best design column of any candidate — but concedes the whole static-safety column (6, 7, 8).
+Prusti (Rust + static contracts) has 3 + 5 + 6 + 7 + 8 + 9, halves of 1 and 10 — numerically the best column yet, but the half of 1 it lacks is the half RESTLY is about.
+Ada (with SPARK) has 1 + 4 + 7 + 8, halves of 6 and 10 — arguably the strongest 1 on the board, but misses the whole metaprogramming column (3, 5, 9).
+Python with Pydantic + SQLModel has 3 + 4 + 5 + 9 + 10, halves of 1 and 6 — the best data column on the board, with almost none of the safety column.
+Dafny has 6 + 8 + 11 + 14, halves of 1, 4 and 12 — the only full 14 on the board, and almost nothing else.
+Nim has 2 + 4 + 5 + 8 + 9, halves of 1, 3, 6 and 7 — misses only 10 outright.
+D has 3 + 4 + 5 + 9, halves of 1, 2, 7 and 8 — contracts are in the spec and dead in the culture; misses 6 and 10.
+The Rebol family (Rye, Arturo, Red) tops out at Rye's 2 + 5 + 9 with halves of 1, 3, 4 and 6 — the best pipe story and the only built-in validation dialect on the board, and no compile time at all.
+
+On the conversion points 11–14 (added later, not folded into the rows above):
+Rust/serde has 11 + 12 + 13 (12 is its crown; 14 via proptest, tested not proven).
+Kotlin has 11 + 12 + 13 and half of 14 (kotest property tests; =reified= type parameters even survive erasure at the call site).
+D has 11 + 12 + 13 and half of 14 (built-in =unittest= blocks make the law cheap to state) — Nim's twin on the conversion column.
+Python/Pydantic has 11 + 13, and 12 at class-definition time rather than compile time.
+Rhombus has 11 + 13, and 12 at macro-expansion time.
+Ada has none of 11–14.
+Dafny has 11 and — uniquely — all of 14: the round-trip law as a machine-checked theorem; 12 by specification-and-proof rather than derivation.
+Nim has 11 + 12 + 13 and half of 14 — the entire conversion column, tied with Rust/serde and Kotlin.
+The Rebol family has 11 and 13 in the runtime sense (dynamic languages get them vacuously) and none of 12 or 14 — interpretation perfected, derivation impossible.
+Eiffel has only half of 14 — the round-trip law is /statable/ as a postcondition, the one conversion point contracts give us — and none of 11–13.
+Nobody has all fourteen — which is roughly why RESTLY is interesting research.
+
+* Conclusion — should RESTLY stay in Eiffel?
+
+Yes — because RESTLY's thesis is only expressible in three languages, and Eiffel is the best of them.
+
+** The thesis has exactly three possible homes
+
+RESTLY's interesting claim is /contracts as the HTTP layer/:
+blame → 4xx/500, =require else= as subresource weakening, verbs as types.
+That needs runtime DbC with contract inheritance, which exists in Eiffel, Ada, and Racket/Rhombus.
+Every other candidate — including Kotlin with its widest coverage — makes the thesis a convention, not a contract.
+Switching to Kotlin would not be porting RESTLY;
+it would be abandoning the research to write a nice REST library that already exists five times over.
+Ada loses the entire metaprogramming column harder than Eiffel does.
+Rhombus is the only upgrade on the thesis axis (real blame, macros as the metadata channel) —
+at the price of every static guarantee.
+
+** The wall Eiffel fails is mechanical; the wall it holds is conceptual
+
+The conversion boilerplate is a tax, but it is boring tax — the mismatch ledger works, it is just verbose.
+And the retrospective undersold one thing:
+this project already prefers named per-domain converter classes as a matter of style.
+Point 11 calls the named class a tax; our own style calls it a choice we would make anyway.
+What Eiffel cannot do — derive the internals — is exactly what code generation is good at.
+"Derive outside the compiler" is an honest workaround for the interpret-vs-derive ceiling;
+serde is codegen too, it just lives inside the build.
+
+** The graveyard is a warning about switching, not staying
+
+Three attempts to have both walls died (C# Code Contracts, Cobra, D's contracts)
+because contracts were not load-bearing for anything.
+In Eiffel they are load-bearing for the whole culture — the standard library keeps them honest.
+Leaving Eiffel means leaving the one place the thesis is native.
+
+** The caveat that would change the answer
+
+If the goal shifts from research ("can contracts be the error layer?")
+to product ("a todobackend people deploy"),
+then Kotlin, without hesitation:
+folk-RESTLY via =require()= → 400 plus kotlinx.serialization ships in a weekend and stands on the JVM.
+And if a second implementation ever happens as research — the comparison paper writes itself —
+Rhombus is the counterpart that keeps the thesis and fixes both of our genuine language fights.
+
+** Verdict
+
+Eiffel for RESTLY-the-thesis, with generated converters as the prosthetic for the data wall.
+The two-walls verdict stands —
+but a language that is strongest on the wall that makes the work /novel/
+beats nine languages that are strong on the wall that makes it /convenient/.
+
+* Appendix: Rhombus in detail
+
+Rhombus (https://rhombus-lang.org/) is the Racket team's new-syntax language on the Racket VM.
+Point by point:
+
+1. DbC with blame: its strongest card.
+   =::= annotations are runtime-checked, and underneath sits Racket's contract system, the only one with real blame assignment — exactly the client-fault = 4xx / supplier-fault = 500 split we want.
+   Caveat: Rhombus's native annotation errors are simpler than full =racket/contract= blame; you would reach into the Racket layer for the good stuff.
+   Contract inheritance à la =require else= is not a language construct; you would encode it.
+2. Pipe operator: not in core, but user-defined operators with precedence are a headline feature; =operator (x |> f): f(x)= is one line.
+3. JSON → domain → DB round-trip: thin.
+   Racket's =json= and =db= libraries are solid but there is no serde/kotlinx equivalent; the reflective converter with its mismatch ledger would be ours to build again.
+4. Verbs as types with runtime capability query: =interface=, =class= and =is_a= checks; the =attached {RESTLY_POSTABLE}= pattern translates directly.
+5. Metadata channel on fields: the second strong card.
+   Class-clause macros mean =correct_mismatches= could become declarations inside the class body, checked at expansion time.
+   The macro system is the metadata channel, arbitrarily extensible — best in class.
+6. Null/void safety: dynamic language; annotations catch misuse at runtime, not compile time.
+7. Compiler-checked concurrency: green threads, futures, places; no race checking.
+8. No runtime type holes: vacuously true — there are no static claims to violate, every check is at runtime.
+   Honest, but it fails the spirit (compile-time soundness).
+9. Instance-free introspection / compile-time derive: macros run at compile time; a serde-style derive (and our DDL generator) is writable and idiomatic, but nothing exists off the shelf.
+10. Boring, hardened libraries: Racket's web-server and =db= are 20+ years old and dull in the good way — more hardened than ABEL ever was — but the ecosystem is Eiffel-sized: one maintainer per library.
+
+Verdict: RESTLY-in-Rhombus would keep the thesis (contracts → HTTP, now with real blame) and fix our two genuine language fights (VHPR-5 gone, field metadata via macros), at the price of trading compile-time guarantees for runtime ones.
+
+* Appendix: Prusti in detail
+
+Prusti (https://www.pm.inf.ethz.ch/research/prusti.html, ETH Zurich) is the inverse experiment: Rust with contracts checked /statically/ — Viper-based compile-time proofs lifted from Rust's ownership types.
+Point by point:
+
+1. DbC with blame: split down the middle.
+   The 500 half is done better than anyone — postconditions and invariants are proven, so =error_500= is not handled, it is unreachable.
+   The 4xx half is impossible by construction: RESTLY's precondition → 4xx trick depends on contract violations happening at runtime, thrown by clients you cannot verify (HTTP callers).
+   Prusti's model is that code which might violate a precondition does not compile — but the HTTP boundary is not Rust code, so you are back to hand-written input validation, the exact thing DbC was saving us from.
+   Blame exists, but at compile time (the failing call site), not as a runtime party you can map to a status code.
+   Half of 1, maximal strength; the other half structurally excluded.
+2. Pipe operator: plain Rust — no operator, method chaining approximates.
+   No.
+3. Data round-trip: serde, inherited from Rust.
+   Caveat: Prusti verifies /your/ fragment; derive-generated and third-party code is trusted via external specs, not verified.
+   Yes.
+4. Verbs as types with runtime capability query: Rust's weak point stands — trait downcasting is deliberately painful, and Prusti's supported fragment handles trait objects poorly anyway.
+   No.
+5. Metadata channel on fields: serde attributes.
+   Yes.
+6. Null/void safety: =Option=.
+   Yes.
+7. Compiler-checked concurrency: Send/Sync, plus Prusti proofs on top.
+   Yes — strongest of any candidate.
+8. No runtime type holes: yes, and Prusti extends soundness beyond types to functional properties.
+   Yes — strongest.
+9. Compile-time derive/introspection: yes.
+10. Boring, hardened libraries: Rust's ecosystem yes, but Prusti itself fails its own test — research-grade, "a small but interesting fragment of Rust without unsafe features", and a real RESTLY (async server, closures, trait objects everywhere) sits far outside what it can verify today.
+    Half.
+
+Verdict: the mirror of Rhombus.
+Prusti maximizes exactly what RESTLY does not need (proving the server correct) and structurally cannot do the thing RESTLY is about (contracts as the runtime error layer for untrusted clients).
+It would produce the most trustworthy 500-free todobackend ever built, with completely conventional 4xx handling.
+The sharpened lesson for the list: point 1 must say /runtime-checked/ DbC — a trust boundary needs checks that fire, not proofs that exclude.
+Static and runtime contracts are complements, not substitutes.
+
+* Appendix: Ada in detail
+
+Ada 2012+ (with SPARK as its optional static layer) is Eiffel's closest living relative.
+Point by point:
+
+1. Runtime-checked DbC: in two ways Eiffel's superior.
+   (a) =Pre=/=Post=/=Type_Invariant= aspects are runtime-checked, and Ada 2012 allows raise expressions inside contracts: =Pre => Valid (X) or else raise Bad_Request= — the status mapping becomes a typed exception per code instead of our tag-parsing of assertion labels.
+   (b) It is the only mainstream-adjacent language with real contract inheritance: =Pre'Class= on tagged types is or-combined down the hierarchy — that is literally =require else= weakening.
+   (c) Uniquely, SPARK gives you the Prusti trick in the same language: statically prove the 500 half where feasible, leave runtime checks firing at the boundary for the 4xx half.
+   Blame is the pre-vs-post distinction, same crude level as Eiffel.
+   Yes — arguably the strongest 1 on the board.
+2. Pipe operator: no, and no user-defined operators beyond overloading the fixed set.
+   No.
+3. JSON → domain → DB round-trip: GNATcoll has a JSON library; there is no serde equivalent, and stream attributes (='Read=/='Write=) only give compiler-derived binary serialization with no field metadata.
+   The mismatch-ledger converter would be hand-written per type.
+   No.
+4. Verbs as types with runtime capability query: tagged types, interfaces (Ada 2005), membership test =Store in Postable'Class=, checked downcasts.
+   Our routing pattern translates directly.
+   Yes.
+5. Metadata channel on fields: aspects /look/ like the channel, but user code cannot define or introspect custom aspects; no annotations, no macros.
+   No.
+6. Null safety: =not null access= is opt-in, and idiomatic Ada avoids access types altogether (by-value composites), which sidesteps rather than solves it.
+   Half.
+7. Compiler-checked concurrency: protected objects make synchronized shared state a language construct (our ABEL race would have had an obvious home), and SPARK proves absence of data races outright.
+   Not Rust's ownership model, but close in practice.
+   Yes with SPARK.
+8. No runtime type holes: no generic variance at all (generics instantiate), tagged-type conversions checked; no catcall analogue.
+   Yes.
+9. Instance-free introspection / compile-time derive: essentially no reflection, no metaprogramming.
+   The reflective converter is not merely awkward — it is impossible.
+   No.
+10. Boring, hardened libraries: AWS (Ada Web Server) is decades old and avionics-adjacent industrial; GNATcoll for DB; Alire is a real package manager now.
+    Small but genuinely dull in the good way.
+    Half, better than Eiffel's.
+
+Verdict: Ada keeps the /contract/ thesis better than Eiffel itself — contract inheritance, typed raise-per-status, plus the static/runtime combination that Prusti and Eiffel each only get half of.
+But it fails the entire metaprogramming column (3, 5, 9) harder than Eiffel does: we at least had {REFLECTED_REFERENCE_OBJECT}; Ada has nothing, so every converter is hand-written boilerplate.
+RESTLY-in-Ada keeps the error layer and loses the reflective converter entirely.
+Mirror-image of Rhombus, sibling of Eiffel.
+
+* Appendix: Python with Pydantic + SQLModel in detail
+
+Not a language but a stack (Python + Pydantic + SQLModel, usually under FastAPI), included because it is the best existing answer to "easiest to read, smallest to write" multi-format serialization.
+One class is simultaneously the JSON schema, the YAML schema (any format that parses to dicts), the validation rules, and the SQLite table including generated DDL:
+
+#+begin_src python
+class Todo(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    title: str
+    completed: bool = False
+    order_value: int = Field(alias="order")   # rename_field, on the attribute
+#+end_src
+
+Point by point:
+
+1. Runtime-checked DbC with blame: half — the client half.
+   Pydantic validation fires at the trust boundary and FastAPI maps =ValidationError= to a 422 with per-field detail: our precondition → 4xx idea, productized.
+   But there is no supplier side — no postconditions, no invariants, no contract inheritance.
+   The 500s are back to being bugs you find at 3am.
+2. Pipe operator: no.
+3. Best-in-class bidirectional data transformation: yes — this is the whole point.
+   =alias=, =exclude= and custom validators are the mismatch vocabulary (rename, skip, coerce) living on the field; =SQLModel.metadata.create_all= generates the CREATE TABLE we hand-wrote in =bootstrap_schema=; model configuration is checked at class-definition time, the moral equivalent of =check_schema= at wiring.
+4. Verbs as types with runtime capability query: =isinstance= plus ABCs or =runtime_checkable= Protocols; trivially yes, though nothing checks it statically.
+5. Metadata channel on fields: =Field(...)=, =Annotated=, decorators — best in class alongside Rhombus.
+6. Null safety: =Optional= hints checked by mypy (gradual, opt-in) and by Pydantic at the boundary; the language itself still throws =NoneType= errors.
+   Half.
+7. Compiler-checked concurrency: no — the GIL hides some races and checks nothing.
+8. No runtime type holes: no — type hints are unenforced in the core language; everything is a hole unless Pydantic guards the boundary.
+9. Instance-free type introspection: =model_fields= / =get_type_hints= — runtime rather than compile time, but zero-ceremony and the entire stack is built on it.
+   Yes.
+10. Boring, hardened libraries: SQLAlchemy, FastAPI, requests — the dullest, most battle-tested column of any candidate.
+    Yes.
+    Caveat: TypeDB (or any non-relational target) is manual in every language; no serializer derives TypeQL.
+
+Verdict: the exact complement of Ada.
+It wins the entire data/metaprogramming column (3, 5, 9) and the ecosystem (10), holds the client half of 1, and has almost none of the safety column (7, 8, most of 6).
+The scoreboard pattern is now visible: the ten points split into a design/data column and a safety/contract column, and every candidate picks one.
+Eiffel's claim to the list is that it stands closest to the middle.
+
+* Appendix: Dafny in detail
+
+Dafny (Microsoft Research) is a verification language: contracts proven by Z3, compiled to C#, Java, Go or Python.
+Point by point:
+
+1. Runtime-checked DbC with blame: the same structural split as Prusti, executed more completely.
+   Contracts are the whole language design — pre, post, invariants and termination all proven, and traits enforce behavioral subtyping on overrides (real contract inheritance, checked).
+   But it is all static: the 4xx half is missing for the same reason as Prusti — HTTP callers are not Dafny code, so boundary input still needs hand-written validation that you then /prove/ establishes the preconditions.
+   Half — the 500 half, done best of anyone.
+2. Pipe operator: no.
+3. JSON → domain → DB: one twist — Dafny's standard library contains a formally verified JSON serializer (proven correct, not tested).
+   YAML, XML and databases: nothing; you reach the host ecosystem via ={:extern}=, unverified.
+   No, with an asterisk that matters for 14.
+4. Verbs as types with runtime capability query: traits and classes exist; =is= tests are limited and non-idiomatic.
+   Half.
+5. Metadata channel on fields: ={:attributes}= exist for the compiler, not for user code; no macros to read them.
+   No.
+6. Null safety: references non-null by default, =T?= opt-in.
+   Yes.
+7. Compiler-checked concurrency: the language is essentially sequential.
+   No.
+8. No runtime type holes: fully verified; the soundest candidate possible.
+   Yes.
+9. Instance-free introspection / derive: no reflection, no metaprogramming; every converter is hand-written /and hand-proven/.
+   No.
+10. Boring, hardened libraries: no ecosystem of its own; extern to the host language's, across an unverified boundary.
+    No.
+11. Feature-level generic parameters: =method Decode<T>= is normal Dafny.
+    Yes.
+12. Schema agreement at compile time: not by derivation but by specification — you write the converter and prove it total over the schema.
+    Stronger guarantee than serde's, at perhaps 50× the effort.
+    Half, by a different road.
+13. Multi-format coexistence: no rule against it, and no formats to coexist.
+    Vacuous.
+14. Round-trip laws as checkable contracts: the only full 14 on the board.
+    =lemma RoundTrip (r) ensures ToRep (ToStore (r)) == r= is a machine-checked theorem, and the standard-library JSON codec ships with exactly such proofs.
+    Every other candidate tests this law; Dafny proves it.
+
+Verdict: a proof assistant wearing a programming language's clothes.
+Dafny exists to nail the two points RESTLY cannot get anywhere else (the proven 500-half of 1, and all of 14) and offers almost nothing of the remaining twelve.
+RESTLY-in-Dafny would be one gloriously verified converter with nothing to serve it.
+Its honest role is not candidate but component: write the R ↔ S converter in Dafny, prove the round-trip lemma, compile to C# or Java, and embed it in a host that handles HTTP, formats and the 4xx layer.
+Prusti taught us that static and runtime contracts are complements; Dafny sharpens it — verification is a library you link, not a language you live in.
+
+* Appendix: Nim in detail
+
+Nim compiles to C; UFCS syntax, compile-time macros, and custom pragmas are the headline features.
+The most interesting candidate yet, because it is strong on exactly the column Eiffel failed.
+Point by point:
+
+1. Runtime-checked DbC with blame: not native.
+   =assert=/=doAssert= exist; a =contracts= nimble package provides require/ensure/invariant blocks via macros, but it is one-maintainer and there is no blame or contract inheritance.
+   Like Rhombus, the macro system could /build/ our tag-grammar DSL — unlike Rhombus, nobody has.
+   Half, DIY.
+2. Pipe operator: better than a pipe — UFCS.
+   =x.f().g()= works for /any/ proc, so every function chains; a literal =|>= is a one-line template if you insist.
+   Yes.
+3. JSON → domain → DB round-trip: the pieces exist — =std/jsonutils= or =jsony= (generic to/fromJson with hooks), NimYAML, and =norm=, an ORM that generates SQLite DDL from object definitions with pragmas.
+   But every piece is one-maintainer polish.
+   Half on quality, yes on design.
+4. Verbs as types with runtime capability query: ref objects, inheritance, the =of= test, checked downcast.
+   Translates directly.
+   Yes.
+5. Metadata channel on fields: custom pragmas — =order_value {.serializedName: "order".}= readable by macros at compile time.
+   First-class.
+   Yes.
+6. Null safety: value types cannot be nil; ref types can, =strictNotNil= is still experimental, =Option[T]= in std.
+   Half.
+7. Compiler-checked concurrency: real but partial — ={.gcsafe.}= enforcement, =Isolated[T]= for channel transfer.
+   Weaker than Send/Sync, much more than Eiffel gave us.
+   Half.
+8. No runtime type holes: generics instantiate (no variance holes), variant field access is checked — but =cast= is a casual unchecked escape hatch.
+   Yes, with an asterisk.
+9. Instance-free introspection at compile time: a crown jewel — =fieldPairs=/=typedesc= iteration over fields is /idiomatic/, macros run at compile time; codec and DDL derivation is exactly how jsony and norm work.
+   Yes.
+10. Boring, hardened libraries: no.
+    The ecosystem is Eiffel-sized; the production HTTP servers (jester, prologue, httpbeast) are community-scale.
+    No.
+11. Feature-level generic parameters: =proc decode[T](j: JsonNode): T= is everyday Nim.
+    Yes.
+12. Schema agreement at compile time: yes — a typo'd pragma or type mismatch is a compile error when the deriving macro checks it.
+    Yes.
+13. Multi-format coexistence: =toJson=/=fromYaml= are just generic procs; no VHPR analogue, one type speaks all formats.
+    Yes, though the XML/YAML libraries are thinner than the JSON ones.
+14. Round-trip laws as checkable contracts: statable as tests; no standard property-testing story.
+    Half.
+
+Verdict: Nim is what Eiffel's data wall wishes it were — compile-time derivation, field metadata, feature-level generics, multi-format — while keeping runtime checks and inheritance for the parts of RESTLY that need them.
+Its two failures are precisely Eiffel's: contracts demoted from language to an unmaintained library, and the ecosystem risk of point 10 fully intact.
+You would trade ABEL for norm and be praying to a different one-maintainer god.
+
+* Appendix: the Rebol family (Rye, Arturo, Red) in detail
+
+Three descendants of Rebol, evaluated together because they share one trait that settles most of the checklist at once:
+code is data, dialects are the core idea, and there is no compile time.
+Rebol's genius lands entirely on the wrong side of our interpret-vs-derive line —
+these languages /interpret/ schemas more elegantly than anything on the board, and /derive/ nothing, ever.
+That is Eiffel's failure mode, dynamic edition,
+so the static column (7, 8, 12, the compile-time half of 9) is conceded before scoring starts.
+
+** Rye (ryelang.org) — the standout
+
+Written in Go, embeddable in Go programs.
+Point by point, differences from the family baseline:
+
+1. Runtime-checked DbC with blame: half, and an interesting half.
+   A /validation dialect/ is built into the core, so boundary validation is explicit and separate from logic — the Pydantic move, the client/4xx half productized.
+   No postconditions, no invariants, no contract inheritance: the 500 half does not exist.
+2. Pipe operator: the founding syntax idea — op-words and pipe-words are word /types/.
+   The best point 2 on the entire board, better than Nim's UFCS; it literally is pipes.
+   Yes.
+3. JSON → domain → DB: a SQL dialect is built in, JSON is there; no schema layer, so the mismatch ledger is DIY.
+   Half.
+4. Verbs as types: duck-typed capability checks at runtime, no interfaces.
+   Half.
+5. Metadata channel: homoiconicity — a schema block is data any dialect can read.
+   Yes, at runtime.
+6. Null safety: functions never return null; they return a result or a failure value handled in-flow.
+   A real null story for a dynamic language, enforced at runtime.
+   Half.
+7–8. No.
+9. Introspection: everything, zero ceremony, runtime only.
+   Yes in the Python sense.
+10. Boring libraries: no — one maintainer — with an asterisk: Rye embeds in Go, so Go's boring ecosystem is reachable across an unverified glue boundary (Dafny's escape hatch, inverted).
+11 + 13. Yes in the vacuous dynamic sense.
+12 + 14. No.
+
+Score: 2 + 5 + 9 + 11 + 13, halves of 1, 3, 4, 6.
+
+** Arturo (arturo-lang.io)
+
+The batteries-included one: huge built-in stdlib (JSON and SQLite among the batteries), written in Nim, one maintainer.
+No contracts, no validation dialect, null exists.
+Score: 5 + 9 + 11 + 13, half of 3 — strictly less than Rye for us.
+
+** Red (red-lang.org)
+
+The ambitious one, and the cautionary tale: still alpha and 32-bit only after fifteen years of chasing the full stack (system programming, reactive GUI, 1 MB binary).
+The parse dialect is genuinely great (5, 9, 13), but no pipe, no concurrency, no contracts.
+Point 10 fails harder than anything else we have scored: the ecosystem risk is not a column, it is the language itself.
+Score: 5 + 9 + 11 + 13.
+
+** Verdict
+
+Nobody in the family stacks better than what we already have.
+The comparison that settles it: Rhombus dominates the family at its own game —
+same design column (2 via user-defined operators, 5 and 9 via macros, 13),
+plus the one thing no Rebol descendant has: a real contract system with blame, which is RESTLY's thesis,
+and its macros run at compile time, giving a whiff of derivation the family structurally cannot reach.
+Rye earns a footnote for the best pipe story and the only built-in validation dialect we have seen anywhere;
+like Dafny, its honest role is component (Go glue and config layer), not candidate.
+
+* Appendix: Kotlin in detail
+
+Kotlin was on the scoreboard from the first pass; the detailed treatment recounted its row upward.
+Point by point:
+
+1. Runtime-checked DbC with blame: no contracts, but a fossil of our thesis hides in the stdlib —
+   =require()= throws =IllegalArgumentException= (client's fault) and =check()= throws =IllegalStateException= (supplier's fault).
+   That is blame vocabulary, and every Spring/Ktor app maps IAE → 400 by folk tradition.
+   But there are no postconditions, no invariants, no contract inheritance, no labels;
+   =kotlin.contracts= is smart-cast hints for the compiler, not DbC.
+   No, with the require/check asterisk.
+2. Pipe operator: no =|>=; extension functions and =let=/=run= give chaining that covers most of the need.
+   Half.
+3. JSON → domain → DB round-trip: kotlinx.serialization is a compiler plugin —
+   =@SerialName= (rename), =@Transient= (skip), custom serializers (coerce): the mismatch ledger on the field.
+   Exposed and SQLDelight generate the DDL.
+   Yes.
+4. Verbs as types with runtime capability query: smart casts make it the /idiom/ —
+   =if (storage is Postable)= and =storage= just /is/ Postable inside the branch, cleaner than our =attached= locals.
+   Yes, the best ergonomics on the board.
+5. Metadata channel on fields: annotations, readable at compile time by KSP and plugins, at runtime by reflection.
+   Yes.
+6. Null safety: the language's founding feature.
+   Yes.
+7. Compiler-checked concurrency: no — coroutines are ergonomics, not race checking; shared mutable state compiles happily.
+   No.
+8. No runtime type holes: split verdict — declaration-site variance (=in=/=out=) is checked, so Eiffel's catcall is impossible,
+   but JVM erasure punches its own holes (=List<String>= casts unchecked).
+   Half.
+9. Instance-free compile-time introspection: KSP and the serialization plugin derive from declarations at compile time, no instance needed.
+   Yes — the original scoreboard row undersold this.
+10. Boring, hardened libraries: the JVM — Jackson, JDBC, Ktor, Spring, decades of dull.
+    Tied with Python for best on the board.
+    Yes.
+11. Feature-level generic parameters: =fun <T> decode(s: String): T=,
+    plus =reified= type parameters that survive erasure at inline call sites: =Json.decodeFromString<Todo>(s)=.
+    Yes.
+12. Schema agreement at compile time: the serialization plugin derives codecs from the class;
+    type mismatches are compile errors (string-typed =@SerialName= typos are not).
+    Yes.
+13. Multi-format coexistence: textbook point 13 — =Json=, =Cbor=, =Yaml= are /values/ you pass,
+    one =@Serializable= class speaks all of them.
+    The sentence "format = plugged-in value, not inheritance decision" implemented literally.
+    Yes.
+14. Round-trip laws: kotest property testing; tested, not proven, same as Rust.
+    Half.
+
+Score: 3 + 4 + 5 + 6 + 9 + 10 + 11 + 12 + 13, halves of 2, 8 and 14 — the widest coverage on the board, wider than Nim because it keeps 10.
+
+Verdict: Kotlin is the boring answer — Nim's entire data column plus the ecosystem Nim prays for, losing exactly one thing: the contract thesis.
+Point 1 collapses to =require()=-throws-IAE,
+a folk RESTLY that productized the 4xx half by accident and abandoned the 500 half entirely.
+RESTLY-in-Kotlin ships fastest and proves nothing;
+the part of the codebase we are proudest of becomes a convention, not a contract.
+
+* Appendix: D in detail
+
+D looked, on the spec sheet, like the unicorn: the only language designed with both of our load-bearing walls in it.
+The detailed look demoted it.
+Point by point:
+
+1. Runtime-checked DbC with blame: in the spec, everything we want —
+   =in=/=out= contract blocks and =invariant= on classes, runtime-checked,
+   pre-vs-post giving Eiffel-grade blame,
+   and real contract inheritance (overrides or-combine =in= contracts and and-combine =out= contracts: =require else=/=ensure then= semantics, one of only three languages on the board with it).
+   In the culture, dead:
+   the HOPL paper /Origins of the D Programming Language/ counts contract programming among the features that did not live up to expectations;
+   Phobos itself barely uses =in=/=out=;
+   the community writes plain =assert= at the top of function bodies, which for preconditions is nearly equivalent;
+   DIP 1009's terse =in (expr)= syntax was motivated by the block syntax being too verbose for anyone to bother with;
+   and contract inheritance spent years buggy because so little real code exercised it.
+   A contract system nobody uses is unmaintained masonry — nobody files the bugs, nobody writes the blame tooling.
+   Half: technically present, culturally dead.
+2. Pipe operator: no =|>=; UFCS gives =x.f.g= chaining for free functions.
+   Half.
+3. JSON → domain → DB round-trip: mir-ion, asdf and vibe.d serialization all derive codecs from struct definitions.
+   Yes.
+4. Verbs as types with runtime capability query: interfaces and checked casts.
+   Yes.
+5. Metadata channel on fields: UDAs (User Defined Attributes) — =@serdeKeys("order") long orderValue;= — the mismatch ledger on the field.
+   Yes.
+6. Null safety: none; references are nullable and nothing checks.
+   The category of bugs Eiffel deleted for us comes back.
+   No.
+7. Compiler-checked concurrency: =shared= is a qualifier, not a proof.
+   Half.
+8. No runtime type holes: the =@safe= subset exists but casts escape it.
+   Half.
+9. Instance-free compile-time introspection: arguably best in class anywhere —
+   =__traits(allMembers)=, =static foreach=, CTFE;
+   deriving a codec /and our DDL/ from a struct is idiomatic library code.
+   Yes.
+10. Boring, hardened libraries: the familiar curse — three compilers, Phobos v2/v3 drama, vibe.d at community scale.
+    Bigger than Eiffel's ecosystem, far from boring.
+    No.
+11. Feature-level generic parameters: templates — =T decode(T)(string json)=.
+    Yes.
+12. Schema agreement at compile time: derivation is compile-time; a UDA-checked deriver rejects mismatches as compile errors.
+    Yes.
+13. Multi-format coexistence: formats are libraries, no VHPR analogue; one struct speaks JSON, ion, msgpack.
+    Yes.
+14. Round-trip laws: built-in =unittest= blocks make the law cheap to state; tested, not proven.
+    Half.
+
+Score: 3 + 4 + 5 + 9 + 11 + 12 + 13, halves of 1, 2, 7, 8 and 14; misses 6 and 10 — Nim's twin, not the unicorn.
+
+Verdict: D is the third member of a graveyard that proves our question has been asked before.
+C# Code Contracts died as a library (runtime DbC with inheritance on top of C#'s full data column, abandoned ~2015);
+Cobra died as a language (Python syntax with native require/ensure/invariant, abandoned ~2013);
+D's contracts died inside a living language.
+Three independent burials of exactly the combination this checklist asks for.
+The survivors of "contracts + data column" are the languages where contracts are load-bearing for something:
+Eiffel (the culture), Ada (certification), Dafny (the proofs).
+The lesson generalizes point 10 from libraries to language features:
+a feature is only as real as the community that keeps it honest.

@@ -19,7 +19,10 @@ feature -- Conversion
          -- (the composite is idempotent in general).
       deferred
       ensure
-         representation_round_trips: True -- TODO(owner): contract
+         representation_round_trips: True
+               -- TODO(owner): contract
+               -- suggested: to_representation (Result) ~ a_representation
+               -- (holds once `a_representation' is canonical; see header comment)
       end
 
    to_representation (a_store: S): R
