@@ -1,0 +1,70 @@
+#+TITLE: The TAO of RESTLY
+#+AUTHOR: agarciafdz
+#+DATE: 2026-07-14
+#+STARTUP: overview
+
+* The thesis in one sentence
+
+HTTP is not something you handle — it is something you /declare/.
+A REST server is a set of obligations (contracts) over a set of capabilities (types) across a set of translations (converters);
+everything else is plumbing.
+
+* The principles
+
+** 1. Errors are blame, and blame is already in the language
+
+A 4xx means /the client broke its promise/; a 500 means /the server broke its own/.
+Design by Contract makes exactly this distinction:
+precondition = client's fault, postcondition and invariant = supplier's fault.
+So RESTLY never writes error-handling code —
+it writes =require error_404_missing_key: has_key (k)= and lets the violation route itself to the status line.
+The assertion tag /is/ the API specification.
+
+** 2. A resource is its verb set
+
+Capabilities are types — {RESTLY_POSTABLE}, {RESTLY_PATCHABLE}, {RESTLY_LISTABLE} — not configuration flags.
+Routing asks what the storage /is/ (=attached {RESTLY_POSTABLE} storage=),
+and 405 Method Not Allowed is nothing more than a failed conformance test.
+The uniform interface is the same verbs no matter what stands behind them.
+
+** 3. Representation and Store are different types, and the difference is sacred
+
+Fielding's central insight: what the wire carries and what the server keeps are /not the same thing/,
+and pretending they are is where REST implementations rot.
+RESTLY makes the distinction a type parameter — =[R, S]= — and gives the crossing exactly one home: the pipeline front.
+Everything behind the front is pure protocol; everything before it is pure representation.
+
+** 4. Mismatches are declared, not coded
+
+Rename, skip, coerce — the differences between R and S form a ledger,
+stated once for both directions,
+and checked against the schema at /wiring time/, never discovered mid-request.
+A conversion bug should be a startup failure, not a 3am page.
+
+** 5. Storage is a pipeline of equals
+
+Cache, forwarder, table — every stage speaks the same protocol,
+so composition replaces configuration: =front <| cache <| store=.
+Adding a cache is not a feature; it is a list element.
+
+** 6. The round-trip is the load-bearing law
+
+=to_representation (to_store (r)) ~ r= — stated as a contract on every converter.
+PATCH already /bets/ on it:
+RFC 7386 merge works by converting out, merging, and converting back.
+A converter that cannot round-trip is not a converter; it is a lossy rumor.
+
+* The two walls
+
+The whole edifice rests on two load-bearing walls:
+
+- The contract wall — obligations at the trust boundary, blame becoming status codes.
+  (What Eiffel holds best of any language.)
+- The conversion wall — representation ↔ store at the edges, JSON in, SQLite behind.
+  (What we hold up by hand, with the mismatch ledger as our masonry.)
+
+A REST framework is good exactly insofar as both walls are /declarative/:
+you state what must be true and what corresponds to what —
+and the requests, the errors, and the schema all follow.
+
+See =retrospective-on-the-fitness-of-eiffel.org= for how well the language holds each wall.
