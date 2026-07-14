@@ -69,8 +69,6 @@ pipelines funcionan como se usa en testing/test_restly_cache.e").
 | =RESTLY_BASIC_COMBINATOR=   | =library/restly/src/combinator/restly_basic_combinator.e= | base combinator (front/back, =-= and =<|= aliases)  |
 | =RESTLY_CACHE=              | =library/restly/src/combinator/restly_cache.e=            | cache combinator                                    |
 | =RESTLY_CONVERTER=          | =library/restly/src/converter/restly_converter.e=         | value conversion; exactly two features: =to_store=, =to_representation= |
-| =RESTLY_CONVERTER_AGENT=    | =library/restly/src/converter/restly_converter_agent.e=   | agent-based converter                               |
-| =RESTLY_REPRESENTATION=     | =library/restly/src/converter/restly_representation.e=    | representation layer                                |
 | =RESTLY_RESOURCE=           | =library/restly/src/converter/restly_resource.e=          | resource; converter injected at creation            |
 | =RESTLY_HASH_TABLE=         | =library/restly/src/structures/restly_hash_table.e=       | concrete storage                                    |
 
