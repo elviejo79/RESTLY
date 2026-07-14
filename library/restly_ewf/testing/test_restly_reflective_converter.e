@@ -63,7 +63,7 @@ feature -- Tests
 
 	test_base_converter_with_no_mismatches
 		local
-			l_converter: RESTLY_REFLECTIVE_CONVERTER [SAMPLE_ITEM]
+			l_converter: RESTLY_JSON_REFLECTIVE_CONVERTER [SAMPLE_ITEM]
 			l_json: JSON_OBJECT
 		do
 			create l_converter.make (agent: SAMPLE_ITEM do create Result.make ("") end)
