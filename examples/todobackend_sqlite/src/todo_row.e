@@ -15,17 +15,9 @@ inherit
 		end
 
 create
-	make, make_default
+	make_default
 
 feature -- Initialization
-
-	make (a_title: STRING; a_completed: INTEGER; a_order_value: INTEGER)
-			-- Row with all fields.
-		do
-			title := a_title
-			completed := a_completed
-			order_value := a_order_value
-		end
 
 	make_default
 			-- Empty row (ABEL deserialization needs a default creation).
@@ -47,38 +39,12 @@ feature -- Access
 	order_value: INTEGER
 			-- Sort order.
 
-	is_completed: BOOLEAN
-			-- Is this todo completed?
-		do
-			Result := completed /= 0
-		end
-
 feature {RESTLY_TABLE} -- Element Change
 
 	set_id (a_id: INTEGER)
 			-- <Precursor>
 		do
 			id := a_id
-		end
-
-feature -- Element Change
-
-	set_title (a_title: STRING)
-			-- Set `title` to `a_title`.
-		do
-			title := a_title
-		end
-
-	set_completed (a_completed: INTEGER)
-			-- Set `completed` to `a_completed`.
-		do
-			completed := a_completed
-		end
-
-	set_order_value (a_order_value: INTEGER)
-			-- Set `order_value` to `a_order_value`.
-		do
-			order_value := a_order_value
 		end
 
 feature -- Comparison
