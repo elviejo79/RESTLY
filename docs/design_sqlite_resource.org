@@ -69,8 +69,8 @@
 ** Which persistence library: ABEL or EiffelStore?
    DECIDED: ABEL (see Decision section).
    VERIFIED 2026-07-11: the relational SQLite factory exists in our install; only the compile check is still pending.
-** Should a typed RESTLY_TABLE [V] class exist at all?
-   DECIDED: yes, RESTLY_TABLE [V] exists (see Decision section).
+** Should a typed RESTLY_TABLE_ORIGIN [V] class exist at all?
+   DECIDED: yes, RESTLY_TABLE_ORIGIN [V] exists (see Decision section).
 ** pending_ids lifecycle: when is a request_id -> id entry cleared?
    RESOLVED: pending_ids deleted — ABEL managed types write the minted id back into `v`, so extend_with reads it off `v` and records it in the inherited extend_requests.
    The lifecycle question (when are entries cleared? unbounded growth) moves to extend_requests and belongs to RESTLY_POSTABLE, not this class.
@@ -90,7 +90,7 @@ that way seems cleaner to append data to a database.
  #+BEGIN_EXAMPLE
  local
    db : RESTLY_SQLITE
-   persons : RESTLY_TABLE [PERSON]
+   persons : RESTLY_TABLE_ORIGIN [PERSON]
    new_id : INTEGER
    p, new_person : PERSON
 
@@ -109,7 +109,7 @@ that way seems cleaner to append data to a database.
 
  end
  #+END_EXAMPLE
-* Decision: RESTLY_TABLE [V] composes an ABEL repository
+* Decision: RESTLY_TABLE_ORIGIN [V] composes an ABEL repository
 
 ** Why ABEL (answers open question 1) — VERIFIED 2026-07-11
    ABEL's relational backend reads PRE-EXISTING tables (not only its own object schema).
@@ -127,18 +127,18 @@ that way seems cleaner to append data to a database.
    - FLAT CLASSES ONLY: V must not reference other persisted objects (name: STRING, age: INTEGER fine; address: ADDRESS not).
      This is a documented constraint on every V author.
    - Types found in the schema but NOT managed get value semantics (override_expanded_type — no identity, no update).
-     Every type exposed through a RESTLY_TABLE must be managed.
+     Every type exposed through a RESTLY_TABLE_ORIGIN must be managed.
    - The library lives in unstable/ — the compile check below is still pending before committing.
 
 ** Why composition, not inheritance
    - Identity-by-inheritance is reserved in this repo for what a store IS — its PATH or URI (RESTLY_FILE inherits RESTLY_FILE_NODE).
-     RESTLY_TABLE is not "a PS_REPOSITORY"; it is a store BACKED BY one.
-   - Inheriting PS_REPOSITORY would drag its whole public interface and invariants into RESTLY_TABLE, destroying the tiny store contract (has_key / item / force / put / extend / remove) that RESTLY_PROTOCOL [K, V] defines and RESTLY_DIRECTORY exemplifies.
+     RESTLY_TABLE_ORIGIN is not "a PS_REPOSITORY"; it is a store BACKED BY one.
+   - Inheriting PS_REPOSITORY would drag its whole public interface and invariants into RESTLY_TABLE_ORIGIN, destroying the tiny store contract (has_key / item / force / put / extend / remove) that RESTLY_PROTOCOL [K, V] defines and RESTLY_DIRECTORY exemplifies.
    - Our R/S generic convention already names this relation: conversion between Representation and Store happens AT THE BOUNDARY of the store (same role KEY_CONVERTER plays in the EWF bridge).
      ABEL is that boundary: V -> rows on write, rows -> V on read.
 
    So: serialization is explicitly part of this work, but it is ABEL's part.
-   RESTLY_TABLE's job is only to expose it through the RESTLY store shape.
+   RESTLY_TABLE_ORIGIN's job is only to expose it through the RESTLY store shape.
 
 ** Skeleton
    Mirrors RESTLY_DIRECTORY (RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]); here keys are row ids, values are typed objects.
@@ -153,7 +153,7 @@ that way seems cleaner to append data to a database.
  	]"
 
  class
- 	RESTLY_TABLE [V -> ANY]
+ 	RESTLY_TABLE_ORIGIN [V -> ANY]
 
  inherit
  	RESTLY_POSTABLE [INTEGER, V]
@@ -256,14 +256,14 @@ that way seems cleaner to append data to a database.
 
    The precedent is RESTLY_DIRECTORY.node: it returns the deferred ancestor RESTLY_FILE_NODE, creating RESTLY_DIRECTORY or RESTLY_FILE itself, and the caller object-tests.
    That works because file-vs-directory is a CLOSED set of two non-generic classes the directory can `create` by name.
-   RESTLY_TABLE [V] is an OPEN set: the database cannot `create` a type it cannot name, and an object test can only narrow an object already created with that generic.
+   RESTLY_TABLE_ORIGIN [V] is an OPEN set: the database cannot `create` a type it cannot name, and an object test can only narrow an object already created with that generic.
 
    So the pattern splits in two:
    - db's navigation/traversal hands out UNTYPED table nodes (table name + repository — a stored_types entry) for listing and `exists` only, mirroring RESTLY_FILE_NODE;
    - the CLIENT creates the typed store from one:
 
  #+BEGIN_EXAMPLE
- persons: RESTLY_TABLE [PERSON]
+ persons: RESTLY_TABLE_ORIGIN [PERSON]
  ...
  create persons.make_with_repository (db.repository)
  #+END_EXAMPLE
@@ -306,13 +306,13 @@ that way seems cleaner to append data to a database.
  end
  #+END_EXAMPLE
 
-** Draft for RESTLY_TABLE (ABEL binding)
+** Draft for RESTLY_TABLE_ORIGIN (ABEL binding)
    The backend already exists: ABEL's PS_QUERY with a PS_CRITERION is a QUERY body in all but name (abel_extension's exactly_like / starts_with helpers are canned instances of it).
    Laziest v1 binds Q directly to PS_CRITERION — zero translation code, criteria built with PS_CRITERION_FACTORY at the call site.
 
  #+BEGIN_EXAMPLE
  class
- 	RESTLY_TABLE [V -> ANY]
+ 	RESTLY_TABLE_ORIGIN [V -> ANY]
 
  inherit
  	RESTLY_POSTABLE [INTEGER, V]
@@ -372,7 +372,7 @@ that way seems cleaner to append data to a database.
 
 ** Caveats
    - Q propagates through combinators: a cache or forwarder wrapping a searchable store can only forward `search` by carrying Q in its own generic signature, so a combinator is searchable exactly over its backend's Q (PREDICATE [V] in-memory, PS_CRITERION on ABEL).
-   - Binding Q to PS_CRITERION leaks an ABEL type into RESTLY_TABLE client signatures; acceptable for v1 because those clients already hold a PS_RELATIONAL_REPOSITORY to create the table.
+   - Binding Q to PS_CRITERION leaks an ABEL type into RESTLY_TABLE_ORIGIN client signatures; acceptable for v1 because those clients already hold a PS_RELATIONAL_REPOSITORY to create the table.
      A RESTLY-owned query representation is deferred until a third binding forces one.
    - Accept-Query negotiation (which media types a store accepts) is HTTP surface, so it belongs to the EWF bridge, not to the store protocol.
    - RFC 10008's Location-for-results (a result set minted as its own sub-resource URI) fits the combinator style but is out of scope for v1.

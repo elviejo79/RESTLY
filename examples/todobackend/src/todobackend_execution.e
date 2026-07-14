@@ -5,7 +5,7 @@ class
 	TODOBACKEND_EXECUTION
 
 inherit
-	RESTLY_EWF_SERVER
+	RESTLY_EWF_MOUNTING
 
 create
 	make

@@ -3,7 +3,7 @@
 
 * Goal
 
-A todobackend example that stores todos in SQLite via RESTLY_TABLE and exposes them as a JSON API.
+A todobackend example that stores todos in SQLite via RESTLY_TABLE_ORIGIN and exposes them as a JSON API.
 Demonstrates the full RESTLY pipeline: EWF ↔ JSON ↔ domain object ↔ ABEL/SQLite.
 
 * Pipeline
@@ -13,7 +13,7 @@ EWF [STRING, JSON_OBJECT]
   → RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW]
     key_converter: RESTLY_INT_KEY_CONVERTER (STRING ↔ INTEGER)
     value_converter: TODOBACKEND_JSON_CONVERTER (JSON_OBJECT ↔ TODO_ROW)
-  → RESTLY_TABLE [TODO_ROW]
+  → RESTLY_TABLE_ORIGIN [TODO_ROW]
     proxy: PS_REPOSITORY (ABEL SQLite backend)
   → SQLite file: todobackend.db
 #+end_example
@@ -22,25 +22,25 @@ No new combinator is needed, but two existing classes need changes (next section
 
 * Required library changes
 
-Design review found two fatal gaps between RESTLY_PIPELINE_FRONT and RESTLY_TABLE.
+Design review found two fatal gaps between RESTLY_PIPELINE_FRONT and RESTLY_TABLE_ORIGIN.
 
 ** 1. extend_new must delegate to POSTABLE stores
 
 Today =RESTLY_PIPELINE_FRONT.extend_new= mints its own key via =fresh_key= and calls =store.extend (converted_v, converted_key)=.
-=RESTLY_TABLE.extend= ignores the key; AUTOINCREMENT mints a different id.
+=RESTLY_TABLE_ORIGIN.extend= ignores the key; AUTOINCREMENT mints a different id.
 Result: the Location/id returned by POST points at a row that does not exist.
 
 Fix: in =RESTLY_PIPELINE_FRONT.extend_new=, when =attached {RESTLY_POSTABLE [KS, S]} store=, delegate =extend_new= to the store, read the store-minted key back from the store's =extend_requests=, and convert it with =key_converter.to_representation= before recording it in the front's own =extend_requests=.
 Stores that are not POSTABLE keep the current front-minted path.
 
-** 2. RESTLY_TABLE gains RESTLY_LISTABLE
+** 2. RESTLY_TABLE_ORIGIN gains RESTLY_LISTABLE
 
 The front's listing features (=new_cursor=, =count=, =wipe_out=) downcast the store with =check attached {RESTLY_LISTABLE [KS, S]} store=.
-RESTLY_TABLE is not LISTABLE, so GET on the collection would violate the check.
+RESTLY_TABLE_ORIGIN is not LISTABLE, so GET on the collection would violate the check.
 
-Fix (implemented 2026-07-12, streaming): RESTLY_TABLE inherits RESTLY_LISTABLE [INTEGER, V].
+Fix (implemented 2026-07-12, streaming): RESTLY_TABLE_ORIGIN inherits RESTLY_LISTABLE [INTEGER, V].
 =RESTLY_LISTABLE.new_cursor= now returns kernel =TABLE_ITERATION_CURSOR [V, K]= (via =TABLE_ITERABLE=), not =V_MAP_ITERATOR=: a live stream can only promise item/after/forth/key, while V_MAP_ITERATOR's model (=target=, =key_sequence=, =index=, =back=) assumes a frozen in-memory map.
-=RESTLY_TABLE.new_cursor= streams a criterion-less PS_QUERY through =RESTLY_TABLE_CURSOR= (closes the query at exhaustion); nothing is materialized.
+=RESTLY_TABLE_ORIGIN.new_cursor= streams a criterion-less PS_QUERY through =RESTLY_TABLE_CURSOR= (closes the query at exhaustion); nothing is materialized.
 =count= is a raw =SELECT COUNT(*)= through the connector's {PS_ABEL_EXPORT} connection (PS_TUPLE_QUERY cannot do aggregates); beware =({V}).name= carries the attachment mark ("!SAMPLE_ROW"), which must be pruned to form the table name.
 =wipe_out= routes to the relational backend's =wipe_out= (DELETE FROM each table), which is implemented.
 The pipeline front converts lazily with =RESTLY_CONVERTING_CURSOR=; =RESTLY_HASH_TABLE= now owns its V_HASH_TABLE by composition (inheriting it would put two non-conforming =new_cursor= versions under the ITERABLE seed, forcing rename+select and breaking V_TABLE's inherited =is_equal=/=has=/=out=) and wraps the verified V_MAP_ITERATOR in =RESTLY_V_MAP_CURSOR= at the protocol boundary.
@@ -48,7 +48,7 @@ The pipeline front converts lazily with =RESTLY_CONVERTING_CURSOR=; =RESTLY_HASH
 * Key minting
 
 The database mints the id via AUTOINCREMENT; ABEL writes it back into the TODO_ROW object.
-=RESTLY_TABLE.extend_new= records that minted id instead of pre-computing =fresh_key=.
+=RESTLY_TABLE_ORIGIN.extend_new= records that minted id instead of pre-computing =fresh_key=.
 With library change 1 above, the pipeline front delegates to this and returns the real id.
 
 * Files to create
@@ -81,14 +81,14 @@ Verify with a one-row smoke test before locking the schema; fall back to an INTE
 RESTLY_CONVERTER [JSON_OBJECT, TODO_ROW].
 to_store: extracts title, completed, order from JSON keys; ignores "url" and "id" if present.
 to_representation: builds JSON_OBJECT from TODO_ROW fields; adds "completed" default false if absent (same as existing TODOBACKEND_CONVERTER).
-The "url" field is NOT the converter's job: RESTLY_EWF_HANDLER.patch_url already stamps it on every response from the request URI.
+The "url" field is NOT the converter's job: RESTLY_EWF_GATEWAY.patch_url already stamps it on every response from the request URI.
 
 ** 3. TODOBACKEND_SQLITE_EXECUTION
 
-Inherits RESTLY_EWF_SERVER.
+Inherits RESTLY_EWF_MOUNTING.
 setup_router: mount_resource ("/todos", pipeline).
 pipeline: RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW].make (table, int_key_converter, json_converter).
-table: RESTLY_TABLE [TODO_ROW].make_with_repository (repository).
+table: RESTLY_TABLE_ORIGIN [TODO_ROW].make_with_repository (repository).
 repository: built by PS_SQLITE_RELATIONAL_REPOSITORY_FACTORY, managing TODO_ROW with primary key "id".
 Database file created on first run if absent; schema bootstrapped via SQLITE_MODIFY_STATEMENT.
 All once ("PROCESS") for thread safety.
@@ -116,13 +116,13 @@ The patch (three edits, contracts untouched):
 
 1. =abel/core/backends/relational/ps_relational_connector.e= — implement =delete=: for each entity with a managed type, =DELETE FROM <type.name.as_lower> WHERE <id_column> = <primary_key>= on =get_connection (transaction)=; unmanaged types hit =check managed_type_only: False end=.
 2. =abel/core/framework/ps_default_repository.e= — move the obsolete =delete (object, transaction)= into =feature {PS_ABEL_EXPORT} -- Data modification= (body unchanged; =delete_query= stays obsolete).
-3. =restly_table.e= — inherit the =PS_ABEL_EXPORT= marker and rewrite =remove=: query the row in a transaction, call =repository.delete (row, transaction.transaction)=, commit.
+3. =restly_table_origin.e= — inherit the =PS_ABEL_EXPORT= marker and rewrite =remove=: query the row in a transaction, call =repository.delete (row, transaction.transaction)=, commit.
 
 Safe because the relational cursor sets =primary_key= from the managed id column (=ps_relational_result_cursor.e:138-140=), so the WHERE clause targets the real row id.
 
 WARNING: edits 1 and 2 live in the installed tree (=~/Eiffel_25.12/unstable/library/persistency/abel/=), not in this repository.
 An EiffelStudio upgrade silently reverts them; reapply from the descriptions above.
-=test_remove_deletes_row= in TEST_RESTLY_TABLE is the canary: it fails with a check violation if the patch is missing.
+=test_remove_deletes_row= in TEST_RESTLY_TABLE_ORIGIN is the canary: it fails with a check violation if the patch is missing.
 
 DELETE on the collection needs no patch: it maps to =wipe_out=, which the relational backend implements (DELETE FROM table).
 This matters because the todobackend spec suite deletes the collection before every test to reset state.

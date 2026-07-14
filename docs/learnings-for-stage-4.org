@@ -6,15 +6,15 @@
 
 - =RESTLY_JSON_PIPELINE_FRONT [KS, S]= — concrete front with JSON
   merge (RFC 7386) and auto-increment STRING =fresh_key=.
-- =RESTLY_EWF_HANDLER= — deferred base for verb handlers.
+- =RESTLY_EWF_GATEWAY= — deferred base for verb handlers.
 - =RESTLY_EWF_COLLECTION_HANDLER= — GET list, POST, DELETE all.
 - =RESTLY_EWF_ELEMENT_HANDLER= — GET one, PATCH, DELETE one.
-- =RESTLY_EWF_SERVER= — mounts pipelines onto =WSF_ROUTER=.
+- =RESTLY_EWF_MOUNTING= — mounts pipelines onto =WSF_ROUTER=.
 - Tag parser, unit tests, JSON front tests — 82 tests green.
 
 * Key decision: two handler classes, not one
 
-The original old handler (=RESTLY_EWF_HANDLER= in RESTLY_251021) used
+The original old handler (=RESTLY_EWF_GATEWAY= in RESTLY_251021) used
 a single class with =requested_path= to distinguish collection vs
 element requests. The new design uses two concrete classes:
 
@@ -24,7 +24,7 @@ element requests. The new design uses two concrete classes:
   (GET one, PATCH, DELETE one).
 
 Shared logic (rescue/retry, tag parsing, JSON body parsing, CORS,
-url patching) lives in a deferred parent =RESTLY_EWF_HANDLER=.
+url patching) lives in a deferred parent =RESTLY_EWF_GATEWAY=.
 
 Benefits:
 - The 405 boundary IS the class — no =is_collection= flag, no
@@ -136,7 +136,7 @@ test calls =status_from_tag= directly on the helper object.
 
 Attempted to inline via multiple inheritance into the test class, but
 =EQA_TEST_SET.default_create= cannot initialize
-=RESTLY_EWF_HANDLER.storage= — the composition approach is the right
+=RESTLY_EWF_GATEWAY.storage= — the composition approach is the right
 one here.
 
 * JSON merge (RFC 7386)

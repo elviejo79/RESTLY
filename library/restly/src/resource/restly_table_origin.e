@@ -1,12 +1,13 @@
 note
 	description: "[
-		One relational table as a RESTLY store of typed objects.
+		Origin: one relational table as the authoritative RESTLY store
+		of typed objects (nothing stands behind it).
 		Keys are row ids; values are Vs, (de)serialized by ABEL.
 		Identity is the table; serialization is never ours.
 	]"
 
 class
-	RESTLY_TABLE [V -> RESTLY_IDENTIFIABLE [INTEGER]]
+	RESTLY_TABLE_ORIGIN [V -> RESTLY_IDENTIFIABLE [INTEGER]]
 
 inherit
 	RESTLY_POSTABLE [INTEGER, V]
@@ -182,7 +183,7 @@ feature -- Key minting
 			-- <Precursor>
 			-- ABEL mints ids on insert; `extend_new` reads them back.
 		do
-			(create {EXCEPTIONS}).raise ("RESTLY_TABLE.fresh_key must never be called; the database mints ids.")
+			(create {EXCEPTIONS}).raise ("RESTLY_TABLE_ORIGIN.fresh_key must never be called; the database mints ids.")
 		end
 
 feature {NONE} -- Implementation

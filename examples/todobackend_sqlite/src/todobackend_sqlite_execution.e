@@ -5,7 +5,7 @@ class
 	TODOBACKEND_SQLITE_EXECUTION
 
 inherit
-	RESTLY_EWF_SERVER
+	RESTLY_EWF_MOUNTING
 
 create
 	make
@@ -29,14 +29,14 @@ feature {NONE} -- Diagnostics
 feature {NONE} -- Pipeline
 
 	todo_pipeline: RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW]
-			-- JSON front → RESTLY_TABLE → SQLite.
+			-- JSON front → RESTLY_TABLE_ORIGIN → SQLite.
 		once ("PROCESS")
 			create Result.make (todo_table,
 				create {RESTLY_INT_KEY_CONVERTER},
 				create {TODOBACKEND_JSON_CONVERTER}.make (agent: TODO_ROW do create Result.make_default end))
 		end
 
-	todo_table: RESTLY_TABLE [TODO_ROW]
+	todo_table: RESTLY_TABLE_ORIGIN [TODO_ROW]
 			-- ABEL-backed table storing TODO_ROW objects.
 		once ("PROCESS")
 			create Result.make_with_repository (todo_repository)

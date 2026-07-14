@@ -1,8 +1,8 @@
 note
-	description: "Tests for RESTLY_TABLE over a real SQLite database."
+	description: "Tests for RESTLY_TABLE_ORIGIN over a real SQLite database."
 
 class
-	TEST_RESTLY_TABLE
+	TEST_RESTLY_TABLE_ORIGIN
 
 inherit
 	EQA_TEST_SET
@@ -48,7 +48,7 @@ feature {NONE} -- Fixtures
 			Result := l_factory.new_repository
 		end
 
-	table: RESTLY_TABLE [SAMPLE_ROW]
+	table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			-- Fresh table over `repository`.
 		attribute
 			create Result.make_with_repository (repository)
@@ -70,7 +70,7 @@ feature -- Tests
 			-- After extend_new, the minted key is present, the row round-trips,
 			-- and the id was written back into the inserted object.
 		local
-			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			l_row: SAMPLE_ROW
 			l_key: INTEGER
 		do
@@ -86,7 +86,7 @@ feature -- Tests
 	test_search_filters_rows
 			-- search returns exactly the rows matching the criterion.
 		local
-			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			l_cursor: TABLE_ITERATION_CURSOR [SAMPLE_ROW, INTEGER]
 			l_count: INTEGER
 		do
@@ -106,7 +106,7 @@ feature -- Tests
 	test_put_updates_row
 			-- put replaces the row's payload; the key imposes the id.
 		local
-			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			l_key: INTEGER
 		do
 			l_table := table
@@ -120,7 +120,7 @@ feature -- Tests
 	test_listing_streams_rows
 			-- Iteration streams all rows, count matches, wipe_out empties.
 		local
-			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			l_total: INTEGER
 		do
 			l_table := table
@@ -154,7 +154,7 @@ feature -- Tests
 	test_remove_deletes_row
 			-- After remove, the key is gone.
 		local
-			l_table: RESTLY_TABLE [SAMPLE_ROW]
+			l_table: RESTLY_TABLE_ORIGIN [SAMPLE_ROW]
 			l_key: INTEGER
 		do
 			l_table := table

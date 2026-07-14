@@ -1,12 +1,12 @@
 note
 	description: "[
-		Adapts a single verb action agent to a WSF URI-template handler.
-		Wraps the call with rescue/retry contract-to-HTTP mapping
-		and CORS headers.
+		Guards one route: maps contract blame to HTTP statuses.
+		Adapts a single verb action agent to a WSF URI-template handler,
+		wrapping the call with rescue/retry and CORS headers.
 	]"
 
 class
-	RESTLY_EWF_ACTION_HANDLER
+	RESTLY_EWF_CONTRACT_GUARD
 
 inherit
 	WSF_URI_TEMPLATE_RESPONSE_HANDLER

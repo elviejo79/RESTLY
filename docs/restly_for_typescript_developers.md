@@ -119,7 +119,7 @@ The bridge maps HTTP verbs to protocol capabilities:
 Mounting:
 
 ```typescript
-// Eiffel: RESTLY_EWF_SERVER
+// Eiffel: RESTLY_EWF_MOUNTING
 server.mountCollection("/todos",      todos)
 server.mountElement("/todos/{id}",    todos)
 // shorthand:
@@ -241,8 +241,8 @@ library/restly/              ← Core (no HTTP dependency)
 library/restly_ewf/          ← EWF bridge (depends on core + EWF)
   src/
     wsf_json_response.e      ← JSON response helper
-    restly_ewf_server.e      ← Router + mount features
-    restly_ewf_handler.e     ← Verb dispatch + error mapping
+    restly_ewf_mounting.e      ← Router + mount features
+    restly_ewf_gateway.e     ← Verb dispatch + error mapping
     restly_json_pipeline_front.e  ← JSON merge + STRING fresh_key
   testing/                   ← Bridge tests
 

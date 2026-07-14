@@ -76,7 +76,7 @@ pipelines funcionan como se usa en testing/test_restly_cache.e").
 
 Old checkout: =/home/agarciafdz/r/gh/elv79/RESTLY_251021/RESTFUL/src/=
 — contains =wsf_json_response.e= (to port, step 3) and
-=restly_ewf_handler.e= (the rescue/retry mechanism cited in
+=restly_ewf_gateway.e= (the rescue/retry mechanism cited in
 decision 8).
 
 ** Worth keeping: WSF_JSON_RESPONSE
@@ -139,7 +139,7 @@ more combinator.
    Round-3 update: the pipeline front (decision 16) holds the key
    converter DIRECTLY, so the combinator is no longer on the v1
    path — parked as optional future tooling.
-4. *Mounting* (refined 2026-07-03, round 2): =RESTLY_EWF_SERVER=
+4. *Mounting* (refined 2026-07-03, round 2): =RESTLY_EWF_MOUNTING=
    owns the =WSF_ROUTER= and offers two EXPLICIT features — one
    =mount= with type-driven dispatch was rejected (Eiffel has no
    overloading, and both interfaces usually live on the /same/
@@ -185,7 +185,7 @@ more combinator.
 8. *Errors from contracts*: precondition tags encode status codes
    (=error_404_not_found=). The handler parses the violated tag first;
    falls back to exception type when the tag carries no code.
-   Mechanism (proven in the old =RESTLY_EWF_HANDLER=): the handler
+   Mechanism (proven in the old =RESTLY_EWF_GATEWAY=): the handler
    inherits =EXCEPTION_MANAGER=; the dispatch feature has a =rescue=
    clause that builds the response from =last_exception= and =retry=-s
    (the retry path sees =Result= already attached and returns it).
@@ -553,9 +553,9 @@ feature -- Components (explicit wiring at creation, decision 16)
 | Class                 | Responsibility                                              |
 |-----------------------+-------------------------------------------------------------|
 | =WSF_JSON_RESPONSE=   | ported + fixed (escaping, 204 body, make_with_body)         |
-| =RESTLY_EWF_SERVER=   | owns =WSF_ROUTER=; =map_verb= route table; =mount_collection= / =mount_element= sugar |
-| =RESTLY_EWF_HANDLER=  | deferred verb-provider base: holds the pipeline front; JSON body parsing; =url= patching |
-| =RESTLY_EWF_ACTION_HANDLER= | adapts one verb agent to a WSF handler; tag→status mapping; CORS wiring |
+| =RESTLY_EWF_MOUNTING=   | owns =WSF_ROUTER=; =map_verb= route table; =mount_collection= / =mount_element= sugar |
+| =RESTLY_EWF_GATEWAY=  | deferred verb-provider base: holds the pipeline front; JSON body parsing; =url= patching |
+| =RESTLY_EWF_CONTRACT_GUARD= | adapts one verb agent to a WSF handler; tag→status mapping; CORS wiring |
 | =RESTLY_JSON_PIPELINE_FRONT= | concrete v1 front: =[STRING, JSON_OBJECT]= web side; =merge= = JSON merge (RFC 7386); =fresh_key= = auto-increment as STRING |
 
 *** Mount signatures (decided 2026-07-03, round 2)
@@ -579,7 +579,7 @@ mount_resource (a_template: STRING; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJ
   they succeed because the front itself conforms (decision 16).
   A verb whose interface the mounted object lacks answers 405.
 
-*** RESTLY_EWF_ACTION_HANDLER (explicit route table, 2026-07-06)
+*** RESTLY_EWF_CONTRACT_GUARD (explicit route table, 2026-07-06)
 
 Routing was refactored from "one handler class per endpoint with an
 internal verb =if/elseif=" to an explicit route table: one
@@ -593,7 +593,7 @@ map_verb (a_template: STRING; a_methods: WSF_REQUEST_METHODS;
 Verb matching is now the router's job (the =WSF_REQUEST_METHODS=
 argument that was previously passed as =Void=).
 
-*What it does.* =RESTLY_EWF_ACTION_HANDLER= is the adapter between
+*What it does.* =RESTLY_EWF_CONTRACT_GUARD= is the adapter between
 one verb agent and EWF's handler machinery. It holds a single
 =action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE]= and its
 =response= feature wraps the call with:
@@ -605,7 +605,7 @@ one verb agent and EWF's handler machinery. It holds a single
    error handling);
 2. CORS headers plus =Connection: close= on every response.
 
-*Where it is used.* Exactly one place: =RESTLY_EWF_SERVER.map_verb=
+*Where it is used.* Exactly one place: =RESTLY_EWF_MOUNTING.map_verb=
 creates one instance per route row. The todobackend therefore has 8
 instances: GET/POST/DELETE/OPTIONS on =/todos=,
 GET/PATCH/DELETE/OPTIONS on =/todos/{id}=.
@@ -617,7 +617,7 @@ that /return/ responses — its native agent handler
 (=WSF_URI_TEMPLATE_AGENT_HANDLER=) takes a procedure that writes to
 =res= imperatively, and neither variant knows about rescue/retry or
 the contract-tag grammar. Before the refactor this envelope lived in
-the deferred =RESTLY_EWF_HANDLER= base, tangled with verb dispatch.
+the deferred =RESTLY_EWF_GATEWAY= base, tangled with verb dispatch.
 With one route per verb the wrapper had to become route-shaped: one
 small class that wraps /any/ action in the same rescue/CORS
 envelope. Eiffel rescue clauses cannot be composed as agents, so a
@@ -630,7 +630,7 @@ of mapped verbs) — but that reply keeps the connection alive, and
 the standalone connector stalls ~5s on the next request of a reused
 socket (every preflighted verb then times out in the todobackend
 suite). OPTIONS is therefore mapped explicitly to
-=RESTLY_EWF_SERVER.preflight_ok=, which goes through the action
+=RESTLY_EWF_MOUNTING.preflight_ok=, which goes through the action
 handler and closes the connection like every other RESTLY response.
 
 *** Verb → required conformance (doubles as the 405 spec)
@@ -745,8 +745,8 @@ library/restly_ewf/            (new cluster, own ECF)
   restly_ewf.ecf
   src/wsf_json_response.e
   src/restly_json_pipeline_front.e  (JSON merge + STRING fresh_key)
-  src/restly_ewf_server.e      (owns WSF_ROUTER; mount_* features)
-  src/restly_ewf_handler.e     (verb dispatch, tag→status, url patching)
+  src/restly_ewf_mounting.e      (owns WSF_ROUTER; mount_* features)
+  src/restly_ewf_gateway.e     (verb dispatch, tag→status, url patching)
   testing/application.e         (root class of restly_ewf_tests,
                                  like the core library's)
   testing/test_wsf_json_response.e

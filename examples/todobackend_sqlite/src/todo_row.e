@@ -39,7 +39,7 @@ feature -- Access
 	order_value: INTEGER
 			-- Sort order.
 
-feature {RESTLY_TABLE} -- Element Change
+feature {RESTLY_TABLE_ORIGIN} -- Element Change
 
 	set_id (a_id: INTEGER)
 			-- <Precursor>

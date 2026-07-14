@@ -14,7 +14,7 @@ The answers close with a list of the attributes an ideal language for RESTLY wou
 
 ** Contracts as the HTTP layer
 
-The =error_NNN_= assertion-label grammar (parsed by =status_from_tag= in {RESTLY_EWF_ACTION_HANDLER}) is the most Eiffel-native idea in the repo.
+The =error_NNN_= assertion-label grammar (parsed by =status_from_tag= in {RESTLY_EWF_CONTRACT_GUARD}) is the most Eiffel-native idea in the repo.
 A REST 4xx is literally "the client violated a precondition", so rescue/retry plus tag parsing turns Design by Contract into the error-handling layer for free.
 No exception hierarchy, no error-code enum.
 This would not work in any language where assertions are debug-only.

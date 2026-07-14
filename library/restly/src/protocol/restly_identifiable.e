@@ -16,7 +16,7 @@ feature -- Access
 		deferred
 		end
 
-feature {RESTLY_TABLE} -- Element Change
+feature {RESTLY_TABLE_ORIGIN} -- Element Change
 
 	set_id (a_id: K)
 			-- Set `id` to `a_id`.

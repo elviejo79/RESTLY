@@ -111,7 +111,7 @@ String mangling inventory in restly_ewf:
 *** Options
 
 - Option A: Make the EWF bridge generic on K and V instead of hardcoding
-  ~[STRING, JSON_OBJECT]~. Handlers become ~RESTLY_EWF_HANDLER [K, V]~,
+  ~[STRING, JSON_OBJECT]~. Handlers become ~RESTLY_EWF_GATEWAY [K, V]~,
   mount takes a key-extractor agent. Removes the string assumption from
   the bridge entirely.
 
@@ -165,10 +165,10 @@ The entire EWF bridge is hardcoded to ~[STRING, JSON_OBJECT]~:
 
 | Class                           | Hardcoded assumption                        |
 |---------------------------------+---------------------------------------------|
-| ~RESTLY_EWF_HANDLER~            | ~storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ |
+| ~RESTLY_EWF_GATEWAY~            | ~storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT]~ |
 | ~RESTLY_EWF_COLLECTION_HANDLER~ | casts to ~RESTLY_TRAVERSABLE [STRING, JSON_OBJECT]~, ~RESTLY_EXTENDABLE [STRING, JSON_OBJECT]~ |
 | ~RESTLY_EWF_ELEMENT_HANDLER~    | casts to ~RESTLY_PATCHABLE [STRING, JSON_OBJECT]~ |
-| ~RESTLY_EWF_SERVER~             | just two inherits, no type assumptions (OK)  |
+| ~RESTLY_EWF_MOUNTING~             | just two inherits, no type assumptions (OK)  |
 | ~RESTLY_JSON_PIPELINE_FRONT~    | auto-increment INTEGER keys, JSON merge      |
 
 A second resource with UUID keys, XML values, or a different key
@@ -176,7 +176,7 @@ minting strategy cannot reuse any handler or the pipeline front.
 
 *** Approach
 
-- Make handlers generic: ~RESTLY_EWF_HANDLER [K, V]~ with a
+- Make handlers generic: ~RESTLY_EWF_GATEWAY [K, V]~ with a
   key-extractor and a body-parser injected at creation (agents or
   deferred features). The current ~parse_json_body~ and ~element_key~
   become the JSON-specific implementations.

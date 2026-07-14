@@ -4,7 +4,7 @@
 
 * What was done
 
-- =TODOBACKEND_EXECUTION= — inherits =RESTLY_EWF_SERVER=, maps two
+- =TODOBACKEND_EXECUTION= — inherits =RESTLY_EWF_MOUNTING=, maps two
   explicit routes via =map_uri_template_response=.
 - =TODOBACKEND_CONVERTER= — adds =completed: false= default on
   retrieval (the only business rule not owned by a domain object).
@@ -22,10 +22,10 @@ the discrepancies discovered during stage 5.
 
 ** Decision 4 (Mounting) — mount features removed
 
-Design says: =RESTLY_EWF_SERVER= owns =WSF_ROUTER= and offers
+Design says: =RESTLY_EWF_MOUNTING= owns =WSF_ROUTER= and offers
 =mount_collection= / =mount_element= / =mount_resource=.
 
-Reality: =RESTLY_EWF_SERVER= is a deferred execution mixin inheriting
+Reality: =RESTLY_EWF_MOUNTING= is a deferred execution mixin inheriting
 =WSF_ROUTED_EXECUTION= + =WSF_ROUTED_URI_TEMPLATE_HELPER=. It has no
 mount features — the app calls =map_uri_template_response= directly:
 

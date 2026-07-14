@@ -1,12 +1,12 @@
 note
 	description: "[
-		Verb provider for RESTLY-EWF routes.
+		Gateway translating HTTP requests into {RESTLY_PROTOCOL} calls.
 		Holds the backing pipeline and shared JSON/url helpers.
-		Verb features are mapped per route via {RESTLY_EWF_ACTION_HANDLER}.
+		Verb features are mapped per route via {RESTLY_EWF_CONTRACT_GUARD}.
 	]"
 
 class
-	RESTLY_EWF_HANDLER
+	RESTLY_EWF_GATEWAY
 
 create
 	make

@@ -7,7 +7,7 @@ note
 	]"
 
 deferred class
-	RESTLY_EWF_SERVER
+	RESTLY_EWF_MOUNTING
 
 inherit
 	WSF_ROUTED_EXECUTION
@@ -19,13 +19,13 @@ feature -- Mounting
 	map_verb (a_resource_path: RESTLY_URI_PATH; a_methods: WSF_REQUEST_METHODS; an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])
 			-- Route `a_methods' requests on `a_resource_path' to `an_action'.
 		do
-			map_uri_template_response (a_resource_path, create {RESTLY_EWF_ACTION_HANDLER}.make (an_action), a_methods)
+			map_uri_template_response (a_resource_path, create {RESTLY_EWF_CONTRACT_GUARD}.make (an_action), a_methods)
 		end
 
 	mount_resource (a_collection: RESTLY_URI_PATH; a_storage: RESTLY_PROTOCOL [STRING, JSON_OBJECT])
 			-- Collection at `a_collection`, element at `a_collection + "/{id}"`.
 		local
-			l_handler: RESTLY_EWF_HANDLER
+			l_handler: RESTLY_EWF_GATEWAY
 			l_single_element_uri: RESTLY_URI_PATH
 		do
 			l_single_element_uri := a_collection.template + "/{id}"

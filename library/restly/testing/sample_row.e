@@ -1,6 +1,6 @@
 note
 	description: "[
-		Flat row for RESTLY_TABLE tests: integer fields only, so
+		Flat row for RESTLY_TABLE_ORIGIN tests: integer fields only, so
 		default field-by-field equality holds across a database
 		round trip.  Table convention: sample_row (id, amount).
 	]"

@@ -77,7 +77,7 @@ handler but *flattened the status to 200* — the body length showed the
 handler's real answer (404 JSON, 34 bytes) while the status line lied.
 So ~has_key~ said True for everything.
 
-Fix, in =restly_ewf_server.e= ~mount_resource~: map HEAD explicitly to
+Fix, in =restly_ewf_mounting.e= ~mount_resource~: map HEAD explicitly to
 the same GET agents using the router's ready-made combined method set:
 
 #+begin_src eiffel
