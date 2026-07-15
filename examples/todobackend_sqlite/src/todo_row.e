@@ -11,16 +11,17 @@ class
 inherit
 	RESTLY_IDENTIFIABLE [INTEGER]
 		redefine
-			is_equal, copy
+			default_create, is_equal, copy
 		end
 
 create
-	make_default
+	default_create
 
 feature -- Initialization
 
-	make_default
-			-- Empty row (ABEL deserialization needs a default creation).
+	default_create
+			-- Empty row (ABEL deserialization and the reflective
+			-- converter both need a default creation).
 		do
 			create title.make_empty
 		end

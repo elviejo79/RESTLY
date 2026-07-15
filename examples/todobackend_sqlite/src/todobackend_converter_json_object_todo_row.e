@@ -5,7 +5,7 @@ note
 	]"
 
 class
-	TODOBACKEND_JSON_CONVERTER
+	TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW
 
 inherit
 	RESTLY_JSON_REFLECTIVE_CONVERTER [TODO_ROW]
@@ -14,7 +14,7 @@ inherit
 		end
 
 create
-	make
+	default_create
 
 feature {NONE} -- Mismatch declarations
 

@@ -8,12 +8,18 @@ note
 class
 	SAMPLE_RECORD
 
+inherit
+	ANY
+		redefine
+			default_create
+		end
+
 create
-	make_default
+	default_create
 
 feature {NONE} -- Initialization
 
-	make_default
+	default_create
 			-- Record with empty title and zero fields.
 		do
 			create title.make_empty

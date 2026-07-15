@@ -1,0 +1,70 @@
+#+TITLE: How a JSON body becomes a TODO_ROW
+#+AUTHOR: agarciafdz
+#+DATE: 2026-07-14
+#+STARTUP: overview
+
+* The one-sentence answer
+
+{RESTLY_JSON_PIPELINE_FRONT} never touches TODO_ROW —
+it only knows it holds /some/ =RESTLY_CONVERTER [JSON_OBJECT, S]= and calls it at exactly one point per verb;
+the actual transformation lives in {RESTLY_REFLECTIVE_CONVERTER}.
+
+* The journey of =POST /todos {"title": "buy milk", "completed": true, "order": 3}=
+
+** 1. The front picks the crossing point
+
+In {RESTLY_PIPELINE_FRONT}.extend_new:
+
+#+begin_src eiffel
+l_postable.extend_new (converter.to_store (a_v), a_request_id)
+#+end_src
+
+=a_v= is the {JSON_OBJECT} the gateway parsed.
+Every verb has this same shape: convert at the boundary, then talk pure =RESTLY_PROTOCOL [INTEGER, TODO_ROW]= behind it.
+
+** 2. =to_store= mints a blank row
+
+In {RESTLY_REFLECTIVE_CONVERTER}.to_store:
+
+#+begin_src eiffel
+create Result                        -- S's creation constraint: default_create
+create l_fields.make (Result)        -- REFLECTED_REFERENCE_OBJECT
+#+end_src
+
+The generic constraint =S -> ANY create default_create end= lets the converter mint an empty {TODO_ROW} itself;
+reflection wraps it so its attributes become an indexed field list.
+
+** 3. The loop runs over the row's attributes, not the JSON's keys
+
+For each attribute of {TODO_ROW} the engine asks: what fills you?
+
+- =id= :: declared =skip_field ("id")= in {TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW} → keeps the =default_create= default (the database will mint it).
+- =order_value= :: =representation_key= consults =renamings= → looks up JSON key ="order"= → =set_integer_32_field (i, 3)=.
+- =completed= :: has a declared =from_converter= agent → reads JSON boolean =true=, runs the declared BOOLEAN→INTEGER lambda → =set_integer_32_field (i, 1)=.
+- =title= :: no declaration at all → the /natural/ path: the field type is reference, so =has_string= / =string_item= (effected by {RESTLY_JSON_REFLECTIVE_CONVERTER} against the {JSON_OBJECT}) → =set_reference_field (i, "buy milk")=.
+- absent JSON field :: =has_*= is False → the =default_create= default stays.
+
+** 4. The typed row flows on
+
+{RESTLY_TABLE_ORIGIN}.extend_new inserts it;
+ABEL turns {TODO_ROW} into an SQL row and writes the minted id back.
+
+* Why this is safe rather than magical
+
+** The schema check at wiring time
+
+When {TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW} is created at server startup, =check_schema= demands that
+every attribute of {TODO_ROW} is naturally mappable (STRING/INTEGER/BOOLEAN) or declared in =correct_mismatches=,
+and that every declaration names a real attribute.
+A typo in =rename_field= kills the server at boot, not a request at 3am.
+
+** Format independence
+
+The generic engine only speaks =has_integer= / =put_boolean= / ...;
+{RESTLY_JSON_REFLECTIVE_CONVERTER} is the one class that knows those mean {JSON_OBJECT} lookups.
+=to_representation= is the same loop mirrored —
+which is what PATCH's RFC 7386 round-trip merge relies on.
+
+* The moral
+
+Front = /where/ the crossing happens; converter = /how/; mismatch ledger = the only part you write.

@@ -4,17 +4,17 @@ note
 		on JSON_OBJECT. Directly creatable for stores whose attributes
 		all match their JSON fields; a store with mismatches gets a
 		named descendant redefining `correct_mismatches`
-		(e.g. TODOBACKEND_JSON_CONVERTER).
+		(e.g. TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW).
 	]"
 
 class
-	RESTLY_JSON_REFLECTIVE_CONVERTER [S -> ANY]
+	RESTLY_JSON_REFLECTIVE_CONVERTER [S -> ANY create default_create end]
 
 inherit
 	RESTLY_REFLECTIVE_CONVERTER [JSON_OBJECT, S]
 
 create
-	make
+	default_create
 
 feature -- Access
 

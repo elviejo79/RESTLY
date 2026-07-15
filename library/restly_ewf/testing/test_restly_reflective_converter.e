@@ -42,7 +42,7 @@ feature -- Tests
 			l_record: SAMPLE_RECORD
 			l_json: JSON_OBJECT
 		do
-			create l_record.make_default
+			create l_record
 			l_record.set_id (42)
 			l_record.set_title ("walk dog")
 			l_record.set_completed (1)
@@ -66,7 +66,7 @@ feature -- Tests
 			l_converter: RESTLY_JSON_REFLECTIVE_CONVERTER [SAMPLE_ITEM]
 			l_json: JSON_OBJECT
 		do
-			create l_converter.make (agent: SAMPLE_ITEM do create Result.make ("") end)
+			create l_converter
 			create l_json.make_with_capacity (1)
 			l_json.put_string ("all natural", "title")
 			assert ("title round trip",
@@ -79,7 +79,7 @@ feature -- Tests
 			l_raised: BOOLEAN
 		do
 			if not l_raised then
-				create l_converter.make (agent: SAMPLE_RECORD do create Result.make_default end)
+				create l_converter
 				assert ("schema error raised", False)
 			end
 			assert ("raised at wiring time", l_raised)
@@ -91,7 +91,7 @@ feature -- Tests
 feature {NONE} -- Fixtures
 
 	converter: SAMPLE_RECORD_CONVERTER
-		attribute create Result.make (agent: SAMPLE_RECORD do create Result.make_default end) end
+		attribute create Result end
 
 	new_json (a_title: STRING; a_completed: BOOLEAN; a_order: INTEGER): JSON_OBJECT
 			-- JSON body with the three travelling fields.

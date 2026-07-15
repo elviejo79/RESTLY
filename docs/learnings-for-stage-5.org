@@ -9,7 +9,7 @@
 - =TODOBACKEND_CONVERTER= — adds =completed: false= default on
   retrieval (the only business rule not owned by a domain object).
 - =RESTLY_IDENTITY_CONVERTER [V]= — generic identity converter (library level).
-- =RESTLY_INT_KEY_CONVERTER= — STRING ↔ INTEGER key converter (library level).
+- =RESTLY_KEY_CONVERTER_STRING_INTEGER= — STRING ↔ INTEGER key converter (library level).
 - =TODOBACKEND_SERVER= — =WSF_DEFAULT_SERVICE [TODOBACKEND_EXECUTION]=,
   port 8080.
 - All 16/16 npm acceptance tests pass.
@@ -61,7 +61,7 @@ layout:
 | File                             | Purpose                         |
 |----------------------------------+---------------------------------|
 | =restly_identity_converter.e=   | generic identity converter      |
-| =restly_int_key_converter.e=    | STRING ↔ INTEGER key converter  |
+| =restly_key_converter_string_integer.e=    | STRING ↔ INTEGER key converter  |
 | =todobackend_converter.e=       | adds =completed: false= default |
 
 ** Runbook — npm test needs TEST_SERVER_URL
@@ -128,7 +128,7 @@ guards in the element handler before calling =storage [key]=.
 variables, and populates =req.path_parameters=. The handler reads
 =req.path_parameter ("id")= — no manual string parsing needed.
 The value is always a string; type conversion happens in
-=RESTLY_INT_KEY_CONVERTER=.
+=RESTLY_KEY_CONVERTER_STRING_INTEGER=.
 
 ** Router-level verb filtering would increase code, not reduce it
 

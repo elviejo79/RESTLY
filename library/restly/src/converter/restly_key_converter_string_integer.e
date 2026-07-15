@@ -1,8 +1,8 @@
 note
-	description: "STRING to INTEGER key converter."
+	description: "Key bijection: STRING on the representation side, INTEGER in the store."
 
 class
-	RESTLY_INT_KEY_CONVERTER
+	RESTLY_KEY_CONVERTER_STRING_INTEGER
 
 inherit
 	RESTLY_KEY_CONVERTER [STRING, INTEGER]

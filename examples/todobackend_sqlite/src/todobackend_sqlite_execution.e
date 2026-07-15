@@ -28,12 +28,10 @@ feature {NONE} -- Diagnostics
 
 feature {NONE} -- Pipeline
 
-	todo_pipeline: RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW]
+	todo_pipeline: RESTLY_PIPELINE_FRONT [STRING, JSON_OBJECT, INTEGER, TODO_ROW]
 			-- JSON front → RESTLY_TABLE_ORIGIN → SQLite.
 		once ("PROCESS")
-			create Result.make (todo_table,
-				create {RESTLY_INT_KEY_CONVERTER},
-				create {TODOBACKEND_JSON_CONVERTER}.make (agent: TODO_ROW do create Result.make_default end))
+			create {TODOBACKEND_PIPELINE} Result.make (todo_table)
 		end
 
 	todo_table: RESTLY_TABLE_ORIGIN [TODO_ROW]

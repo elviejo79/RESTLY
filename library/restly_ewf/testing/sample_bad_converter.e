@@ -1,7 +1,7 @@
 note
 	description: "[
 		Declares a mismatch for an attribute SAMPLE_RECORD does not
-		have; `make` must raise at wiring time.
+		have; creation must raise at wiring time.
 	]"
 
 class
@@ -14,7 +14,7 @@ inherit
 		end
 
 create
-	make
+	default_create
 
 feature {NONE} -- Mismatch declarations
 

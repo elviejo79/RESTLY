@@ -14,7 +14,7 @@ inherit
 		end
 
 create
-	make
+	default_create
 
 feature {NONE} -- Mismatch declarations
 

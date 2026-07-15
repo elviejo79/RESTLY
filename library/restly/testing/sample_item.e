@@ -4,8 +4,15 @@ note
 class
 	SAMPLE_ITEM
 
+inherit
+	ANY
+		redefine
+			default_create
+		end
+
 create
-	make
+	make,
+	default_create
 
 feature {NONE} -- Initialization
 
@@ -13,6 +20,12 @@ feature {NONE} -- Initialization
 			-- Initialize with `a_title`.
 		do
 			title := a_title
+		end
+
+	default_create
+			-- Item with empty title.
+		do
+			create title.make_empty
 		end
 
 feature -- Access

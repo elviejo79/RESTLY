@@ -11,8 +11,8 @@ Demonstrates the full RESTLY pipeline: EWF ↔ JSON ↔ domain object ↔ ABEL/S
 #+begin_example
 EWF [STRING, JSON_OBJECT]
   → RESTLY_JSON_PIPELINE_FRONT [INTEGER, TODO_ROW]
-    key_converter: RESTLY_INT_KEY_CONVERTER (STRING ↔ INTEGER)
-    value_converter: TODOBACKEND_JSON_CONVERTER (JSON_OBJECT ↔ TODO_ROW)
+    key_converter: RESTLY_KEY_CONVERTER_STRING_INTEGER (STRING ↔ INTEGER)
+    value_converter: TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW (JSON_OBJECT ↔ TODO_ROW)
   → RESTLY_TABLE_ORIGIN [TODO_ROW]
     proxy: PS_REPOSITORY (ABEL SQLite backend)
   → SQLite file: todobackend.db
@@ -56,7 +56,7 @@ With library change 1 above, the pipeline front delegates to this and returns th
 | # | File                                | Role                                              |
 |---+-------------------------------------+---------------------------------------------------|
 | 1 | src/todo_row.e                      | Domain object: RESTLY_IDENTIFIABLE [INTEGER]       |
-| 2 | src/todobackend_json_converter.e    | RESTLY_CONVERTER [JSON_OBJECT, TODO_ROW]           |
+| 2 | src/todobackend_converter_json_object_todo_row.e    | RESTLY_CONVERTER [JSON_OBJECT, TODO_ROW]           |
 | 3 | src/todobackend_sqlite_execution.e  | Wires pipeline: table → converters → mount         |
 | 4 | src/todobackend_sqlite_server.e     | WSF launcher (port 8081)                           |
 | 5 | todobackend_sqlite.ecf              | Project config: restly + ABEL + SQLite + EWF libs  |
@@ -76,7 +76,7 @@ TODO_ROW redefines =is_equal= to compare fields by value (=title.same_string=).
 Boolean mapping: =completed: BOOLEAN= vs SQLite INTEGER column is unverified in ABEL's relational connector.
 Verify with a one-row smoke test before locking the schema; fall back to an INTEGER attribute with boolean queries if unsupported.
 
-** 2. TODOBACKEND_JSON_CONVERTER
+** 2. TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW
 
 RESTLY_CONVERTER [JSON_OBJECT, TODO_ROW].
 to_store: extracts title, completed, order from JSON keys; ignores "url" and "id" if present.

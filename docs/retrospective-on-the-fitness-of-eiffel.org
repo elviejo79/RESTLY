@@ -27,7 +27,7 @@ Multiple inheritance used for exactly what it is good at.
 
 ** The mismatch ledger
 
-{TODOBACKEND_JSON_CONVERTER} is three declarations; everything else flows by reflection, and =check_schema= fails at wiring time, not mid-request.
+{TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW} is three declarations; everything else flows by reflection, and =check_schema= fails at wiring time, not mid-request.
 That is the {MISMATCH_CORRECTOR} idea paying rent.
 Void safety helped everywhere here too — a whole category of =/= Void= contracts simply does not exist.
 

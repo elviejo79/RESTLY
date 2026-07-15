@@ -10,36 +10,38 @@ note
 		Format-independent: the typed field access (`has_integer`,
 		`integer_item`, `put_boolean`, ...) is deferred; one
 		effecting class per format
-		(e.g. {RESTLY_JSON_REFLECTIVE_CONVERTER}) declares `make`
-		as its creation procedure.
+		(e.g. {RESTLY_JSON_REFLECTIVE_CONVERTER}) declares
+		`default_create` as its creation procedure: a converter is
+		fully determined by its class.
 		Natural types: INTEGER, BOOLEAN, STRING. Reference attributes
-		must be initialized by the factory (the schema check reads
-		them to learn their type).
-		`make` fails fast — at wiring time, not mid-request — on any
+		must be initialized by S's `default_create` (the schema check
+		reads them to learn their type).
+		Creation fails fast — at wiring time, not mid-request — on any
 		attribute neither matched nor declared.
 	]"
 
 deferred class
-	RESTLY_REFLECTIVE_CONVERTER [R, S -> ANY]
+	RESTLY_REFLECTIVE_CONVERTER [R, S -> ANY create default_create end]
 
 inherit
 	RESTLY_CONVERTER [R, S]
+		redefine
+			default_create
+		end
 
 feature {NONE} -- Initialization
 
-	make (a_factory: FUNCTION [S])
-			-- Converter minting fresh stores via `a_factory`; collect
-			-- mismatch declarations, then verify every attribute of S
-			-- is matched, renamed, converted or skipped.
+	default_create
+			-- Collect mismatch declarations, then verify every
+			-- attribute of S is matched, renamed, converted or skipped.
 		do
-			factory := a_factory
 			create renamings.make (0)
 			create skips.make (0)
 			create from_converters.make (0)
 			create to_converters.make (0)
 			correct_mismatches
 			check_schema
-		ensure
+		ensure then
 			error_500_all_attributes_accounted: True
 					-- TODO(owner): contract
 					-- suggested: every attribute of S is matched,
@@ -50,14 +52,14 @@ feature -- Conversion
 
 	to_store (a_representation: R): S
 			-- <Precursor>
-			-- Fresh store from `factory`; absent representation fields
-			-- keep the factory defaults.
+			-- Fresh default-created store; absent representation fields
+			-- keep the `default_create` defaults.
 		local
 			l_fields: REFLECTED_REFERENCE_OBJECT
 			i: INTEGER
 			l_name: STRING
 		do
-			Result := factory.item ([])
+			create Result
 			create l_fields.make (Result)
 			from
 				i := 1
@@ -66,7 +68,7 @@ feature -- Conversion
 			loop
 				l_name := l_fields.field_name (i)
 				if skips.has (l_name) then
-						-- Store-only attribute: keep the factory default.
+						-- Store-only attribute: keep the `default_create` default.
 				elseif attached from_converters.item (l_name) as l_convert then
 					l_convert (l_fields, i, a_representation, representation_key (l_name))
 				else
@@ -255,9 +257,6 @@ feature {NONE} -- Mismatch declarations
 
 feature {NONE} -- Implementation
 
-	factory: FUNCTION [S]
-			-- Mints the fresh store `to_store` fills.
-
 	renamings: STRING_TABLE [STRING]
 			-- Attribute name -> representation key.
 
@@ -293,7 +292,7 @@ feature {NONE} -- Implementation
 			l_name: STRING
 			l_known: STRING_TABLE [BOOLEAN]
 		do
-			create l_fields.make (factory.item ([]))
+			create l_fields.make (create {S})
 			create l_known.make (l_fields.field_count)
 			from
 				i := 1
