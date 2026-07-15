@@ -13,7 +13,7 @@ class
 
 feature -- Scheme handlers
 
-	sqlite (a_file: READABLE_STRING_GENERAL): RESTLY_SQLITE
+	sqlite (a_file: READABLE_STRING_GENERAL): RESTLY_DATABASE_SQLITE
 			-- SQLite database for `a_file`; same file yields same instance.
 		local
 			l_key: STRING
@@ -23,7 +23,7 @@ feature -- Scheme handlers
 			if
 				attached resources.item (l_key) as l_existing
 				and then attached l_existing.item as l_item
-				and then attached {RESTLY_SQLITE} l_item as l_sqlite
+				and then attached {RESTLY_DATABASE_SQLITE} l_item as l_sqlite
 			then
 				Result := l_sqlite
 			else

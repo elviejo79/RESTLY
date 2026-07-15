@@ -68,6 +68,12 @@ feature -- Tests
 			assert ("same instance", {RESTLY_SCHEME}.file ("/tmp/restly_test") = {RESTLY_SCHEME}.file ("/tmp/restly_test"))
 		end
 
+	test_file_different_directories_yield_different_instances
+			-- Different directory strings return different instances.
+		do
+			assert ("different", {RESTLY_SCHEME}.file ("/tmp/restly_a") /= {RESTLY_SCHEME}.file ("/tmp/restly_b"))
+		end
+
 	test_end_to_end_roundtrip
 			-- Full path: scheme -> sqlite -> table handle -> table_origin -> insert + read.
 		local

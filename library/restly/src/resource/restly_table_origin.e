@@ -31,7 +31,7 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_table: RESTLY_SQLITE_TABLE)
+	make (a_table: RESTLY_DATABASE_TABLE)
 			-- Store backed by ABEL repository reached through `a_table`.
 		do
 			table := a_table
@@ -211,7 +211,7 @@ feature {NONE} -- Implementation
 	internal_repository: detachable PS_REPOSITORY
 			-- Set by `make_with_repository`; Void when using table handle.
 
-	table: detachable RESTLY_SQLITE_TABLE
+	table: detachable RESTLY_DATABASE_TABLE
 			-- Set by `make`; Void when using direct repository.
 
 	criterion_factory: PS_CRITERION_FACTORY

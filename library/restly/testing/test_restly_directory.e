@@ -23,7 +23,7 @@ feature {NONE} -- Fixtures
 
 	dir: RESTLY_DIRECTORY
 		attribute
-			create Result.make_with_base_url ("file://" + sandbox_path + "/")
+			Result := {RESTLY_SCHEME}.file (sandbox_path)
 		end
 
 feature {NONE} -- Setup / teardown
