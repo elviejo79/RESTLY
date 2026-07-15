@@ -17,6 +17,11 @@ inherit
 
 	RESTLY_FILE_NODE
 
+	RESTLY_ADDRESSABLE
+		undefine
+			is_equal, copy, out
+		end
+
 create
 	make_with_base_url,
 	make_with_path

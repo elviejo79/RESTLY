@@ -1,0 +1,136 @@
+#+TITLE: RESTLY_SCHEME: universal scheme handlers with a weak resource registry
+#+OPTIONS: toc:t
+
+* Context
+
+The composition root still spells raw ABEL plumbing (factory, set_database, manage, new_repository).
+Scheme handlers are a universal resource mechanism, mirroring URLs:
+
+#+BEGIN_SRC eiffel
+{RESTLY_SCHEME}.file ("my_directory") / "subdir"          -- file://my_directory/subdir
+{RESTLY_SCHEME}.sqlite ("todobackend.db") / "todo_row"    -- sqlite://todobackend.db/todo_row
+#+END_SRC
+
+~.file~ / ~.sqlite~ are factory methods on RESTLY_SCHEME.
+RESTLY_SCHEME also owns a process-wide registry ~STRING_TABLE [WEAK_REFERENCE [RESTLY_ADDRESSABLE]]~ keyed by canonical URL (~"sqlite://todobackend.db/"~, ~"file://my_directory/"~).
+Same URL means the same live resource; a collected or new URL yields a fresh resource.
+
+* Decisions
+
+- Handle + typed create: genericity is class-level, so ~/ "todo_row"~ returns an untyped table handle; the type meets the wiring at ~create {RESTLY_TABLE_ORIGIN [TODO_ROW]}.make (handle)~.
+- Shared repository per database file, via the SCHEME registry.
+  An sqlite-specific registry class is not needed: identity per file comes from the registry; the shared factory/repository state lives inside the cached RESTLY_SQLITE.
+- New marker parent RESTLY_ADDRESSABLE types the registry.
+  RESTLY_RESOURCE [K, R, S] is the converting adapter and cannot serve as a common type.
+- ~ensure class~ markers authorized (mechanism only): instance-free features need the ~class~ keyword at the end of their postcondition to allow ~{RESTLY_SCHEME}.sqlite (...)~ non-object calls.
+  Semantic assertions stay placeholder-True TODO(owner).
+- Lazy repository build: ABEL's factory hands ~managed_types~ to the connector by reference (ps_read_relational_connector.e:104), but ~new_repository~ runs an expanded-type-override pass at build time (ps_sqlite_relational_repository_factory.e:70-79), so late ~manage~ is unsafe.
+  Therefore all ~declare~ calls happen at wiring; the repository is built on first use.
+
+* New classes — library/restly/src/resource/
+
+** restly_addressable.e — RESTLY_ADDRESSABLE
+
+Deferred marker: a resource addressed by a scheme URL.
+No features (pure capability type for the registry).
+Adjective name per naming conventions for deferred property classes.
+
+** restly_scheme.e — RESTLY_SCHEME
+
+All features instance-free (~ensure class~), so call sites are non-object calls with no ~create~:
+
+- ~sqlite (a_file: READABLE_STRING_GENERAL): RESTLY_SQLITE~ — registry lookup under ~"sqlite://" + a_file + "/"~; on hit, object-test ~attached {RESTLY_SQLITE}~; on miss or collected weak item, create + register.
+  Caching query — deliberate (same shape as once).
+- ~file (a_directory: READABLE_STRING_GENERAL): RESTLY_DIRECTORY~ — same mechanism under ~"file://" + a_directory + "/"~, creating via existing ~make_with_path~ (restly_directory.e).
+  Proves the mechanism is scheme-generic.
+- ~resources: STRING_TABLE [WEAK_REFERENCE [RESTLY_ADDRESSABLE]]~ — private, ~once ("PROCESS")~ (EWF threads share it), ~ensure class~.
+- ponytail comments: no locking (wiring runs in startup once ("PROCESS") features, before requests); registry key is the string as given — no path canonicalization ("db.file" is not "./db.file"); add normalization when two spellings must alias.
+- Compile-check risk: verify EiffelStudio 25.12 accepts the non-object calls; if not, fall back to once-class singleton syntax and report.
+
+** restly_sqlite.e — RESTLY_SQLITE (inherits RESTLY_ADDRESSABLE)
+
+The database resource; owns the shared ABEL state for its file:
+
+- ~make (a_file: READABLE_STRING_GENERAL)~ — creates PS_SQLITE_RELATIONAL_REPOSITORY_FACTORY, ~set_database~.
+- ~declare (a_type: TYPE [detachable ANY])~ — command: ~factory.manage (a_type, "id")~ ("id" fixed by RESTLY_IDENTIFIABLE [INTEGER]).
+  Precondition territory: declaring after the repository is built is an error — placeholder ~error_500_repository_not_yet_built: True -- TODO(owner): contract~.
+- ~repository: PS_REPOSITORY~ — lazily builds ~factory.new_repository~ on first access, caches in a detachable attribute; every table of this file gets the same instance.
+- ~table alias "/" (a_name: STRING): RESTLY_SQLITE_TABLE~ — mirrors ~RESTLY_DIRECTORY.subdirectory alias "/"~ (restly_directory.e:139).
+
+** restly_sqlite_table.e — RESTLY_SQLITE_TABLE
+
+The path segment as a value: ~database: RESTLY_SQLITE~ (strong reference — keeps the weak-registered database alive while any table origin uses it), ~name: STRING~.
+
+- ~manage (a_type: TYPE [detachable ANY])~ delegates to ~database.declare (a_type)~.
+- ~repository: PS_REPOSITORY~ delegates to ~database.repository~.
+
+* Modified files
+
+** library/restly/src/resource/restly_directory.e
+
+Add RESTLY_ADDRESSABLE to the inherit clause (marker only, no other change).
+
+** library/restly/src/resource/restly_table_origin.e
+
+- ~create make, make_with_repository~
+- New ~make (a_table: RESTLY_SQLITE_TABLE)~: ~a_table.manage ({V})~, store the handle, ~create criterion_factory~.
+  Suggested precondition (owner): ~a_table.name~ equals derived ~table_name~ — placeholder per protocol.
+- ~proxy~ changes from attribute (restly_table_origin.e:191) to query:
+
+#+BEGIN_SRC eiffel
+proxy: PS_REPOSITORY
+	do
+		if attached internal_repository as l_repository then
+			Result := l_repository
+		else
+			check from_creation: attached table as l_table then
+				Result := l_table.repository
+			end
+		end
+	end
+#+END_SRC
+
+~internal_repository: detachable PS_REPOSITORY~ (set by ~make_with_repository~, kept for tests); ~table: detachable RESTLY_SQLITE_TABLE~ (set by ~make~).
+All verb code keeps calling ~proxy~ unchanged.
+
+** library/restly/restly.ecf
+
+Move ~abel_connector_sqlite~ and ~sqlite~ libraries (currently tests-target-only) into the ~restly~ library target — RESTLY_SQLITE needs the factory class.
+
+** examples/todobackend_sqlite/src/todobackend_sqlite_execution.e
+
+Delete ~todo_repository~; ~todo_table~ becomes:
+
+#+BEGIN_SRC eiffel
+todo_table: RESTLY_TABLE_ORIGIN [TODO_ROW]
+		-- SQLite table storing TODO_ROW objects.
+	once ("PROCESS")
+		bootstrap_schema
+		create Result.make ({RESTLY_SCHEME}.sqlite (db_file) / "todo_row")
+	end
+#+END_SRC
+
+~bootstrap_schema~ and ~db_file~ stay (DDL remains the app's business).
+
+* Tests — library/restly/testing/
+
+New class TEST_RESTLY_SCHEME (new test class means a clean compile is required):
+
+- ~sqlite~ same file twice yields the same RESTLY_SQLITE instance and the same ~repository~.
+- Two different files yield different instances.
+- ~file~ same directory twice yields the same RESTLY_DIRECTORY instance.
+- End-to-end: ~{RESTLY_SCHEME}.sqlite (f) / "sample_row"~ into ~create {RESTLY_TABLE_ORIGIN [SAMPLE_ROW]}.make~, extend + item round-trip.
+  Reuse TEST_RESTLY_TABLE_ORIGIN's schema-bootstrap helper; per-test unique db file names (the registry is process-wide).
+
+No deterministic GC/weak-collection test — weakness is a memory property, not behavior.
+
+* Verification
+
+1. ~ec -batch -clean -config ./restly.ecf -target restly_tests -tests -stop~ from library/restly — 80 existing + new tests green.
+2. ~ec -batch -clean -config ./restly_ewf.ecf -target restly_ewf_tests -tests -stop~ from library/restly_ewf (in-memory todobackend server up on 8080) — 109 green.
+3. ~ec -batch -clean -config ./todobackend_sqlite.ecf -target todobackend_sqlite -c_compile -stop~ from examples/todobackend_sqlite; run it and curl smoke: POST a todo, GET the list.
+
+* Notes
+
+- Contracts are owner-only: every new require/ensure is a placeholder tag with ~True~ and ~-- TODO(owner): contract~, except the authorized bare ~ensure class~ markers.
+- Ceilings noted, not built: no registry locking/eviction, no URL canonicalization, no user/password/host URL parts (sqlite needs none; a future mysql scheme would).

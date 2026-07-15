@@ -26,9 +26,17 @@ inherit
 			-- backend cannot support (root status is not persisted in rows).
 
 create
+	make,
 	make_with_repository
 
 feature {NONE} -- Initialization
+
+	make (a_table: RESTLY_SQLITE_TABLE)
+			-- Store backed by ABEL repository reached through `a_table`.
+		do
+			table := a_table
+			create criterion_factory
+		end
 
 	make_with_repository (a_repository: PS_REPOSITORY)
 			-- Store backed by ABEL repository `a_repository`.
@@ -36,7 +44,7 @@ feature {NONE} -- Initialization
 			-- repository (manage ({V}, "id")) and flat: no references
 			-- to other persisted objects.
 		do
-			proxy := a_repository
+			internal_repository := a_repository
 			create criterion_factory
 		end
 
@@ -190,6 +198,21 @@ feature {NONE} -- Implementation
 
 	proxy: PS_REPOSITORY
 			-- ABEL backend; owns all V <-> row conversion.
+		do
+			if attached internal_repository as l_repository then
+				Result := l_repository
+			else
+				check from_creation: attached table as l_table then
+					Result := l_table.repository
+				end
+			end
+		end
+
+	internal_repository: detachable PS_REPOSITORY
+			-- Set by `make_with_repository`; Void when using table handle.
+
+	table: detachable RESTLY_SQLITE_TABLE
+			-- Set by `make`; Void when using direct repository.
 
 	criterion_factory: PS_CRITERION_FACTORY
 			-- Factory for row-id criteria.

@@ -35,21 +35,10 @@ feature {NONE} -- Pipeline
 		end
 
 	todo_table: RESTLY_TABLE_ORIGIN [TODO_ROW]
-			-- ABEL-backed table storing TODO_ROW objects.
-		once ("PROCESS")
-			create Result.make_with_repository (todo_repository)
-		end
-
-	todo_repository: PS_REPOSITORY
-			-- ABEL repository managing TODO_ROW with primary key "id".
-		local
-			l_factory: PS_SQLITE_RELATIONAL_REPOSITORY_FACTORY
+			-- SQLite table storing TODO_ROW objects.
 		once ("PROCESS")
 			bootstrap_schema
-			create l_factory.make
-			l_factory.set_database (db_file)
-			l_factory.manage ({TODO_ROW}, "id")
-			Result := l_factory.new_repository
+			create Result.make ({RESTLY_SCHEME}.sqlite (db_file) / {TODO_ROW})
 		end
 
 feature {NONE} -- Database
