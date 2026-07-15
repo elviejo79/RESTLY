@@ -35,7 +35,6 @@ feature {NONE} -- Initialization
 			-- Store backed by ABEL repository reached through `a_table`.
 		do
 			table := a_table
-			create criterion_factory
 		end
 
 	make_with_repository (a_repository: PS_REPOSITORY)
@@ -45,7 +44,6 @@ feature {NONE} -- Initialization
 			-- to other persisted objects.
 		do
 			internal_repository := a_repository
-			create criterion_factory
 		end
 
 feature -- REST verbs
@@ -216,6 +214,9 @@ feature {NONE} -- Implementation
 
 	criterion_factory: PS_CRITERION_FACTORY
 			-- Factory for row-id criteria.
+		attribute
+			create Result
+		end
 
 	key_criterion (k: INTEGER): PS_CRITERION
 			-- Criterion selecting the row with id `k`.

@@ -35,10 +35,6 @@ feature {NONE} -- Initialization
 			-- Collect mismatch declarations, then verify every
 			-- attribute of S is matched, renamed, converted or skipped.
 		do
-			create renamings.make (0)
-			create skips.make (0)
-			create from_converters.make (0)
-			create to_converters.make (0)
 			correct_mismatches
 			check_schema
 		ensure then
@@ -259,18 +255,30 @@ feature {NONE} -- Implementation
 
 	renamings: STRING_TABLE [STRING]
 			-- Attribute name -> representation key.
+		attribute
+			create Result.make (0)
+		end
 
 	skips: STRING_TABLE [BOOLEAN]
 			-- Attributes that never travel in the representation.
+		attribute
+			create Result.make (0)
+		end
 
 	from_converters: STRING_TABLE [PROCEDURE [REFLECTED_REFERENCE_OBJECT, INTEGER, R, READABLE_STRING_GENERAL]]
 			-- Attribute name -> representation-to-field direction of a
 			-- type change; reads the representation through the format.
+		attribute
+			create Result.make (0)
+		end
 
 	to_converters: STRING_TABLE [PROCEDURE [REFLECTED_REFERENCE_OBJECT, INTEGER, R, READABLE_STRING_GENERAL]]
 			-- Attribute name -> field-to-representation direction;
 			-- always declared together with `from_converters` by the
 			-- convert_* sugar.
+		attribute
+			create Result.make (0)
+		end
 
 	representation_key (a_attribute: READABLE_STRING_GENERAL): STRING
 			-- Representation field name for `a_attribute`: its declared
