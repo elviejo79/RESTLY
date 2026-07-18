@@ -14,6 +14,8 @@ inherit
 
 	WSF_ROUTED_URI_TEMPLATE_HELPER
 
+feature -- combinator
+
 feature -- Mounting
 
 	map_verb (a_resource_path: RESTLY_URI_PATH; a_methods: WSF_REQUEST_METHODS; an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])

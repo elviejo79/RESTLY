@@ -34,7 +34,11 @@ feature -- Access
 			-- once ("PROCESS"): plain `once' is once-per-thread, so each
 			-- connection thread would get its own empty store.
 		once ("PROCESS")
-			create Result.make_with_converter (create {TODOBACKEND_CONVERTER})
+			create {TODOBACKEND_MEMORY_PIPELINE} Result.make_with_converter (create {TODOBACKEND_CONVERTER}.make (Base_url))
 		end
+
+	Base_url: STRING = "http://localhost:8080/todos"
+			-- Collection url minted into each element's "url" field
+			-- (host and port must match {TODOBACKEND_SERVER}).
 
 end

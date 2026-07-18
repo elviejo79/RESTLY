@@ -24,7 +24,7 @@ feature {NONE} -- Fixtures
 	server_url: STRING = "http://localhost:8080"
 
 	api: RESTLY_HTTP_CLIENT
-		attribute create Result.make_with_url (server_url) end
+		attribute Result := {RESTLY_SCHEME}.http (server_url) end
 
 	seeded_path: STRING
 			-- Element path of a todo created via raw POST.

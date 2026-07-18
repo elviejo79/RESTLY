@@ -57,6 +57,28 @@ feature -- Scheme handlers
 			instance_free: class
 		end
 
+	http (a_url: READABLE_STRING_GENERAL): RESTLY_HTTP_CLIENT
+			-- HTTP client for `a_url`; same URL yields same instance.
+		local
+			l_key: STRING
+			l_ref: WEAK_REFERENCE [RESTLY_ADDRESSABLE]
+		do
+			l_key := a_url.to_string_8
+			if
+				attached resources.item (l_key) as l_existing
+				and then attached l_existing.item as l_item
+				and then attached {RESTLY_HTTP_CLIENT} l_item as l_client
+			then
+				Result := l_client
+			else
+				create Result.make_with_url (create {RESTLY_HTTP_URI}.make (l_key))
+				create l_ref.put (Result)
+				resources.force (l_ref, l_key)
+			end
+		ensure
+			instance_free: class
+		end
+
 feature {NONE} -- Registry
 
 	resources: STRING_TABLE [WEAK_REFERENCE [RESTLY_ADDRESSABLE]]

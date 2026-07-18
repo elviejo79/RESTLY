@@ -74,6 +74,18 @@ feature -- Tests
 			assert ("different", {RESTLY_SCHEME}.file ("/tmp/restly_a") /= {RESTLY_SCHEME}.file ("/tmp/restly_b"))
 		end
 
+	test_http_same_url_yields_same_instance
+			-- Same URL string returns the identical {RESTLY_HTTP_CLIENT}.
+		do
+			assert ("same instance", {RESTLY_SCHEME}.http ("http://localhost:9999") = {RESTLY_SCHEME}.http ("http://localhost:9999"))
+		end
+
+	test_http_different_urls_yield_different_instances
+			-- Different URL strings return different instances.
+		do
+			assert ("different", {RESTLY_SCHEME}.http ("http://a.test") /= {RESTLY_SCHEME}.http ("http://b.test"))
+		end
+
 	test_end_to_end_roundtrip
 			-- Full path: scheme -> sqlite -> table handle -> table_origin -> insert + read.
 		local

@@ -27,6 +27,8 @@ inherit
 			make_from_uri_template
 		end
 
+	RESTLY_ADDRESSABLE
+
 create
 	make_with_url,
 	make_from_uri_template

@@ -98,7 +98,6 @@ feature -- Extension (RESTLY_POSTABLE)
 			-- autoincrement): delegate and convert the minted key back.
 			-- Otherwise mint here via `fresh_key`.
 		local
-			l_store_key: KS
 			l_repr_key: KR
 		do
 			if not extend_requests.has_key (a_request_id) then
@@ -107,8 +106,7 @@ feature -- Extension (RESTLY_POSTABLE)
 					l_repr_key := key_converter.to_representation (l_postable.extend_requests [a_request_id])
 				else
 					l_repr_key := fresh_key
-					l_store_key := key_converter.to_store (l_repr_key)
-					store.extend (converter.to_store (a_v), l_store_key)
+					extend (a_v, l_repr_key)
 				end
 				extend_requests.extend (l_repr_key, a_request_id)
 			end

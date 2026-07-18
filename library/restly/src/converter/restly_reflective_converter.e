@@ -228,9 +228,8 @@ feature {NONE} -- Mismatch declarations
 			-- "Attribute type changed": `a_attribute` is INTEGER in the
 			-- store, boolean in the representation; both directions
 			-- declared together.
-			-- ponytail: only sugar pair needed today; add a sibling
-			-- feature per (representation type, attribute type) pair
-			-- when a resource needs one.
+			-- ponytail: one sugar feature per (representation type,
+			-- attribute type) pair, added when a resource needs one.
 		require
 			error_500_attribute_exists: True
 					-- TODO(owner): contract
@@ -247,6 +246,32 @@ feature {NONE} -- Mismatch declarations
 				agent (a_fields: REFLECTED_REFERENCE_OBJECT; i: INTEGER; a_representation: R; a_key: READABLE_STRING_GENERAL; a_convert: FUNCTION [INTEGER, BOOLEAN])
 					do
 						put_boolean (a_convert (a_fields.integer_32_field (i)), a_representation, a_key)
+					end (?, ?, ?, ?, a_to_representation),
+				a_attribute)
+		end
+
+	convert_integer_string_field (a_attribute: STRING;
+			a_to_store: FUNCTION [STRING, INTEGER];
+			a_to_representation: FUNCTION [INTEGER, STRING])
+			-- "Attribute type changed": `a_attribute` is INTEGER in the
+			-- store, a string in the representation; both directions
+			-- declared together.
+		require
+			error_500_attribute_exists: True
+					-- TODO(owner): contract
+		do
+			from_converters.force (
+				agent (a_fields: REFLECTED_REFERENCE_OBJECT; i: INTEGER; a_representation: R; a_key: READABLE_STRING_GENERAL; a_convert: FUNCTION [STRING, INTEGER])
+					do
+						if has_string (a_representation, a_key) then
+							a_fields.set_integer_32_field (i, a_convert (string_item (a_representation, a_key)))
+						end
+					end (?, ?, ?, ?, a_to_store),
+				a_attribute)
+			to_converters.force (
+				agent (a_fields: REFLECTED_REFERENCE_OBJECT; i: INTEGER; a_representation: R; a_key: READABLE_STRING_GENERAL; a_convert: FUNCTION [INTEGER, STRING])
+					do
+						put_string (a_convert (a_fields.integer_32_field (i)), a_representation, a_key)
 					end (?, ?, ?, ?, a_to_representation),
 				a_attribute)
 		end
