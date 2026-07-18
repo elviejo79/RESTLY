@@ -24,7 +24,7 @@ One of Weiher's original. combinators. This one can write a message and the data
 That also echoes one of Weiher's papers with writeStreamOn and the logging Combinator is important for all the other kinds of systems.
 since it allows a new form of dispatch like an Smalltalk "perform on".
 
-*** work on a SQLite resource handler
+*** DONE work on a SQLite resource handler
 I currently have something that serves APIs web, but I don't have any storage.
 I need to be able to store this things in databases, and in text files, in some specific cases in CSV files or parquet, files ore other formats.
 but to begin just a SQLite resource would be nice. Probably this will need to change to Eiffel Store or Abel to save in the data bases
@@ -47,6 +47,50 @@ or JsonSchema from the objects
 
 ** Inovation / harder
 
+*** Create form of user interface
+
+**** A vision2 user interface ?
+
+***** something like iTask
+If we think it in a way I'm creating something that is like a workflow of services.
+It looks a little bit like ITasks.
+but then for ITasks it needs:
+- A reflection based way to produce a formulary. So that it can automatically create some user interface.
+
+***** create a Data-Star server
+Since this architecture seems to be the most easy to develop web servers.
+
+***** a web framework user interface
+
+***** Actually what I should do is a commandline interface for a post
+
+If we have HASH_TABLE indexed by STRINGs then publishing it should be as simple as:
+
+This is the most simple archictecture you can have
+#+BEGIN_EXAMPLE
+  COMMAND_LINE_SERVER <| RLY_HASH_TABLE[STRING,JSON_OBJECT]
+#+END_EXAMPLE
+
+Because JSON_OBJECT is already a string that you can print and string is the key.
+
+Now what I would like to express is:
+#+BEGIN_EXAMPLE
+  COMMAND_LINE_SERVER <| RLY_HASH_TABLE[INTEGER,TODO_ROW]
+#+END_EXAMPLE
+
+Todo that TODO_ROW must implement the conversion to and from JSON_OBJECT and then it might work
+
+Conversion is very important because I'm not satisfied with the complexity that the TODOBACKEND_SQLITE website has.
+
+It seems so much code for very little.
+
+****** Actually I should refactor the web_implementation
+currently is:
+TODOBACKEND_SERVER that just looks like configuration
+TODOBACkEND_EXECUTION that actually creates the pipes
+A TODOBACKEND_PIPELINE_FRONT that is the one that puts the url as part of the ID.
+
+
 *** create the WIRE concept
 a wire is queue that allows async communication between resources.
 and it also, includes the converter functionality.
@@ -56,15 +100,6 @@ that way I can simplify the combinators type, that way I don't make conversion o
 but only on wires.
 - Maybe that way I can generate a complete architectural diagram, because wires are the links between things.
 - maybe for the graph architectural diagram the Resource Registry , Resource Name Server has a list of all the entities and of all the wires among them.
-
-*** create a Data-Star server
-Since this architecture seems to be the most easy to develop web servers.
-
-*** something like iTask
-If we think it in a way I'm creating something that is like a workflow of services.
-It looks a little bit like ITasks.
-but then for ITasks it needs:
-- A reflection based way to produce a formulary. So that it can automatically create some user interface.
 
 *** Implement other protocols
 As we have said the key of Arhiteture Oriented Programming is that, it shrinks to the level of a program.
