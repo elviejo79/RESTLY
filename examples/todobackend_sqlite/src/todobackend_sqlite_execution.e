@@ -31,8 +31,12 @@ feature {NONE} -- Pipeline
 	todo_pipeline: RESTLY_PIPELINE_FRONT [STRING, JSON_OBJECT, INTEGER, TODO_ROW]
 			-- JSON front → RESTLY_TABLE_ORIGIN → SQLite.
 		once ("PROCESS")
-			create {TODOBACKEND_PIPELINE} Result.make (todo_table)
+			create {TODOBACKEND_PIPELINE} Result.make (todo_table, Base_url)
 		end
+
+	Base_url: STRING = "http://localhost:8081/todos"
+			-- Collection url minted into each element's "url" field
+			-- (host and port must match {TODOBACKEND_SQLITE_SERVER}).
 
 	todo_table: RESTLY_TABLE_ORIGIN [TODO_ROW]
 			-- SQLite table storing TODO_ROW objects.

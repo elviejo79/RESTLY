@@ -21,12 +21,13 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_store: RESTLY_PROTOCOL [INTEGER, TODO_ROW])
-			-- Front for `a_store` with the todobackend converters.
+	make (a_store: RESTLY_PROTOCOL [INTEGER, TODO_ROW]; a_base_url: STRING)
+			-- Front for `a_store` with the todobackend converters;
+			-- element urls are minted under `a_base_url`.
 		do
 			make_with_converters (a_store,
 				create {RESTLY_KEY_CONVERTER_STRING_INTEGER},
-				create {TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW})
+				create {TODOBACKEND_CONVERTER_JSON_OBJECT_TODO_ROW}.make (a_base_url))
 		end
 
 end
