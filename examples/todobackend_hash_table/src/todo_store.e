@@ -1,7 +1,7 @@
 note
 	description: "[
-		Todo store: hash table with server-minted keys (POST),
-		JSON merge (PATCH) and "url" field minting.
+		Todo store: hash table with server-minted keys (POST)
+		and "url" field minting. PATCH merging happens in the gateway.
 	]"
 
 class
@@ -14,8 +14,6 @@ inherit
 		end
 
 	RESTLY_POSTABLE [STRING, JSON_OBJECT]
-
-	RESTLY_PATCHABLE [STRING, JSON_OBJECT]
 
 create
 	make
@@ -34,19 +32,6 @@ feature -- REST verbs
 				v.put (create {JSON_BOOLEAN}.make (False), "completed")
 			end
 			Precursor (v, k)
-		end
-
-feature -- Update
-
-	merge (a_patch: JSON_OBJECT; a_k: STRING)
-			-- <Precursor>
-		local
-			l_item: JSON_OBJECT
-		do
-			l_item := item (a_k)
-			across a_patch.current_keys as k loop
-				l_item.replace (a_patch [k], k)
-			end
 		end
 
 feature -- Key minting

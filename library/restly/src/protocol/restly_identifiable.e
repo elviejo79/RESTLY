@@ -16,7 +16,8 @@ feature -- Access
 		deferred
 		end
 
-feature {RESTLY_TABLE_ORIGIN} -- Element Change
+feature {NONE} -- Element Change
+	-- ponytail: {NONE} until RESTLY_TABLE_ORIGIN exists in this repo; restore export then.
 
 	set_id (a_id: K)
 			-- Set `id` to `a_id`.

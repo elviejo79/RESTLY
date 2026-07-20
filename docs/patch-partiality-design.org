@@ -1,0 +1,70 @@
+#+TITLE: The type of the PATCH payload
+#+AUTHOR: agarciafdz
+#+DATE: 2026-07-19
+#+STARTUP: overview
+
+* The question
+
+Could =merge (a_patch: …)= take a statically typed partial value instead of a {JSON_OBJECT}?
+
+Candidates considered: a labeled TUPLE, and a TUPLE of name/value PAIRs.
+Both fail, for instructive reasons.
+
+* Why a labeled TUPLE fails
+
+TUPLE labels are compile-time sugar only.
+Conformance and runtime access are purely positional, and reflection cannot recover the labels.
+So a store receiving =TUPLE [title: STRING]= at runtime sees only "a tuple whose first item is a STRING" —
+it cannot know that the item means /title/.
+A bare =TUPLE= formal accepts every arity, but then the store cannot map positions to fields at all.
+
+* Why a TUPLE of PAIRs fails
+
+A variable-length collection of =PAIR [STRING, ANY]= is {JSON_OBJECT} re-implemented weaker:
+
+- values degrade to =ANY=, so there is no per-field type check at the call site either;
+- names stay unchecked strings, exactly as in JSON;
+- the JSON parser integration is lost, so the gateway must build the pairs by hand.
+
+You pay conversion machinery to arrive where the wire format already stands.
+
+* The underlying principle
+
+Which fields a PATCH carries is decided at request time.
+TUPLE's field knowledge exists only at compile time.
+Partiality is a runtime property, so the patch type must carry field names (or an equivalent) at runtime.
+That is why the wire-format merge (option B) is not a shortcut but the honest representation:
+{JSON_OBJECT} /is/ the runtime name→value partial map.
+
+* The typed alternative worth a future spike
+
+A patch as a sequence of mutations:
+
+#+begin_src eiffel
+merge (a_patch: SEQUENCE [PROCEDURE [R]]; a_k: K)
+#+end_src
+
+called as
+
+#+begin_src eiffel
+store.merge ([agent {TODO_ROW}.set_title ("walk"), agent {TODO_ROW}.set_completed (1)], 7)
+#+end_src
+
+Each element is statically type-checked, and an absent field is simply an absent agent.
+The catch: the wire path receives JSON,
+so the gateway would still need a name→agent dispatch table per domain class —
+the checked-agent pattern again (see =learning-for-http-client.org=), i.e. the converter machinery by another name.
+It only pays off for callers who construct patches /in Eiffel/, not over the wire.
+
+* Decision
+
+Keep option B for the wire path:
+{GATEWAY}.merge does read-modify-write in JSON space
+(=to_json= → apply patch keys → =from_json= → =put=),
+and both todobackend examples pass 16/16 npm tests with it.
+
+{RESTLY_PATCHABLE} stays in the library, out of the gateway path,
+ready to re-enter as a store-side optimization probed by downcast
+(e.g. an ABEL backend issuing a partial SQL UPDATE).
+
+Revisit the agent-sequence patch only if in-process callers of =merge= appear.

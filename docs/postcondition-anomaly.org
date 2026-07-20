@@ -1,0 +1,73 @@
+#+TITLE: Open problem: library postconditions silent in the example servers
+#+DATE: 2026-07-20
+
+* Status: OPEN — resume here
+
+All assertion categories are enabled everywhere
+(restly.ecf library target, both example targets, both example restly-library overrides),
+yet in the running example servers only preconditions demonstrably fire.
+
+* What works (verified 2026-07-20)
+
+- GET /todos/999 answers 404 =error_404= via the new =CALL_RETURN_PROTOCOL.item= precondition and =EWF_CONTRACT_GUARD=.
+- Both examples clean-compile and pass the npm todobackend suite 16/16.
+
+* The anomaly
+
+=RESTLY_PROTOCOL.put= ensures =error_500_didnt_actually_update: item (k) ~ v=.
+Through a converting stage this is provably False on every PATCH:
+=TODO_CONVERTER.item= mints a fresh =JSON_OBJECT=, and =JSON_OBJECT= has no =is_equal= redefinition,
+so structurally identical objects compare unequal under =~= (probe-confirmed).
+So if postconditions were monitored, every PATCH and POST would answer 500.
+The real server answers 201/200.
+Call-count instrumentation on =to_json= confirms the postcondition's =item (k)= re-read never happens.
+
+* Evidence table
+
+Every isolated reproduction FIRES the postcondition; only the real build stays silent.
+
+| Probe (all in /tmp/eqprobe)                                   | Verdict |
+|---------------------------------------------------------------+---------|
+| Direct root-thread call on converter                          | fires   |
+| Spawned THREAD                                                | fires   |
+| Real example classes + convert clauses                        | fires   |
+| Inside a WSF standalone request, under EWF_CONTRACT_GUARD     | fires   |
+| =put= reached via library-written =force= body                | fires   |
+| TRUE replica: WSF root -> ROUTED_EXECUTION -> gateway <| conv | fires (POST 500, PATCH 500 =error_500_didnt_actually_update=) |
+| Probe ecf with the REAL root class =TODOBACKEND_SERVER.make=  | fires   |
+| Real todobackend.ecf build, freshly clean-compiled            | SILENT (POST 201, PATCH 200) |
+
+Killed theories: stale binaries (clean rebuilds on both sides), violation "poisoning",
+EWF runtime assertion disabling (no =check_assert= anywhere; and the replica uses the same EWF),
+=.ecf.user= override files (none exist),
+assertion option text (option blocks in both ecfs are character-identical by diff).
+
+* Where the culprit must be
+
+The same classes, same restly.ecf, same source cluster fire when built from
+=/tmp/eqprobe/probe.ecf= and stay silent when built from
+=examples/todobackend_integer_todo_row/todobackend.ecf=.
+Remaining differences between the two ecfs are only:
+
+1. explicit =thread= library in the probe ecf (comes transitively in the real one),
+2. probe has an extra local cluster (PROBE classes) and an absolute-path cluster; real has one relative =src= cluster,
+3. restly library location: absolute forward-slash vs relative backslash =..\..\library\restly\restly.ecf=,
+4. =<system>= attributes: xsi:schemaLocation present only in the real one, different name/uuid,
+5. target-level =<file_rule>= excludes only in the real one,
+6. element order inside =<target>=.
+
+* Next step
+
+Bisect: mutate =/tmp/eqprobe/probe.ecf= toward =todobackend.ecf= one difference at a time,
+clean rebuild, POST+PATCH after each, until it goes silent.
+First planned mutation (not yet run): drop the =thread= library and the local PROBE cluster.
+
+Probe state left on disk: =/tmp/eqprobe= with root already switched to =TODOBACKEND_SERVER.make= (this configuration FIRES).
+The debug =print= in =TODO_CONVERTER.to_json= used for call counting has been removed from the example.
+
+* Once found
+
+The satisfiability question re-opens:
+=item (k) ~ v= cannot hold through a converting stage (fresh objects, reference equality, POST adds id/url),
+so when monitoring works, every PATCH/POST in the converter pipeline will answer 500.
+Contract redesign is the author's call (contract authority).

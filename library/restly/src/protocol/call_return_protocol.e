@@ -25,6 +25,8 @@ feature -- REST verbs
 
 	item alias "[]" (req: I): O
 			-- GET: response for the resource addressed by `req`.
+		require
+			error_404_not_found: has_key (req)
 		deferred
 		end
 

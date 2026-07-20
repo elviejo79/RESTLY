@@ -78,6 +78,11 @@ feature {NONE} -- Exception to HTTP status
 			if attached a_exc.tag as l_tag then
 				Result := status_from_tag (l_tag.to_string_8)
 			end
+			if Result = 0 and then attached a_exc.description as l_desc then
+					-- Propagated violations carry the assertion tag in
+					-- `description` rather than `tag`.
+				Result := status_from_tag (l_desc.to_string_8)
+			end
 			if Result = 0 then
 				if attached {PRECONDITION_VIOLATION} a_exc then
 					Result := {HTTP_STATUS_CODE}.precondition_failed
@@ -96,6 +101,10 @@ feature {NONE} -- Exception to HTTP status
 			if a_tag.starts_with ("error_") and a_tag.count > 6 then
 				l_start := 7
 				l_end := a_tag.index_of ('_', l_start)
+				if l_end = 0 then
+						-- Bare "error_NNN" tag, no trailing description.
+					l_end := a_tag.count + 1
+				end
 				if l_end > l_start then
 					l_code := a_tag.substring (l_start, l_end - 1)
 					if l_code.is_integer then
