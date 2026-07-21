@@ -14,7 +14,7 @@ feature {NONE} -- Router
 
 	setup_router
 		do
-			routes ["/todos"] := (create {GATEWAY}) <| (create {TODO_CONVERTER}) <| todos_table
+			routes ["/todos"] := (create {GATEWAY}) <| (create {TODO_CODEC}) <| todos_table
 			print_pipeline_graph
 		end
 

@@ -1,0 +1,55 @@
+#+TITLE: What have I learned with this current spike about implicit conversion?
+
+* I really like the syntax for defining web handlers
+look at this?
+#+BEGIN_SRC eif
+  routes ["/todos"] := (create {GATEWAY}) <| (create {TODO_CONVERTER}) <| todos_table
+#+END_SRC
+just by looking at it what can we understand?
+there is a server that accapts as route like: /todos
+now there is GATEWAY ? what is a GATEWAY? well I know that it translates from one protocol to another, but well well we don't know what it does.
+there there is a TODO_CONVERTER? what does it convert? would it read more clearly if it said? convert_string_json_to_int_todo_row?
+and there there is todos_table? what is that? well it is a hash_table of todo_rows. so it should read HAsH_TABLE[TODO_ROW]?
+
+But regardless of the not entirely clear things I still like how it looks! and I have a figthing chance
+
+maybe a gateway is a convert_request_to_string_json
+and todo_converter to convert_sting_json_to_integer_todo
+and table_todo
+
+#+BEGIN_SRC eif
+  serve["/todos"] := (create convert_request_to_str_json) <| (create convert_str_json_to_int_todo_row) <| table_int_todo_row
+#+END_SRC
+
+* Well I went back to a class that transforms things.
+Implicit conversion is not inherited in "formal" types (i.e. R,S) so no matter what I do I must have a converter (codec) class
+that knows how to transform from a Representation to a Store, and from Store to a representation.
+I have lost the convertability battle.
+I need to accept tthe defeat and just hard-code the conversion when I need it.
+
+* GATEWAY
+Is a component that takes a WSF_REQUEST and is backed by CONVERTER most of the time unless the backend is of type STRING,JSON_OBJECT
+so I guess it should be called JSON_GATEWAY? in case I ever have another thing.
+And another importan thing. JSON_GAETEWAY is a UNARY_COMBINATOR[STRING,JSON_OBJECT] .
+It seems that there are many thingsthat are UNARY_COMBINATORS basically anything that I wanted to have the pipe operator is an unary combinator.
+
+* A CONVERTER is also an UNARY_COMBINATOR.
+meaning it is backed by something just have functions that trasform it from and back
+
+* With this architecture now the pipeline looks:
+if todo table is string json
+now the pipeline looks
+#+BEGIN_SRC eif
+  routes ["/todos"] := (create {JSON_GATEWAY}) <| table_int_todo_row
+#+END_SRC
+
+ if the table_todo is instead integers todoobjects
+ #+BEGIN_SRC eif
+  routes ["/todos"] := (create {JSON_GATEWAY}) <| create {CONVERTER_JSON_TO_TODOS} <|  table_int_todo_row
+#+END_SRC
+
+ And finally if store in the database
+  if the table_todo is instead integers todoobjects
+ #+BEGIN_SRC eif
+  routes ["/todos"] := (create {JSON_GATEWAY}) <| create {CONVERTER_JSON_TO_TODOS} <|  ({SCHEME}.sqlite("files") / {TODO_ROW})
+#+END_SRC

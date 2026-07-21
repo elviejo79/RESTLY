@@ -11,6 +11,7 @@ deferred class
 	RESTLY_CONVERTER [K -> HASHABLE, R]
 
 inherit
+   
 	RESTLY_LISTABLE [STRING, JSON_OBJECT]
 		redefine
 			graph_dot_lines

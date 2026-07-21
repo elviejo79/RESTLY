@@ -2,7 +2,7 @@ note
 	description: "Converter stage for the todos pipeline: INTEGER keys, TODO_ROW values."
 
 class
-	TODO_CONVERTER
+	TODO_CODEC
 
 inherit
 	RESTLY_CONVERTER [INTEGER, TODO_ROW]
