@@ -19,49 +19,10 @@ inherit
 	ANY
 			-- Re-effects default_create/copy/out/is_equal, which
 			-- CALL_RETURN_PROTOCOL undefines for its own joins.
+   RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
 
 create
 	default_create
-
-feature -- Composition
-
-	backed_by alias "<|" (a_back: RESTLY_PROTOCOL [ANY, ANY]): like Current
-			-- Current, backed by `a_back`. When `back` is already a
-			-- converter stage, `a_back` is delegated down the chain, so
-			-- left-associative `<|` composes without parentheses:
-			-- gateway <| converter <| store.
-			-- Widened to [ANY, ANY] for that chaining: a mis-typed
-			-- composition fails at runtime (precondition), not compile time.
-		require
-			chain_accepts_back: attached {RESTLY_CONVERTER [HASHABLE, ANY]} back as l_stage
-				implies l_stage.accepts (a_back)
-			leaf_speaks_wire: (not attached {RESTLY_CONVERTER [HASHABLE, ANY]} back)
-				implies attached {RESTLY_PROTOCOL [STRING, JSON_OBJECT]} a_back
-		do
-			if attached {RESTLY_CONVERTER [HASHABLE, ANY]} back as l_stage then
-				check key_is_hashable: attached {RESTLY_PROTOCOL [HASHABLE, ANY]} a_back as l_typed then
-					l_stage.backed_by (l_typed).do_nothing
-				end
-			else
-				check wire_typed_back: attached {RESTLY_PROTOCOL [STRING, JSON_OBJECT]} a_back as l_wire then
-					back := l_wire
-				end
-			end
-			Result := Current
-		end
-
-feature -- Access
-
-	back: RESTLY_PROTOCOL [STRING, JSON_OBJECT]
-			-- Backing pipeline; capability mixins (LISTABLE, POSTABLE)
-			-- are discovered per verb by downcast.
-		attribute
-			-- ponytail: placeholder empty store until `backed_by` sets the real pipeline
-			create {RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]} Result.make ("unmounted")
-		end
-
-	id_parameter_name: STRING = "id"
-			-- URI template variable for the element key.
 
 feature -- REST verbs
 
@@ -217,14 +178,18 @@ feature {NONE} -- Helpers
 
 feature -- Helpers
 
+	id_parameter_name: STRING = "id"
+			-- Name of the URI-template hole for element keys
+			-- (RESTLY_ROUTES mounts elements at a_uri + "/{id}").
+
 	element_key (req: WSF_REQUEST): STRING
 			-- Element key addressed by `req' (URI template match).
 			-- Public: used in exported preconditions (VAPE).
 		do
-			create Result.make_empty
-			if attached {WSF_STRING} req.path_parameter (id_parameter_name) as l_str then
-				Result := l_str.string_representation.to_string_8
+			if attached {WSF_STRING} req.path_parameter (id_parameter_name) as l_id then
+				Result := l_id.value.to_string_8
+			else
+				create Result.make_empty
 			end
 		end
-
 end

@@ -45,7 +45,7 @@ feature -- Access
 	order_value: INTEGER
 			-- Sort order.
 
-feature {TABLE_INTEGER_TODO_ROW, RESTLY_TABLE_RESOURCE} -- Element Change
+feature {RESTLY_TABLE_RESOURCE} -- Element Change
 
 	set_id (a_id: INTEGER)
 			-- <Precursor>
