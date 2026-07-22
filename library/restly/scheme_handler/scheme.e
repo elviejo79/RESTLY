@@ -35,6 +35,28 @@ feature -- Scheme handlers
 			instance_free: class
 		end
 
+	sqlite_graph (a_file: READABLE_STRING_GENERAL): RESTLY_DATABASE_SQLITE_GRAPH
+			-- Object-graph SQLite database for `a_file`; same file yields same instance.
+		local
+			l_uri: RESTLY_SQLITE_GRAPH_URI
+			l_ref: WEAK_REFERENCE [RESTLY_RESOURCE]
+		do
+			create l_uri.make ("sqlite+graph://" + a_file.to_string_8 + "/")
+			if
+				attached resources.item (l_uri.template) as l_existing
+				and then attached l_existing.item as l_item
+				and then attached {RESTLY_DATABASE_SQLITE_GRAPH} l_item as l_graph
+			then
+				Result := l_graph
+			else
+				create Result.make (l_uri)
+				create l_ref.put (Result)
+				resources.force (l_ref, Result.base_url.template)
+			end
+		ensure
+			instance_free: class
+		end
+
 	file (a_directory: READABLE_STRING_GENERAL): RESTLY_DIRECTORY
 			-- Filesystem directory for `a_directory`; same path yields same instance.
 		local

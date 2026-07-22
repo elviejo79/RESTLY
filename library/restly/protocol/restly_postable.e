@@ -15,18 +15,11 @@ feature -- Extension
 	extend_new (a_v: V; a_request_id: HASHABLE)
 			-- Create a new entry with a server-minted key.
 			-- Idempotent: a duplicate `a_request_id` with the same value is a no-op.
+			-- Minting is the implementor's private affair (a database
+			-- mints on insert; an in-memory store probes for a gap).
 		require
 			same_request_means_same_value: True -- TODO(owner): contract
-		local
-			l_key: K
-		do
-			if not extend_requests.has_key (a_request_id) then
-				-- one minting: `fresh_key` is state-dependent, a second
-				-- call after `extend` would return a different key
-				l_key := fresh_key
-				extend (a_v, l_key)
-				extend_requests.extend (l_key, a_request_id)
-			end
+		deferred
 		ensure
 			request_recorded: extend_requests.has_key (a_request_id)
 			key_present: has_key (extend_requests [a_request_id])
@@ -39,13 +32,6 @@ feature -- Access
 			-- Maps request_id -> generated key.
 		attribute
 			create Result.with_object_equality
-		end
-
-feature -- Key minting
-
-	fresh_key: K
-			-- Next unused key.
-		deferred
 		end
 
 end

@@ -1,0 +1,156 @@
+#+TITLE: Plan: a new database backend (sqlite+graph://) + protocol cleanup
+#+DATE: 2026-07-21
+
+* Context
+
+The relational SQLite backend needs a pre-built =.db= (ABEL's relational
+connector creates no schema) and carries the pipeline's only raw SQL
+(=SELECT COUNT(*)=). ABEL's /generic-layout/ backend
+(=PS_SQLITE_REPOSITORY_FACTORY= -> =PS_GENERIC_LAYOUT_SQL_BACKEND=)
+bootstraps its own =ps_*= schema, and =PS_SQLITE_DATABASE= holds one
+=unique_connection= for the process — so =:memory:= works.
+
+Rulings:
+- The generic layout gets its *own scheme*: =sqlite+graph://=.
+- =count= is removed from the protocol, in general.
+- The =fresh_key= machinery and its precondition go away: ABEL sees
+  =id = 0=, inserts, and writes the minted id back into the object.
+  The npm POST test verifies this claim for the generic layout;
+  fallback below if it does not hold.
+
+This document is also the *standard recipe* for future database handlers.
+
+* Part A — The recipe (standard for any new backend)
+
+To add backend =foo= reachable as =foo://<name>/=:
+
+1. *URI type* — =library/restly/uri/restly_foo_uri.e=: clone
+   =restly_sqlite_uri.e= (28 lines). Pure string-subtype: inherits
+   =URI_TEMPLATE= with =export {NONE} set_template=, =convert= clauses
+   both directions, invariant =template.starts_with ("foo://")=.
+2. *Database node* — =library/restly/scheme_handler/restly_database_foo.e=:
+   inherits =RESTLY_DATABASE=; =make (a_url: RESTLY_FOO_URI)= sets
+   =base_url := a_url=, creates the backend factory, derives the
+   connection name by stripping the scheme prefix and trailing =/=.
+   Effects =manage= and =new_repository= for its factory. Whether the
+   backend mints primary keys on insert is not declared but derived:
+   =RESTLY_TABLE_RESOURCE.mints_ids= tests for ABEL's relational
+   connector (managed types, which demand id 0 on insert and write
+   the minted key back); for every other backend the resource mints
+   via a max-id scan before inserting.
+3. *Scheme registry entry* — one feature in =scheme_handler/scheme.e=:
+   build the typed URI first, look up the weak registry by
+   =l_uri.template=, on miss =create {RESTLY_DATABASE_FOO} Result.make (l_uri)=.
+4. *Example* — copy an existing =examples/todobackend_*= folder; the
+   only line that changes is the resource expression in
+   =todobackend_execution.e=.
+
+Everything else (=RESTLY_TABLE_HANDLE=, =RESTLY_TABLE_RESOURCE=,
+=GATEWAY=, codec, routing) is backend-agnostic and untouched.
+
+* Part B — This instance: sqlite+graph://
+
+- *New* =library/restly/uri/restly_sqlite_graph_uri.e= — invariant
+  =template.starts_with ("sqlite+graph://")=.
+- *New* =library/restly/scheme_handler/restly_database_sqlite_graph.e= —
+  clone of =restly_database_sqlite.e= with:
+  - =factory: PS_SQLITE_REPOSITORY_FACTORY= (generic layout,
+    self-bootstrapping schema)
+  - =make (a_url: RESTLY_SQLITE_GRAPH_URI)=; filename =
+    =template.substring (16, count)= minus trailing =/=
+    (="sqlite+graph://"= is 15 characters)
+  - =manage (a_type)=: *no-op* — the generic layout stores unregistered
+    types
+- *Edit* =library/restly/scheme_handler/scheme.e= — add
+  =sqlite_graph (a_file: READABLE_STRING_GENERAL): RESTLY_DATABASE= per
+  recipe step 3; key ="sqlite+graph://" + a_file.to_string_8 + "/"=.
+- *New example* =examples/todobackend_with_sqlite_graph/= — copy of
+  =todobackend_with_sqlite= minus =todobackend.db=; execution uses
+  ={SCHEME}.sqlite_graph (":memory:")=; keeps
+  =max_concurrent_connections = 1= (same single shared connection).
+  New ecf uuid.
+
+* Part C — Protocol cleanup (user-directed, includes contract edits)
+
+Remove =count= and =fresh_key= from the protocol everywhere:
+
+- =protocol/restly_listable.e= — delete =count=; =wipe_out= ensure
+  becomes =empty: new_cursor.after= (contract edit forced by the
+  deletion — *user-directed*).
+- =protocol/restly_protocol.e:36= — delete precondition
+  =error_403_must_use_fresh_key: not has_key (k)= from =extend=
+  (*user-directed*).
+- =protocol/restly_postable.e= — delete =fresh_key=; =extend_new=
+  becomes *deferred* (body moves to implementors); its require/ensure
+  stay exactly as written.
+- =protocol/restly_null.e= — delete =count = 0= and =fresh_key=;
+  implement =extend_new= as a =this_should_never_be_called= check like
+  its =remove= / =merge=.
+- =converter/converter.e= — delete =count= (~95-100) and =fresh_key=
+  (~153-159); =extend_new= forwarding stays.
+- =scheme_handler/restly_table_resource.e= — delete =count= (the
+  raw-SQL one, ~154-170), the =fresh_key= raise-stub (~183-188), and the
+  now-unused =repository_connector= helper (~213-219); =extend_new=
+  stays (now effects the deferred feature; relies on ABEL id
+  write-back).
+- =datastructures/resource_hash_table.e= — delete =count=.
+- Examples =todobackend_integer_todo_row/src/table_integer_todo_row.e=
+  and =todobackend_hash_table/src/todo_store.e= — their =fresh_key=
+  (which used =count=) becomes a private minting helper probing from
+  =table.count + 1= (inherited =table= is available to descendants), and
+  each implements =extend_new= with the old template body from
+  =restly_postable.e:20-29= (duplicated twice; a mixin would be
+  premature).
+
+* Files
+
+New: =uri/restly_sqlite_graph_uri.e=,
+=scheme_handler/restly_database_sqlite_graph.e=,
+=examples/todobackend_with_sqlite_graph/= (4 src files + ecf).
+
+Edited: =scheme.e=, =restly_listable.e=, =restly_protocol.e=,
+=restly_postable.e=, =restly_null.e=, =converter.e=,
+=restly_table_resource.e=, =resource_hash_table.e=,
+=table_integer_todo_row.e=, =todo_store.e=.
+
+* Verification
+
+1. Clean compile library:
+   =cd library && ec -batch -clean -config ./restly.ecf -target restly -c_compile -stop=
+2. Regression: clean-compile + run =examples/todobackend_integer_todo_row=
+   and =examples/todobackend_with_sqlite=; npm suite
+   (=TEST_SERVER_URL=http://localhost:8080/todos npm test= at the
+   go-todo-app client dir) must stay 16/16 for each.
+3. New example: compile + run =todobackend_with_sqlite_graph=; npm suite
+   16/16 *with no .db file on disk* — proves schema bootstrap +
+   =:memory:=.
+4. *Checkpoint — outcome*: the generic layout does NOT write the id
+   back (the id write-back is the relational connector's managed-types
+   feature). The fallback is in place, gated by =mints_ids=: the
+   resource mints via a max-id scan only when the backend does not.
+   Minting unconditionally breaks the relational path:
+   =PS_RELATIONAL_CONNECTOR.internal_write= raises on any nonzero id
+   that differs from its own pre-generated key ("user-generated
+   primary key").
+
+* Lessons learned (found during verification)
+
+- ={PS_DEFAULT_REPOSITORY}.wipe_out= is testing-only and empties
+  *every* table of the repository — wrong scope for a per-table
+  resource. =RESTLY_TABLE_RESOURCE.wipe_out= instead deletes all rows
+  of V's table inside a single =PS_TRANSACTION= (atomic), the same
+  body as ABEL's unreachable =delete_query=. (An earlier claim that
+  ABEL's =wipe_out= breaks later relational inserts was wrong: those
+  412s came from the minting raise above.)
+- A fast (melted) compile of an example can report "System
+  Recompiled" without picking up library-class edits — even ones with
+  type errors. After editing library classes, clean-compile the
+  example before concluding a fix failed.
+
+* Owner notes
+
+- The two contract edits in Part C are done only because the owner
+  directed them; everything else in require/ensure stays untouched.
+- Removing =error_403_must_use_fresh_key= changes =extend= semantics: it
+  no longer forbids extending an existing key. Flag if that 403
+  mattered; today's npm suite passes via other guards.

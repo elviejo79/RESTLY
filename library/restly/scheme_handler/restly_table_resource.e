@@ -13,9 +13,6 @@ class
 
 inherit
 	RESTLY_POSTABLE [INTEGER, V]
-		redefine
-			extend_new
-		end
 
 	RESTLY_SEARCHABLE [PS_CRITERION, INTEGER, V]
 
@@ -129,10 +126,15 @@ feature -- Extension
 
 	extend_new (a_v: V; a_request_id: HASHABLE)
 			-- <Precursor>
-			-- The database mints the id and ABEL writes it back into
-			-- `a_v`; record that id instead of pre-computing `fresh_key`.
+			-- Backends that mint ids (relational managed types) demand
+			-- id 0 on insert and write the minted key back into `a_v`;
+			-- for the rest (generic layout) the resource mints first.
+			-- Recording `a_v.id` after `insert` serves both.
 		do
 			if not extend_requests.has_key (a_request_id) then
+				if not mints_ids then
+					a_v.set_id (highest_id + 1)
+				end
 				insert (a_v)
 				extend_requests.extend (a_v.id, a_request_id)
 			end
@@ -151,40 +153,32 @@ feature -- Listing
 			create {RESTLY_TABLE_CURSOR [V]} Result.make (l_query)
 		end
 
-	count: INTEGER
-			-- <Precursor>
-			-- SELECT COUNT(*); no row ever travels.
-		local
-			l_transaction: PS_TRANSACTION
-			l_connection: PS_SQL_CONNECTION
-		do
-			l_transaction := proxy.new_transaction
-			check connector_is_relational: attached {PS_RDBMS_CONNECTOR} repository_connector as l_connector then
-				l_connection := l_connector.get_connection (l_transaction.transaction)
-				l_connection.execute_sql ("SELECT COUNT(*) FROM " + table_name)
-				across l_connection as l_row loop
-					Result := l_row [1].to_integer
-				end
-			end
-			l_transaction.commit
-		end
-
 	wipe_out
 			-- <Precursor>
-			-- The relational backend deletes all rows of every managed table.
+			-- All rows of V's table in a single transaction: atomic
+			-- (all deleted or none), and scoped to this table — unlike
+			-- ABEL's testing-only `wipe_out`, which empties every
+			-- table of the repository.
+		local
+			l_query: PS_QUERY [V]
+			l_cursor: ITERATION_CURSOR [V]
+			l_transaction: PS_TRANSACTION
 		do
+			l_transaction := proxy.new_transaction
+			create l_query.make
+			l_transaction.execute_query (l_query)
 			check repository_is_default: attached {PS_DEFAULT_REPOSITORY} proxy as l_repository then
-				l_repository.wipe_out
+				from
+					l_cursor := l_query.new_cursor
+				until
+					l_cursor.after
+				loop
+					l_repository.delete (l_cursor.item, l_transaction.transaction)
+					l_cursor.forth
+				end
 			end
-		end
-
-feature -- Key minting
-
-	fresh_key: INTEGER
-			-- <Precursor>
-			-- ABEL mints ids on insert; `extend_new` reads them back.
-		do
-			(create {EXCEPTIONS}).raise ("RESTLY_TABLE_RESOURCE.fresh_key must never be called; the database mints ids.")
+			l_query.close
+			l_transaction.commit
 		end
 
 feature {NONE} -- Implementation
@@ -193,6 +187,17 @@ feature {NONE} -- Implementation
 			-- ABEL backend; owns all V <-> row conversion.
 		do
 			Result := table.repository
+		end
+
+	mints_ids: BOOLEAN
+			-- Does the backend mint the primary key on insert, writing
+			-- it back into the object? Derived: exactly the relational
+			-- connector does (managed types, which demand id 0 and
+			-- raise on any other value); the generic layout stores
+			-- `id` as an ordinary attribute.
+		do
+			Result := attached {PS_DEFAULT_REPOSITORY} proxy as l_repository
+				and then attached {PS_RELATIONAL_CONNECTOR} l_repository.connector
 		end
 
 	table: RESTLY_TABLE_HANDLE
@@ -210,14 +215,6 @@ feature {NONE} -- Implementation
 			Result := criterion_factory ("id", criterion_factory.equals, k)
 		end
 
-	repository_connector: PS_REPOSITORY_CONNECTOR
-			-- Backend connector of `proxy`, reached through {PS_ABEL_EXPORT}.
-		do
-			check repository_is_default: attached {PS_DEFAULT_REPOSITORY} proxy as l_repository then
-				Result := l_repository.connector
-			end
-		end
-
 	table_name: STRING
 			-- Relational table storing V: the type name lowercased,
 			-- matching ABEL's own naming.
@@ -225,6 +222,20 @@ feature {NONE} -- Implementation
 			Result := ({V}).name.to_string_8.as_lower
 				-- TYPE.name carries the attachment mark ("!SAMPLE_ROW").
 			Result.prune_all ('!')
+		end
+
+	highest_id: INTEGER
+			-- Largest id currently stored.
+			-- ponytail: O(n) scan per POST; a MAX criterion if tables grow large.
+		local
+			l_query: PS_QUERY [V]
+		do
+			create l_query.make
+			proxy.execute_query (l_query)
+			across l_query as ic loop
+				Result := Result.max (ic.id)
+			end
+			l_query.close
 		end
 
 	executed_key_query (k: INTEGER): PS_QUERY [V]

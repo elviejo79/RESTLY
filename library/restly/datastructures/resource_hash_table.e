@@ -71,12 +71,6 @@ feature -- Iteration
 			create {RESTLY_V_MAP_CURSOR [K, V]} Result.make (table.new_cursor)
 		end
 
-	count: INTEGER
-			-- <Precursor>
-		do
-			Result := table.count
-		end
-
 feature -- Removal
 
 	wipe_out

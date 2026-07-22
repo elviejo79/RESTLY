@@ -18,20 +18,13 @@ inherit
 			is_equal, copy, out, default_create
 		end
 
-feature -- Iteration
-
-	count: INTEGER
-			-- Number of entries.
-		deferred
-		end
-
 feature -- Removal
 
 	wipe_out
 			-- Remove all entries.
 		deferred
 		ensure
-			empty: count = 0
+			empty: new_cursor.after
 		end
 
 end

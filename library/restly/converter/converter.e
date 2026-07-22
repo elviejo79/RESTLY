@@ -23,7 +23,6 @@ inherit
 
 	RESTLY_POSTABLE[RK, RV]
 		redefine
-			extend_new,
 			graph_dot_lines
 		end
       
@@ -92,14 +91,6 @@ feature -- REST verbs
 
 feature -- Iteration
 
-	count: INTEGER
-			-- <Precursor>
-		do
-			if attached {RESTLY_LISTABLE [SK, SV]} back as l_list then
-				Result := l_list.count
-			end
-		end
-
 	new_cursor: TABLE_ITERATION_CURSOR [RV, RK]
 			-- <Precursor>
 			-- ponytail: snapshot per iteration; streaming adapter if collections grow.
@@ -135,7 +126,7 @@ feature -- Extension
 
 	extend_new (a_v: RV; a_request_id: HASHABLE)
 			-- <Precursor>: forwarded in R-space so the domain
-			-- store's key minting (fresh_key, set_id) runs;
+			-- store's key minting runs;
 			-- the minted key is mirrored into `extend_requests`
 			-- in wire form (attribute cannot be redefined into a
 			-- derived query — ECMA redeclaration is one-directional).
@@ -145,16 +136,6 @@ feature -- Extension
 				if not extend_requests.has_key (a_request_id) then
 					extend_requests.extend (representation_key (l_back.extend_requests [a_request_id]), a_request_id)
 				end
-			end
-		end
-
-feature -- Key minting
-
-	fresh_key: RK
-			-- <Precursor>
-		do
-			check postable_back: attached {RESTLY_POSTABLE [SK, SV]} back as l_back then
-				Result := representation_key (l_back.fresh_key)
 			end
 		end
 

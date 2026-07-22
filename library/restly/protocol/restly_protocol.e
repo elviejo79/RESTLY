@@ -32,8 +32,6 @@ feature -- REST verbs
 
 	extend (v: V; k: K)
 			-- POST: create new resource with key `k`; must not already exist.
-		require
-			error_403_must_use_fresh_key: not has_key (k)
 		deferred
 		ensure
 			error_500_didnt_actually_update: has_key(k) and then item(k) ~ v 

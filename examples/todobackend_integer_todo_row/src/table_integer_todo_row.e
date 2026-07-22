@@ -28,12 +28,26 @@ feature -- REST verbs
 			Precursor (v, k)
 		end
 
-feature -- Key minting
+feature -- Extension
+
+	extend_new (a_v: TODO_ROW; a_request_id: HASHABLE)
+			-- <Precursor>
+		local
+			l_key: INTEGER
+		do
+			if not extend_requests.has_key (a_request_id) then
+				l_key := fresh_key
+				extend (a_v, l_key)
+				extend_requests.extend (l_key, a_request_id)
+			end
+		end
+
+feature {NONE} -- Key minting
 
 	fresh_key: INTEGER
-			-- <Precursor>
+			-- Next unused key.
 		do
-			Result := count + 1
+			Result := table.count + 1
 		end
 
 end

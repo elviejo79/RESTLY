@@ -3,7 +3,7 @@ note
 		Null store: has no keys, lists nothing, accepts nothing.
 		The unwired state of a composable stage — `has_key` is
 		always False, so the verbs' preconditions can never hold;
-		reads that are total (count, new_cursor, search) answer
+		reads that are total (new_cursor, search) answer
 		emptiness instead of dying.
 		One instance per [K, V] derivation: creation is private,
 		access through `instance`.
@@ -76,9 +76,6 @@ feature -- REST verbs
 
 feature -- Iteration
 
-	count: INTEGER = 0
-			-- <Precursor>
-
 	new_cursor: TABLE_ITERATION_CURSOR [V, K]
 			-- <Precursor>: an empty stream.
 		local
@@ -95,14 +92,12 @@ feature -- Removal
 		do
 		end
 
-feature -- Key minting
+feature -- Extension
 
-	fresh_key: K
+	extend_new (a_v: V; a_request_id: HASHABLE)
 			-- <Precursor>
 		do
-			check this_should_never_be_called: False then
-				Result := fresh_key
-			end
+			check this_should_never_be_called: False end
 		end
 
 feature -- Update
