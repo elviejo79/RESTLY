@@ -19,7 +19,15 @@ inherit
 	ANY
 			-- Re-effects default_create/copy/out/is_equal, which
 			-- CALL_RETURN_PROTOCOL undefines for its own joins.
-   RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
+
+	RESTLY_WIRE_SCHEMA
+			-- The four wire-schema knobs; adopted from `back` at
+			-- composition for any name not set explicitly here.
+
+	RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
+		redefine
+			make_with_back
+		end
 
 create
 	default_create
@@ -262,46 +270,31 @@ feature -- Helpers
 			id_parameter_name := a_name
 		end
 
-	element_envelope: detachable STRING assign set_element_envelope
-			-- Wire envelope around one element (e.g. "article"):
-			-- unwrapped from request bodies, wrapped around element
-			-- responses. Void = flat bodies.
+feature -- Composition
 
-	set_element_envelope (a_name: detachable STRING)
-			-- Envelope element bodies under `a_name`.
+	make_with_back (a_back: like back)
+			-- <Precursor>; adopt the wire-schema names declared by
+			-- `a_back` (the codec or store directly behind this
+			-- gateway) for any knob not set explicitly here.
 		do
-			element_envelope := a_name
+			Precursor (a_back)
+			if attached {RESTLY_WIRE_SCHEMA} a_back as l_schema then
+				if element_envelope = Void then
+					element_envelope := l_schema.element_envelope
+				end
+				if collection_envelope = Void then
+					collection_envelope := l_schema.collection_envelope
+				end
+				if key_field = Void then
+					key_field := l_schema.key_field
+				end
+				if url_field = Void then
+					url_field := l_schema.url_field
+				end
+			end
 		end
 
-	collection_envelope: detachable STRING assign set_collection_envelope
-			-- Wire envelope around the collection (e.g. "articles"):
-			-- `items` answers {name: [...], nameCount: n}. Void = flat array.
-
-	set_collection_envelope (a_name: detachable STRING)
-			-- Envelope the collection under `a_name`.
-		do
-			collection_envelope := a_name
-		end
-
-	key_field: detachable STRING assign set_key_field
-			-- Field of element representations receiving the element key
-			-- (e.g. "slug"). Derived on the way out, never stored.
-
-	set_key_field (a_name: detachable STRING)
-			-- Echo the element key into field `a_name`.
-		do
-			key_field := a_name
-		end
-
-	url_field: detachable STRING assign set_url_field
-			-- Field of element representations receiving the element's
-			-- absolute URL. Derived on the way out, never stored.
-
-	set_url_field (a_name: detachable STRING)
-			-- Echo the element URL into field `a_name`.
-		do
-			url_field := a_name
-		end
+feature -- Helpers
 
 	element_key (req: WSF_REQUEST): STRING
 			-- Element key addressed by `req' (URI template match).

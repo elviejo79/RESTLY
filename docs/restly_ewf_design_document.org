@@ -706,6 +706,31 @@ Ruling: *no principal in the typed protocol; authentication lives at the call/re
 Per-verb policy (Fielding's safe verbs — =item=, =items=, =has_key=, =head= — open; mutating verbs guarded) was considered and *deferred*: =JWT_AUTH= guards all verbs for now.
 Revisit when RealWorldApp demands public reads (its spec does: GET articles is public, POST/PUT need a token).
 
+*** Ruling: wire schema is declared behind the gateway, applied at it (2026-07-23)
+
+The question: envelope names and derived fields ("url", "slug") were set imperatively on each =GATEWAY= at wiring time — can that knowledge move into the codec or store that actually knows the resource?
+
+Ruling: *declaration sinks, application stays*.
+
+1. /Declaration sinks./
+   =RESTLY_WIRE_SCHEMA= is a mixin of four detachable name knobs — =element_envelope=, =collection_envelope=, =key_field=, =url_field= — declared by the stage directly behind the gateway (a codec or a store), the one that knows the resource.
+2. /Adoption at composition./
+   =GATEWAY.make_with_back= adopts the back stage's names for any knob not set explicitly on the gateway; explicit gateway settings win, so ~<|~ wiring stays declarative and executions become pure routing.
+3. /Application cannot sink./
+   The codec's =representation= feeds both =item= and =items=, so wrapping there would envelope every collection member; =merge='s read-modify-write would patch the wrapper; and a derived url needs the live request.
+   Envelope application and url derivation therefore stay in the gateway, at the HTTP boundary.
+
+*** Ruling: reflective converter withdrawn until a second typed resource exists (2026-07-23)
+
+A reflective converter (field loop over =REFLECTED_REFERENCE_OBJECT= with declared per-field corrections) was ported and then withdrawn the same day.
+It replaced =TODO_ROW='s owner-authored wire preconditions with silent defaulting — a validation regression — to serve exactly one typed resource.
+
+Re-entry criteria, both required:
+
+1. A second typed resource actually exists, so the reflection machinery has two users.
+2. Value-level mismatches follow ELKS =MISMATCH_CORRECTOR= semantics: a present-but-mistyped representation field /raises/ (→ 500) unless a declared correction handles it; a declared correction is the only silent path; an /absent/ field defaults, because REST partial bodies are legitimate — the same shape as the old preconditions =has_key (f) implies well_typed (f)=.
+   =check_schema= already gives these semantics at the class-shape level; the value level must match.
+
 *** Verb → required conformance (doubles as the 405 spec)
 
 | Route kind (feature)  | Verb       | requires                                 |

@@ -13,12 +13,8 @@ create
 feature {NONE} -- Router
 
 	setup_router
-		local
-			gate: GATEWAY
 		do
-			create gate
-			gate.url_field := "url"
-			routes ["/todos"] := gate <| todos_table
+			routes ["/todos"] := (create {GATEWAY}) <| todos_table
 			print_pipeline_graph
 		end
 
