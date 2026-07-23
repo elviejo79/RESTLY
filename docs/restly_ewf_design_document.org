@@ -675,6 +675,37 @@ that boundary layer, return style beats collecting parameter.
 Revisit only if a stage ever needs streaming/chunked responses,
 the one case where an accumulating parameter genuinely wins.
 
+Note (2026-07-23): the call/return layer is itself a small combinator algebra.
+=CALL_RETURN_COMPOSABLE= gives it ~<|~; =JWT_AUTH= is its /pass-through/ member (I→I, O→O plus a guard); =GATEWAY= is its /converter/ member — but an asymmetric one: =CONVERTER= maps R↔S with one key-map and one value-map shared by every verb, while =GATEWAY= maps I→(K,V) inbound and result→O outbound.
+No generic =CALL_RETURN_CONVERTER= class is extracted, deliberately: GATEWAY's outbound map is verb-dependent — =item= answers 200+body, =put= answers 204, =extend= answers 303+Location, missing key answers 404 — because I and O are protocol envelopes carrying status and headers, not encodings of the store value.
+A generic class would therefore need one hook per verb: GATEWAY with extra indirection, and exactly one heir.
+Extract it only when a second front-end format appears (a CLI or test adapter speaking something other than WSF), giving the per-verb response policy two users.
+
+*** Ruling: auth is a boundary combinator; typed core stays principal-free (2026-07-23)
+
+The question: should there be an AUTH combinator in the typed core (=RESTLY_COMPOSABLE [K, V]=), guarding verbs per user?
+
+Ruling: *no principal in the typed protocol; authentication lives at the call/return boundary*.
+
+1. /Weiher has no AUTH combinator, and the absence is structural./
+   His generic catalog (Figure 13) is PassThrough, Mapping, Switching, Logging, Caching, Sequential.
+   The lone "authentication" box (Microsoft To-Do, Figure 34) manages credentials as /data flowing through stores/ — never a gate on store operations.
+   The Storage protocol is (verb, ref, data): there is no principal parameter to check.
+2. /Fielding agrees./
+   Authentication exists because organizational boundaries imply trust boundaries; in-process there is one boundary — the process.
+   The default operation set is safe operations not requiring trust; trust is decided at the connector boundary.
+3. /RESTLY discovered the same fact from the other direction./
+   The Authorization header dies at the =GATEWAY=: typed stages speak =[STRING, JSON_OBJECT]= and carry no principal.
+   That is /why/ =JWT_AUTH= is a =CALL_RETURN_COMPOSABLE= in front of the gateway, not a =RESTLY_COMPOSABLE= behind it.
+   Our boundary layer is the "authentication box" of Figure 34, made explicit.
+4. /The capability reading, and its limit./
+   In-process, authorization can be composition: hand the admin =gateway <| store= and the visitor a read-only pipeline — possession of the reference /is/ the authorization, no runtime check needed.
+   Over HTTP the caller is anonymous bytes and holds no reference, so runtime verification is unavoidable — exactly once, at the boundary.
+   Split: authentication (who) = =JWT_AUTH=, runtime, boundary-only; authorization (what) = composition, after verification.
+
+Per-verb policy (Fielding's safe verbs — =item=, =items=, =has_key=, =head= — open; mutating verbs guarded) was considered and *deferred*: =JWT_AUTH= guards all verbs for now.
+Revisit when RealWorldApp demands public reads (its spec does: GET articles is public, POST/PUT need a token).
+
 *** Verb → required conformance (doubles as the 405 spec)
 
 | Route kind (feature)  | Verb       | requires                                 |
