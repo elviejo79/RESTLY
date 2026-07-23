@@ -15,16 +15,10 @@ feature {NONE} -- Initialization
 	make (a_url: RESTLY_SQLITE_URI)
 			-- Database backed by the SQLite file named in `a_url`,
 			-- e.g. "sqlite:///home/me/db.sqlite/".
-		local
-			l_file: STRING
 		do
 			base_url := a_url
-			l_file := a_url.template.to_string_8.substring (10, a_url.template.count)
-			if l_file.count > 1 and then l_file.ends_with ("/") then
-				l_file.remove_tail (1)
-			end
 			create factory.make
-			factory.set_database (l_file)
+			factory.set_database (a_url.file_name)
 		end
 
 feature {RESTLY_DATABASE} -- Element Change
