@@ -183,7 +183,7 @@ feature {NONE} -- Helpers
 
 feature -- Helpers
 
-	id_parameter_name: STRING
+	id_parameter_name: STRING assign set_id_parameter_name
 			-- Name of the URI-template hole for element keys
 			-- (RESTLY_ROUTES mounts elements at a_uri + "/{id}").
 		attribute

@@ -45,7 +45,7 @@ feature -- Access
 			-- Pinned signature algorithm: trusting the token's own
 			-- header alg would accept unsigned ("none") tokens.
 
-	bearer_prefix: STRING
+	bearer_prefix: STRING assign set_bearer_prefix
 			-- Scheme prefix expected in the Authorization header.
 		attribute
 			Result := "Bearer "

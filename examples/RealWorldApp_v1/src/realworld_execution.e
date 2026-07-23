@@ -33,11 +33,11 @@ feature {NONE} -- Router
 			auth, guarded: JWT_AUTH
 		do
 			create gate
-			gate.set_id_parameter_name ("slug")
+			gate.id_parameter_name := "slug"
 			articles := gate <| articles_table
 
 			create auth.make (secret)
-			auth.set_bearer_prefix ("Token ")
+			auth.bearer_prefix := "Token "
 			guarded := auth <| articles
 
 				-- operationId: GetArticles (public)
