@@ -23,7 +23,8 @@ inherit
 
 	RESTLY_POSTABLE[RK, RV]
 		redefine
-			graph_dot_lines
+			graph_dot_lines,
+			extend_new
 		end
       
    RESTLY_COMPOSABLE[SK,SV]
@@ -136,6 +137,16 @@ feature -- Extension
 				if not extend_requests.has_key (a_request_id) then
 					extend_requests.extend (representation_key (l_back.extend_requests [a_request_id]), a_request_id)
 				end
+			end
+		end
+
+feature {NONE} -- Key minting
+
+	fresh_key (a_v: RV): RK
+			-- <Precursor>: never ours -- the store behind `back` mints.
+		do
+			check this_should_never_be_called: False then
+				Result := fresh_key (a_v)
 			end
 		end
 

@@ -34,24 +34,10 @@ feature -- REST verbs
 			Precursor (v, k)
 		end
 
-feature -- Extension
-
-	extend_new (a_v: JSON_OBJECT; a_request_id: HASHABLE)
-			-- <Precursor>
-		local
-			l_key: STRING
-		do
-			if not extend_requests.has_key (a_request_id) then
-				l_key := fresh_key
-				extend (a_v, l_key)
-				extend_requests.extend (l_key, a_request_id)
-			end
-		end
-
 feature {NONE} -- Key minting
 
-	fresh_key: STRING
-			-- Next unused key.
+	fresh_key (a_v: JSON_OBJECT): STRING
+			-- <Precursor>: next unused counter key; ignores `a_v`.
 			-- ponytail: O(n) probe from count+1; a counter attribute if stores grow large
 		local
 			i: INTEGER

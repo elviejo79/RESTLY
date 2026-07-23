@@ -92,12 +92,14 @@ feature -- Removal
 		do
 		end
 
-feature -- Extension
+feature {NONE} -- Key minting
 
-	extend_new (a_v: V; a_request_id: HASHABLE)
+	fresh_key (a_v: V): K
 			-- <Precursor>
 		do
-			check this_should_never_be_called: False end
+			check this_should_never_be_called: False then
+				Result := fresh_key (a_v)
+			end
 		end
 
 feature -- Update

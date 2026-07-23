@@ -13,6 +13,9 @@ class
 
 inherit
 	RESTLY_POSTABLE [INTEGER, V]
+		redefine
+			extend_new
+		end
 
 	RESTLY_SEARCHABLE [PS_CRITERION, INTEGER, V]
 
@@ -133,11 +136,19 @@ feature -- Extension
 		do
 			if not extend_requests.has_key (a_request_id) then
 				if not mints_ids then
-					a_v.set_id (highest_id + 1)
+					a_v.set_id (fresh_key (a_v))
 				end
 				insert (a_v)
 				extend_requests.extend (a_v.id, a_request_id)
 			end
+		end
+
+feature {NONE} -- Key minting
+
+	fresh_key (a_v: V): INTEGER
+			-- <Precursor>: one past the highest row id.
+		do
+			Result := highest_id + 1
 		end
 
 feature -- Listing

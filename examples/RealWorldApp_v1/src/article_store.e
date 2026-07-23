@@ -15,24 +15,10 @@ inherit
 create
 	make
 
-feature -- Extension
-
-	extend_new (a_v: JSON_OBJECT; a_request_id: HASHABLE)
-			-- <Precursor>
-		local
-			l_key: STRING
-		do
-			if not extend_requests.has_key (a_request_id) then
-				l_key := fresh_slug (a_v)
-				extend (a_v, l_key)
-				extend_requests.extend (l_key, a_request_id)
-			end
-		end
-
 feature {NONE} -- Key minting
 
-	fresh_slug (a_v: JSON_OBJECT): STRING
-			-- Slug from `a_v`'s "title", uniquified if taken.
+	fresh_key (a_v: JSON_OBJECT): STRING
+			-- <Precursor>: slug from `a_v`'s "title", uniquified if taken.
 		do
 			Result := slugify (title_of (a_v))
 			from
