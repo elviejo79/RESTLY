@@ -11,7 +11,7 @@ deferred class
 
 feature -- Access
 
-	id: K
+	id: K assign set_id
 			-- Identity key.
 		deferred
 		end

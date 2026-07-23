@@ -33,7 +33,7 @@ feature -- Initialization
 
 feature -- Access
 
-	id: INTEGER
+	id: INTEGER assign set_id
 			-- <Precursor>
 
 	title: STRING

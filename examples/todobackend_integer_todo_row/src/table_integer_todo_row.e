@@ -24,7 +24,7 @@ feature -- REST verbs
 			-- <Precursor>
 			-- Writes the minted key into the row's identity.
 		do
-			v.set_id (k)
+			v.id := k
 			Precursor (v, k)
 		end
 

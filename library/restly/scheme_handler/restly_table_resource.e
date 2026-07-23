@@ -86,7 +86,7 @@ feature -- REST verbs
 			l_cursor := l_query.new_cursor
 			if not l_cursor.after then
 				l_cursor.item.copy (v)
-				l_cursor.item.set_id (k)
+				l_cursor.item.id := k
 				l_transaction.update (l_cursor.item)
 			end
 			l_query.close
@@ -136,7 +136,7 @@ feature -- Extension
 		do
 			if not extend_requests.has_key (a_request_id) then
 				if not mints_ids then
-					a_v.set_id (fresh_key (a_v))
+					a_v.id := fresh_key (a_v)
 				end
 				insert (a_v)
 				extend_requests.extend (a_v.id, a_request_id)
