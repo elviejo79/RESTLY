@@ -31,7 +31,7 @@ feature -- REST verbs
 		require else
 			error_404: back.has_key (element_key (req))
 		do
-			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (back [element_key (req)])
+			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (element_representation (req, element_key (req)))
 		end
 
 	head (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -101,17 +101,32 @@ feature -- REST verbs
 		end
 
 	items (req: WSF_REQUEST): WSF_JSON_RESPONSE
-			-- GET /resource — return all items as a JSON array.
+			-- GET /resource — all items as a JSON array, wrapped in
+			-- `collection_envelope` (plus a count field) if set.
 		local
 			l_array: JSON_ARRAY
+			l_cursor: TABLE_ITERATION_CURSOR [JSON_OBJECT, STRING]
+			l_wrap: JSON_OBJECT
 		do
 			create l_array.make_empty
 			if attached {RESTLY_LISTABLE [STRING, JSON_OBJECT]} back as l_list then
-				across l_list as ic loop
-					l_array.extend (ic)
+				from
+					l_cursor := l_list.new_cursor
+				until
+					l_cursor.after
+				loop
+					l_array.extend (represented (l_cursor.item, req, l_cursor.key))
+					l_cursor.forth
 				end
 			end
-			Result := {WSF_JSON_RESPONSE}.ok.with_body (l_array.representation)
+			if attached collection_envelope as l_name then
+				create l_wrap.make_with_capacity (2)
+				l_wrap.put (l_array, l_name)
+				l_wrap.put (create {JSON_NUMBER}.make_integer (l_array.count), l_name + "Count")
+				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (l_wrap)
+			else
+				Result := {WSF_JSON_RESPONSE}.ok.with_body (l_array.representation)
+			end
 		end
 
 	remove (req: WSF_REQUEST): WSF_JSON_RESPONSE
@@ -146,7 +161,7 @@ feature -- REST verbs
 				l_json.replace (l_patch [k], k)
 			end
 			back.put (l_json, l_key)
-			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (back [l_key])
+			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (element_representation (req, l_key))
 		end
 
 	preflight_ok (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
@@ -159,7 +174,7 @@ feature -- REST verbs
 feature {NONE} -- Helpers
 
 	parse_body (req: WSF_REQUEST): JSON_OBJECT
-			-- Parse JSON from request body.
+			-- Parse JSON from request body, unwrapping `element_envelope` if set.
 		local
 			l_input: STRING
 			l_parser: JSON_PARSER
@@ -173,12 +188,63 @@ feature {NONE} -- Helpers
 			else
 				create Result.make_with_capacity (0)
 			end
+			if attached element_envelope as l_name and then attached {JSON_OBJECT} Result [l_name] as l_inner then
+				Result := l_inner
+			end
+		end
+
+	represented (a_json: JSON_OBJECT; req: WSF_REQUEST; a_key: STRING): JSON_OBJECT
+			-- `a_json` plus the address-derived fields (`key_field`,
+			-- `url_field`) in a fresh object: injecting into `a_json`
+			-- itself would alias the fields back into the store.
+		local
+			l_string: JSON_STRING
+		do
+			if key_field = Void and url_field = Void then
+				Result := a_json
+			else
+				create Result.make_with_capacity (a_json.count + 2)
+				across a_json.current_keys as k loop
+					Result.put (a_json [k], k)
+				end
+				if attached key_field as l_field then
+					l_string := a_key
+					Result.replace (l_string, l_field)
+				end
+				if attached url_field as l_field then
+					l_string := element_url (req, a_key)
+					Result.replace (l_string, l_field)
+				end
+			end
+		end
+
+	element_representation (req: WSF_REQUEST; a_key: STRING): JSON_OBJECT
+			-- Representation of element `a_key`: stored value plus derived
+			-- fields, wrapped in `element_envelope` if set.
+		local
+			l_inner: JSON_OBJECT
+		do
+			l_inner := represented (back [a_key], req, a_key)
+			if attached element_envelope as l_name then
+				create Result.make_with_capacity (1)
+				Result.put (l_inner, l_name)
+			else
+				Result := l_inner
+			end
 		end
 
 	element_url (req: WSF_REQUEST; a_key: READABLE_STRING_8): STRING
 			-- Absolute URL of element `a_key' under the requested collection.
+			-- Element-addressed requests carry the key as the last URI
+			-- segment; strip it, or the key would be appended twice.
+		local
+			l_uri: STRING
 		do
-			Result := req.absolute_script_url (req.request_uri.to_string_8 + "/" + a_key)
+			l_uri := req.request_uri.to_string_8
+			if attached req.path_parameter (id_parameter_name) then
+				l_uri.keep_head (l_uri.last_index_of ('/', l_uri.count) - 1)
+			end
+			Result := req.absolute_script_url (l_uri + "/" + a_key)
 		end
 
 feature -- Helpers
@@ -194,6 +260,47 @@ feature -- Helpers
 			-- Extract element keys from URI-template hole `a_name`.
 		do
 			id_parameter_name := a_name
+		end
+
+	element_envelope: detachable STRING assign set_element_envelope
+			-- Wire envelope around one element (e.g. "article"):
+			-- unwrapped from request bodies, wrapped around element
+			-- responses. Void = flat bodies.
+
+	set_element_envelope (a_name: detachable STRING)
+			-- Envelope element bodies under `a_name`.
+		do
+			element_envelope := a_name
+		end
+
+	collection_envelope: detachable STRING assign set_collection_envelope
+			-- Wire envelope around the collection (e.g. "articles"):
+			-- `items` answers {name: [...], nameCount: n}. Void = flat array.
+
+	set_collection_envelope (a_name: detachable STRING)
+			-- Envelope the collection under `a_name`.
+		do
+			collection_envelope := a_name
+		end
+
+	key_field: detachable STRING assign set_key_field
+			-- Field of element representations receiving the element key
+			-- (e.g. "slug"). Derived on the way out, never stored.
+
+	set_key_field (a_name: detachable STRING)
+			-- Echo the element key into field `a_name`.
+		do
+			key_field := a_name
+		end
+
+	url_field: detachable STRING assign set_url_field
+			-- Field of element representations receiving the element's
+			-- absolute URL. Derived on the way out, never stored.
+
+	set_url_field (a_name: detachable STRING)
+			-- Echo the element URL into field `a_name`.
+		do
+			url_field := a_name
 		end
 
 	element_key (req: WSF_REQUEST): STRING

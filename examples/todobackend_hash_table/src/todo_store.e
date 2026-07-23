@@ -1,7 +1,7 @@
 note
 	description: "[
-		Todo store: hash table with server-minted keys (POST)
-		and "url" field minting. PATCH merging happens in the gateway.
+		Todo store: hash table with server-minted keys (POST).
+		PATCH merging and "url" derivation happen in the gateway.
 	]"
 
 class
@@ -22,12 +22,8 @@ feature -- REST verbs
 
 	extend (v: JSON_OBJECT; k: STRING)
 			-- <Precursor>
-			-- Mints the element's "url" field before storing.
-		local
-			l_url: JSON_STRING
+			-- Defaults "completed" before storing.
 		do
-			l_url := Base_url + "/" + k
-			v.replace (l_url, "url")
 			if not v.has_key ("completed") then
 				v.put (create {JSON_BOOLEAN}.make (False), "completed")
 			end
@@ -51,11 +47,5 @@ feature {NONE} -- Key minting
 			end
 			Result := i.out
 		end
-
-feature -- Representation
-
-	Base_url: STRING = "http://localhost:8080/todos"
-			-- Collection url minted into each element's "url" field
-			-- (host and port must match {TODOBACKEND_SERVER}).
 
 end

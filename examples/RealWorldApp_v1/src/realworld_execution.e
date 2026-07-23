@@ -34,6 +34,9 @@ feature {NONE} -- Router
 		do
 			create gate
 			gate.id_parameter_name := "slug"
+			gate.element_envelope := "article"
+			gate.collection_envelope := "articles"
+			gate.key_field := "slug"
 			articles := gate <| articles_table
 
 			create auth.make (secret)
