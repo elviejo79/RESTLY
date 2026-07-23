@@ -1,0 +1,416 @@
+#+TITLE: ABEL User Manual
+#+SUBTITLE: Object-oriented persistence with schema evolution for Eiffel
+#+AUTHOR: Compiled from Marco Piccioni's thesis "OO Persistence with Evolution"
+#+OPTIONS: toc:3
+
+* Overview
+
+ABEL is an Eiffel persistence library that stores plain Eiffel objects in
+relational databases (SQLite, MySQL) or an in-memory store, without any
+persistence annotations in the domain classes. It uses reflection to
+decompose the object graph and reassemble it at retrieval.
+
+The framework described in the thesis has three parts:
+
+- ABEL :: the persistence library itself (81 classes, 11 clusters).
+- Escher :: an IDE tool (Eve/EiffelStudio research branch) that manages
+  class versioning and generates schema-evolution handlers.
+- Ebbro :: an object browser for inspecting stored objects.
+
+Only ABEL ships as a reusable library; this manual covers it.
+
+** Thesis names vs. shipped names
+
+The thesis names classes without a prefix. The shipped library prefixes
+everything with ~PS_~. Mapping for the classes you will actually touch:
+
+| Thesis name           | Shipped class                   |
+|-----------------------+---------------------------------|
+| REPOSITORY            | PS_REPOSITORY                   |
+| REPOSITORY_FACTORY    | PS_*_REPOSITORY_FACTORY (e.g. PS_SQLITE_REPOSITORY_FACTORY) |
+| RELATIONAL_REPOSITORY | PS_DEFAULT_REPOSITORY           |
+| CRUD_EXECUTOR         | (folded into repository/transaction API) |
+| QUERY [G]             | PS_QUERY [G]                    |
+| CRITERION             | PS_CRITERION                    |
+| CRITERION_FACTORY     | PS_CRITERION_FACTORY            |
+| TRANSACTION           | PS_TRANSACTION                  |
+| COLLECTION_HANDLER    | PS_COLLECTION_HANDLER           |
+| RELATIONAL_CONNECTOR  | PS_RELATIONAL_CONNECTOR         |
+
+~PS_ABEL_EXPORT~ is a shipped-library ancestor class that grants access to
+features with restricted export status (e.g. ~{PS_DEFAULT_REPOSITORY}.delete~,
+~{PS_TRANSACTION}.transaction~) — inherit it when you need those.
+
+* Core concepts
+
+** Plain domain classes
+
+Domain classes need *no* persistence annotations, no special ancestors, no
+mapping files. Any effective class with a default-creatable form works.
+Contracts and class invariants are kept and even *enforced at retrieval*
+(see [[*Invariant-safe retrieval]]).
+
+Practical requirements observed in use:
+
+- The class must expose ~default_create~ (ABEL creates an empty instance
+  reflectively, then fills the fields).
+- Basic types round-trip: numeric types, strings. BOOLEAN does *not*
+  round-trip reliably through the SQLite relational connector — use an
+  INTEGER 0/1 field instead.
+
+** Repository
+
+~REPOSITORY~ (deferred) is the boundary between the front-end API and the
+back ends. You obtain one from a factory:
+
+#+begin_src eiffel
+  local
+      factory: PS_SQLITE_REPOSITORY_FACTORY
+      repository: PS_REPOSITORY
+  do
+      create factory.make
+      factory.set_database ("my_data.db")   -- or ":memory:"
+      repository := factory.new_repository
+  end
+#+end_src
+
+The thesis MySQL form:
+
+#+begin_src eiffel
+  repository := factory.create_mysql_repository_with_default_host_port
+      ("dbname", "userid", "password")
+#+end_src
+
+** CRUD executor
+
+In the thesis API, a ~CRUD_EXECUTOR~ created with ~make (repository)~
+offers the four operations:
+
+- ~insert (object)~
+- ~update (object)~
+- ~delete (object)~
+- ~execute_query (query)~
+
+Every operation is implicitly wrapped in its own transaction unless you use
+the explicit ~*_within_transaction~ variants (see [[*Transactions]]).
+
+* Queries and criteria
+
+** Basic query
+
+~QUERY [G]~ is deferred, with two effective descendants:
+
+- ~OBJECT_QUERY [G]~ — retrieves full objects of type G.
+- ~TUPLE_QUERY [G]~ — retrieves only selected attributes as tuples
+  (cheaper when you do not need the whole object).
+
+Standard recipe (thesis Listing 5.2 style):
+
+#+begin_src eiffel
+  local
+      query: PS_QUERY [PERSON]
+  do
+      create query.make                     -- all objects of PERSON
+      -- or: create query.make_with_criterion (crit)
+      executor.execute_query (query)        -- COMMAND: fills the query
+      across query as qr loop
+          print (qr.item.name)
+      end
+      query.reset                           -- required before reuse
+  end
+#+end_src
+
+Notes:
+
+- Command–query separation: ~execute_query~ is a *command* that
+  side-effects its argument; the results are then read from the query
+  object itself.
+- ~QUERY~ inherits ~ITERABLE~, so ~across~ works directly; it also exposes
+  ~result_cursor: RESULT_SET [G]~ for manual iteration.
+- ~set_criterion~ can be used instead of the creation-time criterion.
+
+** Criteria
+
+~CRITERION~ is deferred with two flavors, both built through
+~CRITERION_FACTORY~ (feature ~criterion_factory: PS_CRITERION_FACTORY~ in
+client code):
+
+- Predefined criteria :: string triplets ~[attribute, operator, value]~.
+- Agent criteria :: wrap any BOOLEAN function of the object.
+
+Criteria compose with the logical operators ~and~, ~or~, ~not~:
+
+#+begin_src eiffel
+  Result := crit_factory [[ "name", "=", "Poldo" ]]
+      and not crit_factory [[ agent age_more_than (?, 40) ]]
+#+end_src
+
+Predefined criteria can be pushed down to SQL; agent criteria are
+evaluated in Eiffel after retrieval, so prefer predefined ones for large
+tables.
+
+* Transactions
+
+Every CRUD operation runs in an implicit transaction by default. For
+multi-operation atomicity, use the explicit variants, all taking a
+~TRANSACTION~:
+
+- ~insert_within_transaction (object, transaction)~
+- ~update_within_transaction (object, transaction)~
+- ~delete_within_transaction (object, transaction)~
+- ~execute_query_within_transaction (query, transaction)~
+
+~TRANSACTION~ offers ~commit~ and ~rollback~.
+
+** Isolation levels
+
+~TRANSACTION_ISOLATION_LEVEL~ defines the four ANSI levels:
+Read Uncommitted, Read Committed, Repeatable Read, Serializable.
+The default is the backend's default (typically Serializable for SQLite).
+
+** Error handling
+
+- Irrecoverable errors :: automatic rollback, then an exception is raised.
+- Recoverable errors :: (e.g. a transaction conflict) are retried
+  automatically; no exception reaches the client.
+
+Error class hierarchy (all under ~ERROR~):
+
+- ~CONNECTION_ERROR~
+- ~TRANSACTION_CONFLICT~
+- ~VERSION_MISMATCH~
+- ~INTERNAL_ERROR~
+- ~GENERAL_ERROR~
+- ~ACCESS_RIGHT_VIOLATION~
+
+An ~ERROR_VISITOR~ lets you handle each error kind without type tests.
+
+* Object graph traversal and depths
+
+When you insert/update/delete/query an object, ABEL walks its object
+graph. How far it walks is controlled by ~OBJECT_GRAPH_SETTINGS~ with four
+independent depths:
+
+| Operation | Setting        | Default                     |
+|-----------+----------------+-----------------------------|
+| insert    | ~insert_depth~ | ~Object_graph_depth_infinite~ |
+| query     | ~query_depth~  | ~Object_graph_depth_infinite~ |
+| update    | ~update_depth~ | 1                           |
+| delete    | ~delete_depth~ | 1                           |
+
+Depth semantics:
+
+- Depth 1 :: basic types only (numeric, boolean, string attributes).
+- Depth 2 :: basic types plus directly referenced objects.
+- Infinite :: the whole reachable graph.
+- Rule: an object is considered iff ~level (object) < depth~.
+  References beyond the depth come back as ~Void~ on retrieval —
+  make sure your class invariants tolerate that, or query deep enough.
+
+Override per repository via ~REPOSITORY.default_object_graph_settings~.
+
+Related switches:
+
+- ~is_update_during_insert_enabled~ (default: no)
+- ~is_insert_during_update_enabled~ (default: yes)
+- ~custom_update_depth_during_insert~, ~custom_insert_depth_during_update~
+
+* Architecture (what happens under the hood)
+
+** ORM decomposition
+
+~RELATIONAL_REPOSITORY~ decomposes each object graph into parts:
+
+#+begin_example
+  OBJECT_GRAPH_PART
+  ├── OBJECT_GRAPH_ROOT
+  ├── SIMPLE_PART
+  │   └── BASIC_ATTRIBUTE_PART
+  └── COMPLEX_PART
+      ├── SINGLE_OBJECT_PART
+      └── COLLECTION_PART
+          ├── OBJECT_COLLECTION_PART
+          └── RELATIONAL_COLLECTION_PART
+#+end_example
+
+Insert pipeline: ~OBJECT_GRAPH_BUILDER~ builds the parts →
+~WRITE_PLANNER~ totally orders them respecting dependencies →
+~WRITE_EXECUTOR~ walks the plan calling ~BACKEND.insert~ per part.
+Retrieval is coordinated by ~RETRIEVAL_MANAGER~.
+
+** Collections
+
+Two mapping strategies:
+
+- ~RELATIONAL_COLLECTION_PART~ :: classic relational layout — 1:M via a
+  foreign key in the item table, or M:N via an associative table. The ORM
+  may add attributes (e.g. ~items_owned~) to make the FK side navigable.
+- ~OBJECT_COLLECTION_PART~ :: the collection object itself gets its own
+  table and primary key.
+
+To support a custom collection type, inherit
+~PS_COLLECTION_HANDLER [COLLECTION_TYPE -> ITERABLE [detachable ANY]]~ and
+implement ~is_relationally_mapped~, ~is_mapped_as_1_to_N~ and
+~build_relational_collection~.
+
+** Backend layer
+
+- ~SQL_DATABASE~ → ~MYSQL_DATABASE~, ~SQLITE_DATABASE~
+- ~SQL_CONNECTION~, ~SQL_ROW~
+- ~GENERIC_LAYOUT_SQL_STRINGS~ → ~MYSQL_STRINGS~, ~SQLITE_STRINGS~
+- ~GENERIC_LAYOUT_SQL_BACKEND~ — the heart of the ORM
+- ~METADATA_TABLES_MANAGER~ — bootstraps/maintains the meta-schema
+- ~OBJECT_IDENTIFICATION_MANAGER~ — assigns a repository-wide
+  ~object_identifier~ per object, held via weak references so identity is
+  stable without preventing garbage collection
+- ~KEY_POID_TABLE~ — maps ~object_identifier~ → database primary key
+
+** The generic layout schema
+
+The generic layout stores *any* object shape in three fixed meta-tables,
+bootstrapped automatically (no pre-built database file needed; ~:memory:~
+works):
+
+| Table     | Columns                          |
+|-----------+----------------------------------|
+| class     | classid, name                    |
+| attribute | attributeid, name, classid (FK)  |
+| value     | objectid, attributeid, value     |
+
+Consequences:
+
+- Adding/removing/renaming a class or attribute, or changing an
+  attribute's type, is a *row* operation — no DDL, no migration scripts.
+- No type registration is required before storing a type (in RESTLY this
+  is why ~manage~ is a no-op for the sqlite+graph backend).
+- The price is a join-heavy, EAV-style layout; it favors flexibility over
+  raw query speed.
+
+* Schema evolution
+
+** The model: schema modification operators (SMOs)
+
+Six primitive SMOs cover attribute-level change; any class change is a
+composition of them:
+
+1. attribute not changed
+2. attribute added
+3. attribute renamed
+4. attribute type changed
+5. attribute removed
+6. attribute made attached
+
+Detection works by comparing the ASTs of the old and new class versions.
+Add, remove, type-change and not-changed are detected with certainty;
+*rename is only a heuristic* (it looks like a remove + add with the same
+type), so the tool asks the developer to confirm renames.
+
+** Transformation functions
+
+For each evolved class C, an object transformer has the shape:
+
+#+begin_src eiffel
+  transform_v1_to_v2 (old_object: OLD_C): C
+      do
+          create Result.default_create
+          Result.name := <expression over old_object, defaults, ...>
+          ...
+      end
+#+end_src
+
+The thesis formalizes these as generation functions G/S with:
+
+- I :: default-value inputs (constants supplied for added attributes)
+- W :: warnings — placeholders that evaluate to a no-op but flag places
+  the developer should review
+
+Default type converters are applied automatically where types changed:
+INTEGER→STRING via ~out~, STRING→INTEGER via ~to_integer~; custom
+converters can be registered for other pairs.
+
+** Versioning and handlers (Escher workflow)
+
+Each versioned class carries a ~version: INTEGER~ feature. The IDE
+workflow:
+
+1. *Release* — snapshots the class, increments ~version~, copies the
+   project configuration into a ~release_N~ folder.
+2. *Create Handler* — pick a version pair (v_old, v_new); the tool
+   generates a ~C_SCHEMA_EVOLUTION_HANDLER~ containing the transformation
+   function skeleton (with W-warnings where it could not infer intent) and
+   registers it in the ~SCHEMA_EVOLUTION_PROJECT_MANAGER~. Handlers hold
+   their transformation functions per version pair in a hash table.
+3. *Release Handler* — freezes the handler alongside the class release.
+4. *Create Filter* — optionally choose which attributes persist at all.
+
+Both *forward* (old data, new code) and *backward* (new data, old code)
+transformations are supported.
+
+** Retrieval algorithm
+
+On retrieving an object of class C stored as version v_s while the program
+runs version v_c:
+
+1. If v_s = v_c → standard retrieval, done.
+2. Otherwise, look for a ~C_SCHEMA_EVOLUTION_HANDLER~:
+   - none exists → *exception* (no handler).
+   - handler exists but has no transformation function for (v_s, v_c) →
+     *exception* "Incompatible versions".
+   - a needed attribute type converter is missing → *exception*.
+3. Otherwise ~perform_across_version_retrieval~: retrieve as v_s, apply
+   the transformation function, hand the resulting v_c object to the
+   client.
+
+** Invariant-safe retrieval
+
+After transformation, the *class invariant of the current version* is
+checked. Objects that violate it are rejected rather than delivered — a
+transformation cannot silently produce ill-formed objects.
+
+* Extension points
+
+- New relational database :: subclass four classes: ~X_DATABASE~,
+  ~X_STRINGS~, ~X_CONNECTION~, ~X_ROW~.
+- Custom mapping to an existing schema :: inherit ~BACKEND~ plus the
+  collection handler(s) you need.
+- Non-relational store :: inherit ~REPOSITORY~ and ~BACKEND~.
+- ~IN_MEMORY_DATABASE~ :: ships with the library; useful for tests and
+  caching.
+- ~VERSION_HANDLER~ :: a ~BACKEND~ decorator that stamps each inserted
+  object with its class version and checks versions at retrieval — the
+  hook that makes schema evolution work.
+
+* Relation to Eiffel's native serialization
+
+Eiffel's built-in mechanism is ~MISMATCH_CORRECTOR~ / ~correct_mismatch~,
+which fires when a retrieved (SED-serialized) object's layout differs from
+the current class. ABEL's SMO/handler model is a structured, tool-supported
+replacement for hand-written ~correct_mismatch~ bodies. Independently,
+Eiffel's ~convert~ clauses provide language-level implicit conversion
+between types — RESTLY uses them for wire (JSON) conversion, not for
+persistence.
+
+* How RESTLY uses ABEL
+
+- ~RESTLY_DATABASE~ (deferred) holds ~repository: PS_REPOSITORY~ built
+  lazily with ~once ("OBJECT")~; subclasses provide the concrete factory.
+- ~RESTLY_DATABASE_SQLITE_GRAPH~ implements the ~sqlite+graph://~ scheme:
+  it parses the file name out of the URI, creates a
+  ~PS_SQLITE_REPOSITORY_FACTORY~, and calls ~set_database~. ABEL
+  bootstraps the ps_* meta-tables itself, so ~:memory:~ works and
+  ~manage~ is a no-op (the generic layout stores unregistered types).
+- ~RESTLY_TABLE_RESOURCE~ does the CRUD: ~PS_QUERY [V]~ with
+  ~PS_CRITERION~ / ~PS_CRITERION_FACTORY~ for reads, ~PS_TRANSACTION~ for
+  writes, and inherits ~PS_ABEL_EXPORT~ to reach restricted features
+  (~{PS_DEFAULT_REPOSITORY}.delete~, ~{PS_TRANSACTION}.transaction~).
+- Domain rows (e.g. ~TODO_ROW~) are plain classes with ~default_create~
+  and an INTEGER 0/1 field where a BOOLEAN would not round-trip through
+  SQLite. JSON conversion is handled entirely outside ABEL, by Eiffel
+  ~convert~ clauses plus a ~CONVERTER~ stage (~TODO_CODEC~).
+
+* Source
+
+Marco Piccioni, /Object-Oriented Persistence with Evolution/ (doctoral
+thesis). Chapters used: 1–3 (model), 5 (API and IDE workflow),
+Appendix B (ORM, backends, generic layout, transactions, extension
+points). Page offset in the PDF: PDF page ≈ thesis page + 18.
