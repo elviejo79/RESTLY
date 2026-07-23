@@ -183,9 +183,18 @@ feature {NONE} -- Helpers
 
 feature -- Helpers
 
-	id_parameter_name: STRING = "id"
+	id_parameter_name: STRING
 			-- Name of the URI-template hole for element keys
 			-- (RESTLY_ROUTES mounts elements at a_uri + "/{id}").
+		attribute
+			Result := "id"
+		end
+
+	set_id_parameter_name (a_name: STRING)
+			-- Extract element keys from URI-template hole `a_name`.
+		do
+			id_parameter_name := a_name
+		end
 
 	element_key (req: WSF_REQUEST): STRING
 			-- Element key addressed by `req' (URI template match).

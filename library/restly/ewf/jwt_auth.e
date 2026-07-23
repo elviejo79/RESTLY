@@ -45,7 +45,19 @@ feature -- Access
 			-- Pinned signature algorithm: trusting the token's own
 			-- header alg would accept unsigned ("none") tokens.
 
-	bearer_prefix: STRING = "Bearer "
+	bearer_prefix: STRING
+			-- Scheme prefix expected in the Authorization header.
+		attribute
+			Result := "Bearer "
+		end
+
+feature -- Element change
+
+	set_bearer_prefix (a_prefix: STRING)
+			-- Expect `a_prefix` (e.g. "Token ") before the JWT.
+		do
+			bearer_prefix := a_prefix
+		end
 
 feature -- Status report
 

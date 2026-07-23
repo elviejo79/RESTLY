@@ -19,6 +19,7 @@ feature {NONE} -- Initialization
 			profile: PROFILE
 			article: ARTICLE
 			comment: COMMENT
+			server: REALWORLD_SERVER
 		do
 			create user
 			create profile
@@ -33,6 +34,18 @@ feature {NONE} -- Initialization
 			end
 			smoke_check_jwt_auth
 			io.put_string ("RealWorld domain objects OK%N")
+			print_dev_token
+			create server.make
+		end
+
+	print_dev_token
+			-- Print a token curl can pass as: Authorization: Token <tok>
+		local
+			jws: JWS
+		do
+			create jws.make_with_json_payload ("{%"sub%":%"1%"}")
+			jws.set_algorithm_to_hs256
+			io.put_string ("dev token: " + jws.encoded_string ({REALWORLD_EXECUTION}.secret) + "%N")
 		end
 
 	smoke_check_jwt_auth
