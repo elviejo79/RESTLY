@@ -633,6 +633,48 @@ suite). OPTIONS is therefore mapped explicitly to
 =RESTLY_EWF_MOUNTING.preflight_ok=, which goes through the action
 handler and closes the connection like every other RESTLY response.
 
+*** Ruling: response as return value, not collecting parameter (2026-07-23)
+
+The question: the front layer (=CALL_RETURN_PROTOCOL=, spoken by
+=GATEWAY= and =JWT_AUTH=) has every verb /return/ a
+=WSF_RESPONSE_MESSAGE=. The older EWF-native alternative is the
+/Collecting Parameter/ pattern (Beck, Smalltalk Best Practice
+Patterns): =execute (req, res)= mutating the passed-in response,
+as =WSF_EXECUTION= does. Which is more RESTLY?
+
+Ruling: *return style stays*.
+
+1. /Table metaphor./ GET and HEAD are queries; a response as return
+   value honors =item alias "[]"=. A collecting parameter turns
+   even GET into a command.
+2. /Combinators compose values, not effects./
+   =Result := back [req]= chains freely, and a guard stage
+   substitutes its 401 /instead of/ delegating. A shared mutable
+   =res= threaded through the pipeline cannot be un-written; every
+   stage would have to trust everything upstream.
+3. /Symmetry with ~<|~./ Both sides of the gateway speak "key-ish
+   thing in, value-ish thing out" — one composition law.
+4. /Cost acknowledged, then repaid./ =extend (req): O= fused
+   command and report: 201 plus a body built by an internal
+   read-back (=back [l_new_key]=) — the gateway performing the
+   query on the client's behalf. Resolved the same day via
+   Post/Redirect/Get: =extend= now answers =303 See Other= +
+   =Location= and /no body/; the client's follow-up GET is the
+   query. The response degrades from a value to a location —
+   Weiher's polymorphic identifiers at the front door. Verified
+   empirically: jsdom's XHR follows the 303 transparently, npm
+   suite 16/16. The =WSF_JSON_RESPONSE= value objects were already
+   the step away from EWF's mutable channel; =CALL_RETURN_PROTOCOL=
+   only names the protocol they implied.
+
+Framing against the corpus: Weiher's /Gentle Tyranny/ critique of
+call/return as universal glue stands — RESTLY's answer to it is the
+storage protocol. =CALL_RETURN_PROTOCOL= is the /deliberate
+adapter/ at the EWF boundary, not the glue of the system; within
+that boundary layer, return style beats collecting parameter.
+Revisit only if a stage ever needs streaming/chunked responses,
+the one case where an accumulating parameter genuinely wins.
+
 *** Verb → required conformance (doubles as the 405 spec)
 
 | Route kind (feature)  | Verb       | requires                                 |

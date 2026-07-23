@@ -180,6 +180,16 @@ feature -- Factory: Success responses (2xx)
 			instance_free: class
 		end
 
+feature -- Factory: Redirections (3xx)
+
+	see_other: WSF_JSON_RESPONSE
+			-- 303: Post/Redirect/Get — pair with `with_location`.
+		do
+			create Result.make_with_status ({HTTP_STATUS_CODE}.see_other)
+		ensure
+			instance_free: class
+		end
+
 feature -- Factory: Server errors (5xx)
 
 	internal_server_error: WSF_JSON_RESPONSE

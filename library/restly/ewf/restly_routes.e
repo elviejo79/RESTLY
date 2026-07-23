@@ -24,7 +24,7 @@ feature {NONE} -- Initialization
 
 feature -- Access
 
-	item alias "[]" (a_uri: READABLE_STRING_8): GATEWAY assign put
+	item alias "[]" (a_uri: READABLE_STRING_8): CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE] assign put
 			-- Handler mounted at `a_uri`.
 		do
 			Result := table [a_uri.to_string_8]
@@ -32,7 +32,7 @@ feature -- Access
 
 feature -- Element change
 
-	put (a_handler: GATEWAY; a_uri: READABLE_STRING_8)
+	put (a_handler: CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE]; a_uri: READABLE_STRING_8)
 			-- Mount `a_handler` at collection `a_uri`
 			-- (element URI: `a_uri` + "/{id}").
 		local
@@ -61,7 +61,7 @@ feature {NONE} -- Implementation
 	execution: RESTLY_ROUTED_EXECUTION
 			-- Execution whose router receives the mappings.
 
-	table: V_HASH_TABLE [STRING, GATEWAY]
+	table: V_HASH_TABLE [STRING, CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE]]
 			-- Mounted handlers by collection URI.
 
 	methods_patch: WSF_REQUEST_METHODS
