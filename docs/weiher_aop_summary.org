@@ -1,0 +1,1950 @@
+#+TITLE: Architecture-Oriented Programming: The Weiher Corpus
+#+SUBTITLE: A consolidated technical summary of Polymorphic Identifiers (DLS '13), Storage Combinators (Onward! '19), Gentle Tyranny (Programming '20), and Beyond Procedure Calls (Onward! '24)
+#+AUTHOR: Prepared for the RESTLY thesis project
+#+DATE: 2026-07-23
+#+OPTIONS: toc:3 num:t
+#+TODO: GAP OPEN CONFIRM | SETTLED REJECTED
+
+* How to read this document
+
+This is a synthesis, not four abstracts stapled together. The four papers
+were published over eleven years and the vocabulary, the framing, and even
+the name of the language changed along the way. Where the papers disagree,
+this document follows the *most recent* formulation (Onward! '24), and every
+such resolution is marked explicitly with a =CONFLICT= block so you can
+trace what was overridden and why.
+
+Explanations follow the ADEPT sequence wherever a concept is introduced:
+**A**nalogy first, then a **D**iagram, then a concrete **E**xample, then a
+**P**lain-English restatement, and only then the **T**echnical definition.
+The papers themselves mostly run this order backwards — definition first,
+motivation later — which is exactly why re-reading them cold is hard.
+Code listings and diagrams are reproduced from the papers (diagrams
+redrawn as ASCII with figure references); the connecting prose is new.
+
+The reading order below is *conceptual*, not chronological:
+
+| Part | Paper                         | Year | Role in the corpus                          |
+|------+-------------------------------+------+---------------------------------------------|
+|    1 | Gentle Tyranny                | 2020 | The problem: why call/return is not enough  |
+|    2 | Polymorphic Identifiers       | 2013 | The naming half: URIs as identifiers        |
+|    3 | Storage Combinators           | 2019 | The data-access half: composable stores     |
+|    4 | Beyond Procedure Calls        | 2024 | The unification: connectors as metaclasses  |
+|    5 | Consolidated model + conflicts| —    | One coherent AOP picture, 2024-normative    |
+|    6 | RESTLY anchor points          | —    | What each paper obligates the thesis to do  |
+
+One terminological ruling up front, applied throughout:
+
+#+BEGIN_QUOTE
+CONFLICT (resolved, favoring 2024): The language is called
+*Objective-Smalltalk* in the 2013 and 2020 papers and *Objective-S* in the
+2024 paper. They are the same artifact. This document says Objective-S
+everywhere except in direct quotations. Likewise "scheme-handler" (2013)
+and "store bound to a scheme" (2019/2024) name the same mechanism; this
+document uses the 2019+ store vocabulary and treats "scheme handler" as
+the *factory/binding* role only — which is also the RESTLY
+=restly_schemes= ruling.
+#+END_QUOTE
+
+* Part 0 — The Big Idea in one page
+
+** Analogy
+
+A city does not run on one kind of connection. It has roads, water pipes,
+power lines, mail, and radio. Each is optimized for what it carries, and
+nobody proposes delivering water by mail truck. Mainstream programming
+languages are cities with only roads: the procedure call. Everything else —
+storage, streams, events, constraints — must be delivered by truck, i.e.,
+simulated with procedure calls, and the simulation code (the "glue") ends
+up dominating and obscuring the system.
+
+** Diagram
+
+The one picture that organizes all four papers (Beyond Procedure Calls,
+Figure 1):
+
+#+BEGIN_EXAMPLE
+  Program A   ──── HTTP ────   Program B
+  Object  A   ─── Message ───  Object  B
+  Filter  A   ──── Pipe ─────  Filter  B
+  Procedure A ──── Call ─────  Procedure B
+  ─────────────────────────────────────────
+  Component A ── CONNECTOR ──  Component B     (the generalization)
+#+END_EXAMPLE
+
+Boxes are *components* (loci of computation and storage). Arrows are
+*connectors* (the glue that mediates communication). Architecture is
+determined by the connectors, not the boxes.
+
+** Example
+
+The same working system, expressed three ways (all from the papers):
+
+#+BEGIN_SRC smalltalk
+"Serve every file in $HOME over HTTP on port 8080 — SC Fig. 25"
+server := ref:file:{env:HOME} -> scheme:file -> SchemeHTTPServer port:8080.
+server start.
+
+"Say Hello World to the web — BPC Listing 44"
+#HTTPServer{ port: 8081 } → #MPWDictStore{ hello: 'World' }.
+
+"Keep one directory mirrored into another, forever — BPC Listing 41"
+target |= source.
+#+END_SRC
+
+No callbacks, no framework annotations, no route tables. The program text
+*is* the architecture diagram, read left to right.
+
+** Plain English
+
+Weiher's program across the four papers is a single claim unfolding:
+
+1. /2013:/ Names should be polymorphic, not just operations. An identifier
+   that looks like a URI can point to a variable, a file, or a web
+   resource, and clients cannot tell the difference.
+2. /2019:/ Once names and a four-verb storage interface are separated,
+   you can build *generic intermediaries* — caches, loggers, mappers —
+   that snap together like HTTP proxies, but in-process and at
+   procedure-call speed.
+3. /2020:/ This is not a storage trick. It is one instance of a general
+   disease: call/return is our only abstraction mechanism, and most modern
+   systems (UIs, sync, persistence, pipelines) are not call/return-shaped.
+4. /2024:/ Therefore: take the connector taxonomy from software
+   architecture research, make *each connector type polymorphic* via a
+   metaobject protocol, give the frequent ones surface syntax, and let one
+   designator (=→=) connect anything to anything compatible. That is
+   Architecture-Oriented Programming.
+
+** Technical definition
+
+*Architecture-Oriented Programming (AOP, Weiher's sense — not
+aspect-oriented programming):* a programming model in which the connector
+types identified by software-architecture research (procedure call, data
+access, stream, event, distributor/naming, linkage, adaptor, arbitrator)
+are first-class, *polymorphic* language concepts backed by a metaobject
+protocol, so that architectural patterns are expressed directly in the
+implementation rather than encoded indirectly through procedural glue or
+maintained in a separate architectural description. A language is
+/architecturally polymorphic/ with respect to a connector type if it can
+directly express several (ideally all) variants of that type behind one
+surface syntax; mainstream languages are /architecturally monomorphic/ —
+one variant per supported type, usually just synchronous local calls and
+direct variable access.
+
+* Part 1 — The Gentle Tyranny of call/return (Programming '20)
+
+This is the manifesto paper. It supplies the *why* for everything else, so
+even though it postdates Storage Combinators, read it first.
+
+** Analogy
+
+Call/return is a tyranny that rules /gently/: it never forbids you from
+building a UI binding, a cache, or a pipeline. It just makes every one of
+them a simulation — close enough to the real thing that pointing out the
+difference feels like splitting hairs, costly enough that the glue
+eventually swallows the program. A tyrant who lets you do anything, as
+long as you do it his way, is still a tyrant.
+
+** The core observation
+
+All three mainstream "paradigms" are the same connector wearing different
+hats (Gentle Tyranny, Table 1):
+
+| Paradigm        | Syntax  | Side effects            |
+|-----------------+---------+-------------------------|
+| Imperative      | =f(x)=  | discouraged             |
+| Functional      | =f(x)=  | disallowed              |
+| Object-oriented | =x.f()= | discouraged / contained |
+
+All are mechanisms for /computing a result and terminating/. But — citing
+Feynman ("computers... primarily are filing systems"), Guy Steele
+("Ongoing behavior, not completion, is now of primary interest"), and
+Black's Infopipes ("information exchange has replaced computation") — most
+modern programs are about *storage, communication, and ongoing
+relationships*, with computation incidental. Using the computation
+mechanism as the sole abstraction mechanism produces unresolvable
+architectural mismatch. Wheeler saw the dual role of subroutines in 1952:
+evaluation of functions vs. organization of processes. The second use is
+the strained one.
+
+** Example — the temperature converter, death by a thousand setters
+
+The paper's running example: a Celsius/Fahrenheit converter with UI and
+persistence. In call/return style (Objective-S syntax), the *model* is
+four clean methods. Then reality arrives:
+
+Connecting the UI forces the setters to know about text fields
+(GT Fig. 3, abridged):
+
+#+BEGIN_SRC smalltalk
+- f:degreesF {
+    self c:(degreesF - 32) / 1.8.
+    ivar:ui/celsiusTextField/intValue := self c.
+}
+- c:newValue {
+    ivar:c := newValue.
+    ivar:ui/fahrenheitTextField/intValue := self f.
+}
+#+END_SRC
+
+Avoiding a redundant UI update forces a =basicC:= / =c:= split
+(GT Fig. 4). Persistence adds a defaults write inside =basicC:=
+(GT Fig. 5/6). Adding Kelvin multiplies every setter's UI-update burden
+(GT Fig. 7) until the design collapses into a centralized =-updateUI=
+(GT Fig. 8) — which reintroduces the redundant updates the earlier
+contortions existed to avoid.
+
+The punchline: none of this complexity is in the domain. It is
+architectural embellishment — moving data between locations to keep
+model, UI, and persistence synchronized — expressed through methods that
+"perform an action and then terminate."
+
+** The same program under dataflow constraints
+
+With constraint connectors (=|== one-way, ==|== bidirectional), each
+requirement is *purely additive*. The complete application (GT Fig. 13):
+
+#+BEGIN_SRC smalltalk
+ivar:ui/celsiusTextField/intValue    =|= ivar:c.
+ivar:ui/fahrenheitTextField/intValue =|= ivar:f.
+ivar:ui/kelvinTextField/intValue     =|= ivar:k.
+
+ivar:f |= (9.0/5.0) * ivar:c + 32 .
+ivar:c |= (ivar:f - 32) * (5.0/9.0).
+ivar:k |= ivar:c + 273.15.
+ivar:c |= ivar:k - 273.15.
+
+ivar:c := defaults:celsius.
+defaults:celsius |= ivar:c.
+#+END_SRC
+
+The whole program is the concatenation of its increments; no earlier line
+was ever edited. Note that persistence became legal on the /left-hand
+side/ of a constraint only because =defaults:celsius= is a Polymorphic
+Identifier — a name, not a method pair. This is the load-bearing joint
+between the 2020 paper and the 2013 paper.
+
+The paper then abstracts the whole application into pseudo-architecture
+(GT Fig. 15 — pseudo-code, the grouping construct did not exist yet):
+
+#+BEGIN_EXAMPLE
+ui =|= memory-model.
+memory-model := persistence.
+persistence |= memory-model.
+#+END_EXAMPLE
+
+** Why bindings and Java Streams don't count
+
+Two demolitions worth keeping at hand for the thesis's related-work
+defenses:
+
+- /Cocoa bindings/ (GT Fig. 14): =[celsiusField bind:@"value"
+  toObject:model withKeyPath:@"celsius" options:nil]= *sets up* the
+  binding as a side effect; no line of code *is* the binding. Debuggers
+  have nothing to point at. Weiher connects this to Dijkstra's goto
+  argument: shorten the gap between the static program and the dynamic
+  process. Constraints are to callbacks what structured control flow was
+  to goto.
+- /Java Streams/ (GT Fig. 23): the fluent chain *looks* like a pipeline
+  but the chained calls construct filter objects; they process nothing.
+  The pipeline shape is simulated through an indirection layer, extending
+  the filter set is a framework-implementer task, and custom processing
+  gets trapped in anonymous lambdas instead of named, reusable
+  components. "The differences are not small, just subtle" — that is the
+  gentleness of the tyranny.
+
+** Technical takeaways
+
+- Thesis of the paper: neither extend nor replace call/return —
+  *generalize* it, the way general relativity contains Newtonian
+  mechanics as a special case.
+- The "connect and run" idiom =(stdin -> toupper -> rawstdout) run=
+  is proposed as the generalization of apply/eval.
+- Styles demonstrated: constraint connectors, in-process REST / storage
+  combinators, pipes and filters — each validated in real systems first
+  as frameworks, then linguistically integrated.
+
+#+BEGIN_QUOTE
+CONFLICT (resolved, favoring 2024): Gentle Tyranny presents the
+bidirectional connector ==|== as a peer primitive. Beyond Procedure Calls
+only commits to the one-way =|== and explicitly relegates
+update-graph/glitch-free constraints, multi-way constraints, and solvers
+to "more sophisticated mechanisms" that the building blocks /should/
+support — i.e., future work. Treat one-way =|== as the settled core and
+everything else as aspiration. (This matches the RESTLY REJECTED ruling on
+claiming glitch-freedom under SCOOP.)
+#+END_QUOTE
+
+* Part 2 — Polymorphic Identifiers (DLS '13)
+
+The oldest paper, and the foundation stone: it establishes the *naming
+connector*. Everything later depends on its central separation — the
+identifier names a location; the operation is specified elsewhere.
+
+** Analogy
+
+In OO, every drawer in every cabinet has its own custom key-and-motor
+pair: =name= / =setName:=, =age= / =setAge:=. If you want to add a
+security camera (logging), a copy of the cabinet in another building
+(caching), or move the cabinet to the cloud, you must re-machine every
+key. A URI, by contrast, is a *street address*: one universal addressing
+scheme, four universal operations (GET/PUT/PATCH/DELETE), and any courier,
+customs office, or forwarding service can handle any address without
+knowing what lives there.
+
+** The problem: the Uniform Access Principle unravels
+
+Meyer's UAP demands access to state be indistinguishable from access to
+computation. Languages honor it — but *only for one store*: instance
+variables. The paper's opening exhibit (PI Listing 1), retrieving "name"
+from five different stores in Objective-C:
+
+#+BEGIN_SRC objc
+name;                                              // local variable
+[person name];                                     // message
+[person objectForKey:@"name"];                     // dictionary
+[NSString stringWithContentsOfFile:@"name"];       // file
+[[NSData dataWithContentsOfURL:[NSURL URLWithString:
+    @"http://www.person.com/name"]] stringValue];  // web
+#+END_SRC
+
+Five stores, five incompatible syntaxes. The paper then proves by
+exhaustion (sections 2.1–2.3) that every conventional repair is bad:
+
+1. /Make objects dictionary-compatible/ (PI Listing 5): a hand-written
+   =objectForKey:= if-ladder per class — boilerplate, an order of
+   magnitude slower than native access, and it abandons the language's
+   own access syntax. Punishes object modeling.
+2. /Make dictionaries object-compatible/ (PI Listing 6): cover-method
+   pairs for *every attribute*. The storage concern smears across the
+   entire codebase.
+3. /forwardInvocation: trickery/ (PI Listing 7): string-mangles selector
+   names into keys at ~2 µs per access — three orders of magnitude slower
+   than a message send, and fragile.
+
+So practitioners choose option 4: live with non-uniform access. The root
+cause, stated precisely in §2.4: a message like =setName:= *fuses* the
+L-value (=name=) with the operation (=set=). Language UAP machinery
+un-fuses them only for instance-variable storage and direct access.
+
+** The solution: three parts
+
+#+BEGIN_EXAMPLE
+   identifier ──▶ scheme-handler ──▶ reference ──▶ L-value
+   (URI text)      (manages one         (Strachey        (the storage
+                    store; maps          Load-Update      location)
+                    names to refs)       Pair, reified)
+#+END_EXAMPLE
+
+1. *Polymorphic Identifiers* are URIs in the language: =scheme:path=.
+   Valid PIs (PI Listing 13):
+   #+BEGIN_SRC smalltalk
+   person
+   name
+   var:person/name
+   var:person/{attribute}
+   file://tmp/button.png
+   http://www.example.com/button.png
+   file:{env:HOME}/rfcs/{rfcName}
+   #+END_SRC
+   Note URI templates (={...}=) for parameterized identifiers, and =/= as
+   the path separator.
+2. *References* reify the Load-Update Pair for one L-value. The default
+   in-memory reference negotiates three access modes at *binding time* —
+   offset, message, keyed (PI Listing 14, abridged):
+   #+BEGIN_SRC objc
+   -value {
+       if ( offset >= 0 )       return ((id*)target)[offset];
+       else if ( getSelector )  return [target perform:getSelector];
+       else                     return [target objectForKey:attributeName];
+   }
+   #+END_SRC
+   Binding separated from evaluation is the performance trick: JIT-like
+   inlining without runtime code generation. References also carry
+   store-specific extras: assignment is delegated to the reference (so
+   file-to-file copy can become a symlink, web-to-file can stream),
+   references can list children (generic browsing/export).
+3. *Scheme-handlers* each manage one store and translate identifiers to
+   references. Schemes are late-bound through the =scheme:= meta-scheme:
+   #+BEGIN_SRC smalltalk
+   scheme:http := URLSchemeResolver new.
+   #+END_SRC
+   Crucially (RESTLY cares): a scheme names a /namespace partition/, not a
+   protocol and not a specific store — users can rebind =http:= to
+   anything.
+
+** Uniformity payoff
+
+#+BEGIN_SRC smalltalk
+name := var:person/name.       "object OR dictionary behind it — same code"
+var:person/name := newName.
+
+file:rfc1738 := http://datatracker.ietf.org/doc/rfc1738.   "download"
+#+END_SRC
+
+In-memory stores are schemes too: =ivar:=, =local:=, =thread:=,
+=global:=, =class:=, with the composite =var:= scheme doing prioritized
+sequential lookup — the ordinary identifier-resolution rules of a
+programming language, *reconstructed from user-level combinators*. The
+default scheme is bound to =var:=, so bare =greeting= is sugar for
+=var:greeting=.
+
+Composite scheme-handlers (§3.3.2) are storage combinators before the
+name existed: relative schemes (prefix mapping), filter schemes (data
+mapping — e.g., PNG bytes to image objects), sequential schemes, caching
+schemes. PI Figure 1, redrawn — an =http:= handler with two cache layers:
+
+#+BEGIN_EXAMPLE
+  Web Client
+      │
+      ▼
+  memcache (cache) ──▶ memory            [primitive]
+      │
+      ▼
+  filecache (cache) ──▶ tempdir (rel) ──▶ file   [primitive]
+      │
+      ▼
+  rawhttp (http)                          [primitive]
+#+END_EXAMPLE
+
+** Performance (PI Table 3, ns per access)
+
+| Storage    | Keyed | Message |  PI  | PI/Offset | forwardInvocation |
+|------------+-------+---------+------+-----------+-------------------|
+| Object     |  58.7 |    2.50 | 3.11 |      2.22 |              2.48 |
+| Dictionary |  24.2 |    26.2 | 25.9 |      29.3 |              2051 |
+
+PI/Offset *beats a native message send* (2.22 vs 2.50 ns) while remaining
+fully substitutable — the uniform-access tax is negative once binding is
+separated from evaluation. The only catastrophic row is the
+forwardInvocation hack the paper exists to kill.
+
+** Technical takeaways
+
+- The UAP is achievable for arbitrary stores, parameterized access, and
+  external resources — but only by making /identifiers/ polymorphic, not
+  by making more things look like messages.
+- Self/Newspeak took the opposite route (everything is a message) and hit
+  exactly the L-value problem: Load and Update become separate
+  identifiers related only by convention ("a complexity that bothers us
+  to this day" — Ungar & Smith).
+- REST inverts the OO assumption: on the Web, /identifiers/ are the
+  interface and messaging is the hidden implementation detail.
+
+#+BEGIN_QUOTE
+CONFLICT (resolved, favoring 2019/2024): the 2013 paper's vocabulary is
+"scheme-handler" and "composite scheme-handler". From 2019 on these are
+"store" and "storage combinator", and the reference protocol is fixed as
+{ pathComponents, path, scheme } (SC Fig. 2). Use the later vocabulary;
+reserve "scheme handler" for the binding of a store to a scheme name —
+i.e., the factory role, exactly as in the RESTLY =restly_schemes= ruling.
+#+END_QUOTE
+
+* Part 3 — Storage Combinators (Onward! '19)
+
+The central paper for RESTLY — the one whose open future-work sentence the
+thesis answers. It takes the naming machinery of Part 2 and builds the
+*data-access connector* into a plug-composable component system.
+
+** Analogy
+
+On the Web you can drop a Squid or Varnish cache between any client and
+any server without either of them knowing or caring — the cache speaks
+GET/PUT to both sides. In-process, caches exist everywhere (Apache
+modules, nginx modules, ORMs) and *none are interchangeable*, because
+each is welded to its host's procedural interface. Storage combinators
+are the answer to: what would in-process components have to look like for
+the Squid trick to work between ordinary objects?
+
+The theoretical warrant is Fielding's own evaluation of HTTP: requests
+directed to resources through a generic interface with standard semantics
+can be interpreted by intermediaries almost as well as by the origin —
+and, Weiher observes, *nothing in that sentence requires distribution*.
+
+** In-Process REST: location / operation / resolver
+
+The load-bearing separation (SC Table 1):
+
+|           | OO        | In-Process REST  | HTTP         |
+|-----------+-----------+------------------+--------------|
+| location  | (fused    | reference        | URI          |
+| operation |  into the | Storage protocol | HTTP methods |
+| resolver  |  message) | store            | HTTP server  |
+
+OO fuses location and operation into the message, "thereby limiting what
+an intermediary can do." Un-fuse them and generic intermediaries become
+possible.
+
+The three pieces:
+
+*Reference protocol* (SC Fig. 2):
+#+BEGIN_SRC smalltalk
+protocol Reference {
+    -<Array>pathComponents.
+    -<String>path.
+    -<String>scheme.
+}
+#+END_SRC
+
+*Storage protocol* (SC Fig. 3 — identical in GT Fig. 16 and BPC Listing 2;
+this is the most stable artifact in the corpus):
+#+BEGIN_SRC smalltalk
+protocol Storage {
+    -at:ref.
+    -<void>at:ref put:object.
+    -<void>at:ref merge:object
+    -<void>deleteAt:ref;
+}
+#+END_SRC
+
+*Store*: any object implementing Storage. "There is no requirement for a
+store to actually store data, it can just as easily compute it" — the
+HTTP-server property, in-process.
+
+The full operation-equivalence table (SC Table 2):
+
+| Store                   | HTTP              | L-Values      | Smalltalk dict      | Java In-Proc REST | Java accessor          |
+|-------------------------+-------------------+---------------+---------------------+-------------------+------------------------|
+| =store at:ref.=         | GET <uri>         | Load          | =dict at:key.=      | =nodeForUri(ref)= | =obj.getAttribute()=   |
+| =store at:ref put:d.=   | PUT <uri> <d>     | Update <d>    | =dict at:key put:d.=| —                 | =obj.setAttribute(d)=  |
+| =store at:ref merge:d.= | PATCH <uri> <d>   | —             | —                   | —                 | —                      |
+| =store deleteAt:ref.=   | DELETE <uri>      | —             | =dict deleteAt:key.=| —                 | —                      |
+
+Note what the table quietly asserts: the Storage protocol *is* the
+dictionary protocol plus merge — the HASH_TABLE analogy at the heart of
+RESTLY is Weiher's own Table 2, columns 1 and 4.
+
+The ancestral Java form from the BBC system (SC Fig. 1):
+#+BEGIN_SRC java
+public SiteMapNode nodeForUri(String path) {
+    return root().subobjectForPath(path);
+}
+// ...
+node = nodeForUri("football/premiereLeague");
+#+END_SRC
+
+** Using stores — four ways to say the same thing
+
+#+BEGIN_SRC smalltalk
+"Via API, dictionary-backed (SC Fig. 4)"
+store := DictStore store.
+ref := store referenceForPath:'hello'.
+store at:ref put:'world'.
+store at:ref.                       "→ 'world'"
+
+"A raw Smalltalk dictionary, for comparison (SC Fig. 5)"
+dict := Dictionary new.
+dict at:'hello' put:'world'.
+
+"Via API, disk-backed (SC Fig. 6) — one token changed"
+store := DiskStore store.
+
+"Via Polymorphic Identifiers (SC Figs. 7–8)"
+scheme:dict := DictStore store.
+dict:hello := 'world'.
+dict:hello.                         "→ 'world'"
+
+file:hello := 'world'.              "pre-bound file scheme"
+file:hello.
+#+END_SRC
+
+The dict/store similarity is deliberate: keep the ergonomics of "just use
+a dictionary" without marrying the implementation. This is exactly the
+Wunderlist origin story below. Pre-built simple stores: dict, disk,
+=http/https/ftp=, =env=, =var=, key-value and SQLite databases, windows,
+AppleScript.
+
+** The combinator concept
+
+#+BEGIN_EXAMPLE
+  a store:                 ┌───────┐
+             Storage ──▶  │ store │
+                          └───────┘
+
+  a storage combinator:    ┌────────────┐
+             Storage ──▶   │ combinator │ ──▶ Storage [1..n]
+                           └────────────┘
+#+END_EXAMPLE
+
+(SC Figs. 9–10.) A storage combinator *provides* the Storage protocol
+upward and *consumes* it downward. Because interface-in equals
+interface-out, they compose like Unix filters and are closed under
+composition. That symmetry is the entire mechanism.
+
+The catalog's class hierarchy (SC Fig. 13; combinators in brackets):
+
+#+BEGIN_EXAMPLE
+                          Store
+    ┌──────┬────────────────┼───────────────┬──────────┐
+   Dict  [PassThrough]   [Mapping]      [URL-Based]   Disk
+            │        ┌──────┼──────┬─────────┐
+        ┌───┴────┐ [Relative] [JSON]  [Sequential]
+   [Switching*][Logging]
+        └─[Cache]
+#+END_EXAMPLE
+(*Switching actually subclasses DictStore — see its listing.)
+
+** The combinator catalog, with implementations
+
+*** PassThrough — the identity (SC Fig. 11)
+#+BEGIN_SRC smalltalk
+class PassThrough : Store {
+    var source.
+    -at:ref                    { self source at:ref. }
+    -<void>at:ref put:object   { self source at:ref put:object. }
+    -<void>at:ref merge:object { self source at:ref merge:object. }
+    -<void>deleteAt:ref        { self source deleteAt:ref. }
+}
+#+END_SRC
+"Source" is defined from the GET point of view (SC footnote 5).
+Configuration and use (SC Fig. 12):
+#+BEGIN_SRC smalltalk
+scheme:p := PassThrough store.
+scheme:p setSource:DictStore store.
+p:hello := 'world'.
+p:hello.
+#+END_SRC
+
+*** MappingStore — the abstract map() (SC Fig. 14)
+
+Richer than a Unix filter because the store protocol is bidirectional:
+three overridable mappings — the ref going down, data coming up, data
+going down.
+
+#+BEGIN_SRC smalltalk
+class MappingStore : Store {
+    var source.
+    -mapRef:ref                  { ref. }
+    -mapRetrieved:object ref:ref { object. }
+    -mapToStore:object ref:ref   { object. }
+    -at:ref {
+        var retrieved := (self source at:(self mapRef:ref)).
+        self mapRetrieved:retrieved ref:ref.
+    }
+    -<void>at:ref put:object {
+        var toStore := self mapToStore:object ref:ref.
+        self source at:(self mapRef:ref) put:toStore.
+    }
+    -<void>at:ref merge:object {
+        var toMerge := self mapToStore:object ref:ref.
+        self source at:(self mapRef:ref) merge:toMerge.
+    }
+    -deleteAt:ref { self source deleteAt:(self mapRef:ref). }
+}
+#+END_SRC
+
+With identity mappings it degenerates to PassThrough. Mappings are
+overridable methods rather than function arguments *by design*: "to
+encourage named, reusable components" — the same anti-lambda stance as
+the Java Streams critique.
+
+*** RelativeStore — prefix mapping (SC Fig. 15)
+#+BEGIN_SRC smalltalk
+class RelativeStore : MappingStore {
+    var prefix.
+    -mapReference:ref { self prefix referenceByAppending: ref. }
+}
+#+END_SRC
+Decouples clients from absolute locations (document directories, service
+URLs, test servers). Setup (SC Fig. 16):
+#+BEGIN_SRC smalltalk
+homeRef := ref:file:{env:HOME}.
+scheme:home := RelativeStore storeWithRef:homeRef.
+scheme:home setSource: scheme:file.
+home:.bashrc            "→ the user's .bashrc"
+#+END_SRC
+
+*** Serialiser — data-only mapping (SC §3.1.4)
+A MappingStore that maps only data: external serialized form (JSON, XML)
+below, object graph above. No listing in the paper; the JSON store in the
+diagrams is the canonical instance.
+
+*** SwitchingStore — the mount table (SC Fig. 17)
+#+BEGIN_SRC smalltalk
+class SwitchingStore : DictStore {
+    -storeForRef:ref           { super at: ref firstPathComponent. }
+    -at:ref                    { (self storeForRef:ref) at:ref. }
+    -<void>at:ref put:object   { (self storeForRef:ref) at:ref put:object. }
+    -<void>at:ref merge:object { (self storeForRef:ref) at:ref merge:object. }
+    -deleteAt:ref              { (self storeForRef:ref) deleteAt:ref. }
+}
+#+END_SRC
+Routes by first path component, "comparable to a mount point." Note it
+*is a* DictStore — the routing table is itself a store.
+
+*** CachingStore — the workhorse (SC Fig. 18)
+#+BEGIN_SRC smalltalk
+class CachingStore : PassThrough {
+    var cache.
+    -copyFromSourceToCache:ref {
+        var result := super at:ref.
+        self cache at:ref put:result.
+        result.
+    }
+    -<void>at:ref {
+        var result := self cache at:ref.
+        result ifNil: { result := self copyFromSourceToCache:ref. }
+        result.
+    }
+    -<void>at:ref put:object {
+        self cache at:ref put:object.
+        super at:ref put:object.
+    }
+    -<void>at:ref merge:object {
+        self copyFromSourceToCache:ref.
+        var merged := self cache at:ref merge:object.
+        self source at:ref put:merged.
+    }
+    -<void>deleteAt:ref {
+        self cache deleteAt:ref.
+        super deleteAt:ref.
+    }
+    -<void>invalidate:ref { self cache deleteAt:ref. }
+}
+#+END_SRC
+
+Read-through on GET; write-through on PUT; explicit =invalidate:= instead
+of automatic invalidation. Read the merge path carefully — it is the
+standing RESTLY overclaim correction in the flesh: *refresh the cache
+from the authoritative source first*, merge in the cache, then PUT the
+merged result to the source. Merge never trusts a possibly-stale cache
+entry.
+
+*** LoggingStore + filters — the adapter to the stream world (SC Fig. 19)
+#+BEGIN_SRC smalltalk
+class LoggingStore : PassThrough {
+    var log.
+    -<void>at:ref put:object {
+        super at:ref put:object.
+        self log write:(RESTOperation verb:'PUT' reference:ref).
+    }
+    -<void>at:ref merge:object {
+        super at:ref merge:object.
+        self log write:(RESTOperation verb:'MERGE' reference:ref).
+    }
+    -<void>deleteAt:ref {
+        super deleteAt:ref.
+        self log write:(RESTOperation verb:'DELETE' reference:ref).
+    }
+}
+#+END_SRC
+
+Passes everything through unchanged; additionally writes a
+=RESTOperation= (verb + reference, *no data*) to its log. Only writes are
+logged. The log target is anything implementing =-write:= — a *filter*.
+This is the single sanctioned junction between the store world and the
+stream world (the RESTLY "stores are not streams" ruling cites exactly
+this seam). Because notifications carry refs, not pointers, the data need
+not even exist in memory (deletions).
+
+Configuration (SC Fig. 20):
+#+BEGIN_SRC smalltalk
+scheme:p := LoggingStore store.
+scheme:p setSource:DictStore store.
+scheme:p setLog: stderr.
+p:hello := 'world'.        "→ 'PUT hello' on stderr"
+#+END_SRC
+
+Two ready-made filters:
+- *StoreNotifications* (SC Fig. 21): turns RESTOperations into
+  NSNotificationCenter MVC change notifications.
+- *Copier* (SC Fig. 22): one-way store synchronization —
+  #+BEGIN_SRC smalltalk
+  class Copier {
+      var source. var target.
+      -<void>write:restOperation {
+          restOperation verb = 'PUT' ifTrue:{
+              var ref := restOperation reference.
+              target at:ref put:(source at:ref).
+          }
+          restOperation verb = 'DELETE' ifTrue:{ target deleteAt:ref. }
+      }
+  }
+  #+END_SRC
+  This is the engine of Constraint Connectors: dataflow constraints that
+  work over *arbitrary* stores.
+
+** Composition
+
+*** Three equivalent syntaxes
+Procedural configuration hides the static architecture in dynamic
+execution order. Two declarative remedies (SC Figs. 23–24):
+
+#+BEGIN_SRC smalltalk
+"Array convenience — any language with array literals"
+homeRef := ref:file:{env:HOME}.
+scheme:home := #Store( RelativeStore storeWithRef:homeRef , scheme:file ).
+
+"Arrow connection — Objective-S only"
+scheme:home := ref:file:{env:HOME} -> scheme:file.
+home:.bashrc
+#+END_SRC
+
+Class names in a composition auto-instantiate; refs auto-convert to
+stores as part of connection ("component adaptation").
+
+*** HTTP server stack (SC Figs. 25–27)
+#+BEGIN_SRC smalltalk
+server := ref:file:{env:HOME} -> scheme:file -> SchemeHTTPServer port:8080.
+server start.
+
+"Too slow? Insert a cache — nothing else changes:"
+server := ref:file:{env:HOME} -> CachingStore -> SchemeHTTPServer port:8080.
+#+END_SRC
+
+SchemeHTTPServer maps inbound HTTP verbs to the Storage protocol as
+trivially as possible (Table 2 is the mapping). Diagram (SC Fig. 27):
+
+#+BEGIN_EXAMPLE
+ HTTP-Server ──▶ CachingStore ──cache──▶ DictStore
+  Port:8081          │
+                   source
+                     ▼
+               Relative: ~/  ──▶ DiskStore
+#+END_EXAMPLE
+
+These diagrams have a 1:1 correspondence to the code, are *generated at
+run time* from the live object graph (graphViz: method), and were used to
+produce several figures in the paper itself — a debugging aid promoted to
+documentation.
+
+*** HTTP client stacks (SC Figs. 28–29)
+#+BEGIN_EXAMPLE
+ client ──▶ CachingStore ──cache──▶ DictStore          (memory only)
+                │source
+                ▼
+              rawhttp
+
+ client ──▶ CachingStore1 ──cache──▶ DictStore         (memory + disk)
+                │source
+                ▼
+            CachingStore2 ──cache──▶ RelativeStore(tmp) ──▶ DiskStore
+                │source
+                ▼
+              rawhttp
+#+END_EXAMPLE
+
+Reads cascade memory → disk → network. The paper sketches the next
+refinement: serialisers selected by a MIME-type SwitchingStore, memory
+cache moved above them to cache native objects rather than bytes.
+
+*** The storage stack (SC Fig. 30) — the canonical picture
+#+BEGIN_EXAMPLE
+ client ──▶ CachingStore ──cache──▶ DictStore (memory)
+                │source
+                ▼
+              JSON ──▶ Disk
+#+END_EXAMPLE
+Memory as cache-of-disk, serialisation in the seam. This exact stack
+recurs in Wunderlist, To-Do, and both later papers.
+
+*** The asynchronous writer (SC Fig. 31) — composition earns its keep
+#+BEGIN_EXAMPLE
+ client ──▶ CachingStore ──cache──▶ Memory ◀──source── Copier
+                │source(writes)        (reads)            │target
+                ▼                                         ▼
+             Logger ──refs──▶ Queue ──refs──▶ (Copier) JSON ──▶ Disk
+#+END_EXAMPLE
+
+Synchronous disk writes throttle the Fig. 30 stack. Fix: replace the
+write path with Logger → async Queue → Copier; the Copier pulls the
+*current* value from the memory store and pushes it through JSON to disk.
+The queue decouples write latency and *coalesces* writes (the copier
+always reads the freshest value, so duplicate queued refs collapse).
+
+Two facts worth quoting in any composability argument:
+- The first implementation was a single hand-written store — "very
+  complex and error-prone." The compositional version was simpler,
+  smaller, and *worked out of the box* from pre-tested parts.
+- Semantics shift subtly: while writes are outstanding, the cache entry
+  *is the source of truth*, not a discardable copy. Composition does not
+  absolve you from reasoning about the composite's invariants.
+
+** Experience
+
+- *BBC SportStats v2* (In-Process REST's birthplace): a distributed
+  system of 100+ processes on a dozen machines became one Java process.
+  Early SwitchingStore mounted per-sport sites under one tree; early
+  mapping stores translated to HTML/WAP/Ceefax. Tree storage replaced a
+  relational DB + procedural mapping rules.
+- *Wunderlist 3* (iOS/macOS): replaced a CoreData ORM that was the
+  chronic crash/performance source. Started as "simplest thing that could
+  possibly work" — nested dictionaries — *lifted to the Storage
+  interface* on day one, which later allowed growth to the Fig. 30 stack
+  and then the production architecture (SC Fig. 32):
+  #+BEGIN_EXAMPLE
+  core ──▶ caching store ──cache──▶ memory store
+               │source
+               ▼
+           switcher (by object type)
+             ├─sensitive──▶ keychain
+             └───────────▶ JSON ──▶ disk store
+  #+END_EXAMPLE
+  Tests use =core ──▶ memory store= (SC Fig. 33): *no mocks* — a smaller
+  configuration of the same production parts. Fast, no global state
+  touched, no test-only code to falsify results.
+- *Microsoft To-Do* (same team): scope expanded to domain logic and UI —
+  the sidebar is *generated by a mapping store*. Production hierarchy
+  (SC Fig. 34, abridged): core → switcher1 fanning to {suggestions,
+  sidebar, day, search, detail, user-store} plus a UI-notifications
+  filter; user-store → id-redirector (local ids ↔ server ids) →
+  authentication frameworks → CascadingRemoveStore (delete associated
+  data) → caching store → JSON → disk.
+- *HPI / Lively*: a Lively performance bug fixed by plugging in a
+  CachingStore "without altering any other code."
+- *Miller-column file browser* (SC Figs. 35–37): NSBrowser's per-row API
+  × DiskStore's whole-directory reads = quadratic lag; inserting the same
+  unmodified CachingStore fixed it:
+  #+BEGIN_SRC smalltalk
+  fb setStore: (MPWCachingStore storeWithSource: MPWDiskStore store
+                                cache: MPWDictStore store).
+  #+END_SRC
+
+** Evaluation numbers
+
+- *Reliability*: BBC production outages down ~50×  (partial failure
+  modes of distribution simply removed — the Waldo argument run in
+  reverse). Wunderlist 3.0 crashes down 10× vs 2.x, on a .0 release.
+- *Performance* ("hello world" request throughput, SC Fig. 38, log
+  scale): Sinatra 938 r/s, Flask 1 523 r/s, Fastify 58 120 r/s, storage
+  combinators over HTTP 63 735 r/s, storage combinators *in-process*
+  ~49 000 000 r/s — three orders of magnitude above the fastest HTTP
+  variant. BBC production: ~100× improvement.
+- *Productivity*: BBC code size ÷4 while *adding* two output media.
+  To-Do developer report: unified layer interface ≈ "infinitely
+  extensible" with minimal glue; combinators toggled on/off as feature
+  flags enabling frequent merges; estimated a Wunderlist rewrite at
+  50–60% of the code (parts achieved <50%). Reported downsides, verbatim
+  concerns: dataflow paths not determinable before runtime (the object
+  graph must be kept "before their eyes"), and debugging means stepping
+  through the whole transformation path.
+- *Size*: the Objective-C implementation is <1 KLOC including unit
+  tests; many single stores <50 LOC with tests.
+
+** Discussion: inverting OO
+
+Kay's Smalltalk was a scaled-*down* network of computers exchanging
+messages — but that network was notional. The real planet-scale network
+chose REST: names + a small verb set with state-based semantics. REST
+demonstrates you can hide state *and computation* behind a
+state-oriented interface, inverting the OO doctrine that interfaces must
+be procedural. And since storage, not computation, has driven workloads
+for a decade+, forcing recursive decomposition along procedural lines is
+itself an architectural mismatch. Brooks, 1975: show me your tables and
+I won't usually need your flowchart.
+
+Section 7.2 then *names the field* — and immediately bounds it: storage-
+oriented composition is powerful, "one should refrain" from crowning it
+an all-encompassing ontology like OO. Citing Hughes: modularity is
+bounded by the kinds of glue available; we need *many kinds of
+connectors*. That sentence is the bridge to the 2024 paper.
+
+** Related-work boundary stakes (each one a RESTLY fence post)
+
+- /Genesis/: composes sub-store-granularity parts into one store; no
+  symmetric store-interface composition.
+- /Stackable filesystems, FUSE/: kernel-mediated, global, privileged,
+  byte-oriented (forces serialisation); combinators are in-process,
+  per-program, object-carrying. MPWFoundation ships a FUSE adapter the
+  other direction.
+- /Plan 9/: per-process hierarchical namespaces over diverse resources —
+  closest OS-level relative — but server processes/kernel transitions and
+  byte-oriented APIs.
+- /HTTP middleware/: in-process, stackable, request-modifying — but tied
+  to a specific HTTP server and to HTTP itself. A "rich source of
+  inspiration" for future combinators.
+- /RInK paper (Adya et al.)/: independent evidence that remote key-value
+  stores should move back in-process; combinators keep such designs
+  modular.
+- /Properties (C#, Objective-C, Eiffel, Swift)/: data-like syntax but no
+  full name/operation separation, so no way to capture all names for one
+  operation and interpose generic services.
+- /Lenses (Foster et al.)/: share bidirectionality, but operate
+  per-function; combinators abstract over an *entire identifier set* at
+  once. (The RESTLY "not lenses wholesale" ruling is this sentence.)
+
+** The future-work paragraph (the RESTLY charter)
+
+SC §9, in full paraphrase because every clause matters: how to type and
+statically check storage combinators is open; the generic nature that
+makes them composable makes correct-connection verification hard;
+existing generic approaches are "probably insufficient, because even
+single instances of the combinators will usually be processing many
+different types"; and then the sentence the thesis answers — "One
+possibility is that the types move from the operations to the polymorphic
+identifiers." RESTLY's =[K, V]=-on-the-store-interface design is the
+other announced branch of the same fork: types move onto the *store*
+rather than the identifier, with =restly_schemes= recovering Weiher's
+monomorphic universal composability at =[STRING, STRING]=.
+
+Also queued as future work: composition-level tracing/debugging by
+auto-inserting logging stores (answering the To-Do team's reported
+downside), and graphical specification of compositions.
+
+* Part 4 — Beyond Procedure Calls as Component Glue (Onward! '24)
+
+The capstone, and the *normative* paper: wherever earlier papers differ,
+this one wins. Subtitle: "Connectors Deserve Metaclass Status" — a
+deliberate escalation of Mary Shaw's 1994 "Procedure Calls Are the
+Assembly Language of Software Interconnection: Connectors Deserve
+First-Class Status."
+
+** Analogy
+
+Shaw asked for connectors to be first-class citizens — values you can
+define and pass around. Thirty years of ADLs and ArchJava tried exactly
+that and industry ignored them. Weiher's move is subtler: don't add a new
+citizen class; *promote the civil service*. Connectors already exist in
+every language (calls, variable access); make each of those existing
+mechanisms polymorphic behind its familiar syntax, governed by a
+metaobject protocol — the same trick CLOS played on method dispatch. The
+surface language barely changes; the space of systems it can express
+explodes.
+
+** The connector taxonomy (BPC Table 1, from Mehta/Medvidovic/Phadke)
+
+| Connector type | Variants                                        | Objective-S support |
+|----------------+-------------------------------------------------+---------------------|
+| Procedure call | subroutine, function, method, macro, coroutine… | direct (HOM)        |
+| Data access    | local variable, file API, REST APIs…            | direct (PI + SC)    |
+| Stream         | Unix pipes, Go channels, TCP sockets…           | direct (PWS)        |
+| Event          | notifications, message brokers…                 | direct (protocols)  |
+| Distributor    | naming, DNS, X.400…                             | direct (schemes)    |
+| Linkage        | compile-time, run-time, dynamic, static         | indirect            |
+| Adaptor        | interpreters, DeLine packaging…                 | indirect            |
+| Arbitrator     | locks, transactions…                            | (not claimed)       |
+
+Definitions: /architecturally monomorphic/ = at most one variant per
+connector type expressible directly (all mainstream languages);
+/architecturally polymorphic/ = several-to-all variants of a type behind
+one syntax. The strategy: (1) make existing connectors polymorphic;
+(2) minimally extend surface syntax for additional types; (3) one generic
+connection mechanism; (4) support features (complex object literals).
+
+Objective-S is a Smalltalk generalization implemented on the Objective-C
+runtime; full peer to Objective-C, no FFI, methods indistinguishable to
+callers.
+
+** Connector type by connector type
+
+*** Naming + data access (PIs + storage combinators, recapped and extended)
+
+#+BEGIN_SRC smalltalk
+greeting := 'Hello World!'.
+var:greeting := 'Hello World!'.        "same reference — default scheme is var:"
+file:hello.txt := greeting.
+var:conf/2024/website := https://2024.splashcon.org.
+#+END_SRC
+
+Identifiers denote *values*; prepend =ref:= to get the reference itself.
+References are created *by stores*, which control the reference kind
+returned.
+
+The uniformity table (BPC Table 2) — the strongest single exhibit in the
+corpus for the data-access claim:
+
+| Data store        | Conventional PL                                  | Objective-S        |
+|-------------------+--------------------------------------------------+--------------------|
+| Local variable    | =hello=                                          | =hello=            |
+| Environment var   | =getenv("hello");=                               | =env:hello=        |
+| Dictionary        | =dict at:'hello'=                                | =dict:hello=       |
+| File              | =f=fopen("hello","r"); fread(buffer,len,f);=     | =file:hello=       |
+| Keychain          | =SecItemCopyMatching(queryDict, &retval);=       | =keychain:hello=   |
+| Dynamic library   | =dlopen("hello.dylib", RTLD_NOW);=               | =dl:hello=         |
+| Web               | =urllib.urlopen("http://hello.com")=             | =http://hello.com/=|
+
+And uniformity is behavioral, not just syntactic: =file:.=, =env:.= and
+=task:.= all produce directory listings in the =st= shell (BPC
+Listing 29) — same client code browsing a filesystem, the process
+environment, and an object's instance variables.
+
+*** Property paths — defining stores declaratively (BPC §2.1.2)
+
+The 2024 replacement for hand-implementing the four Storage methods.
+Paths are declared at method level with a leading =/=, may contain
+=:parameters= and =*= wildcards (bound as variables in the body), match
+in file order, respect inheritance (unmatched paths go to the
+superclass), and each path exposes only the REST verbs it mentions. PUT/
+POST bodies arrive as =newValue=.
+
+The To-Do store, complete (BPC Listing 3):
+#+BEGIN_SRC smalltalk
+scheme Todo : MappingStore {
+    var tasks.
+    -taskList { this:tasks allValues. }
+    /tasks {
+        get { self tasks. }
+    }
+    /task/:id {
+        get { this:tasks at:id . }
+        put { this:tasks at:id put:newValue.  self persist. }
+    }
+    /complete/:id {
+        post { (this:tasks at:id) setDone:true.  self persist. }
+    }
+    -<void>persist { source:tasks := self tasks. }
+}
+#+END_SRC
+
+The 2020 paper's SQLite adapter (GT Fig. 19) shows the same construct
+computing table metadata from =PRAGMA= queries behind =/schema/:table= —
+stores that compute rather than store, declaratively.
+
+*** Streams (Polymorphic Write Streams)
+
+Syntax: =<<= writes to a stream; =^= passes to the next pipeline stage.
+Protocol — one message:
+#+BEGIN_SRC smalltalk
+protocol Streaming {
+    -<void>writeObject:anObject;
+}
+#+END_SRC
+Anything implementing it is a target; anything sending it is a source.
+Adopters include filters, polymorphic references, one-argument closures,
+and mutable arrays. Filter definition compressed to method-weight (BPC
+Listing 6):
+#+BEGIN_SRC smalltalk
+filter add3   |{ ^object + 3. }
+filter times4 |{ ^object * 4. }
+filter upcase |{ ^object uppercaseString. }
+filter dup    |{ ^object. ^object. }        "1-in, 2-out — not a function"
+#+END_SRC
+Pipelines: =add3 → times4=. Packaging as a real Unix filter (BPC
+Listing 21):
+#+BEGIN_SRC smalltalk
+#!env st
+filter upcase |{ ^object uppercaseString. }
+(stdin → upcase → rawstdout) run
+#+END_SRC
+The 2020 paper adds the operational virtue: the construction is passive
+and *asynchrony-agnostic* — the same composition works sync or async, no
+callbacks, no promise pyramids.
+
+*** Events / implicit invocation
+
+A /notification protocol/ declares the one message subscribers receive:
+#+BEGIN_SRC smalltalk
+protocol ModelDidChange { -<void>modelDidChange:object; }
+
+protocol:ModelDidChange notify: ref:myObject.     "send"
+protocol:ModelDidChange << ref:myObject.          "send, as a stream target"
+#+END_SRC
+Classes *adopt* the protocol to auto-subscribe. Distributed events reuse
+the stream abstraction — RabbitMQ as a component (BPC Listings 34–36):
+#+BEGIN_SRC smalltalk
+r := #OQRabbit{ queue:'testQueue', sending: true, host:'localhost' }.
+r << 'Hello Objective Rabbit'.
+
+text := #TextField{ frame:(180@24) }.  text → queue.     "UI → queue"
+queue → stdout.                                          "queue → console"
+queue → protocol:ModelDidChange.       "remote observer pattern"
+#+END_SRC
+The equivalent Python/pika receiver is 52 lines whose destination is
+buried in a callback (BPC Listing 37) — the point is not line count but
+that the architecture is *invisible* in the procedural version.
+
+*** Procedure calls made polymorphic — Higher Order Messaging
+
+A HOM = prefix message (delivery semantics) + argument message (intent):
+#+BEGIN_SRC smalltalk
+robot turn: 20.               "default HOM: sync"
+robot sync turn: 20.          "fully qualified equivalent"
+robot async turn: 20.         "asynchronous"
+robot future turn: 20.        "remote/deferred — Croquet-style"
+robots do turn: 20.           "multi-receiver"
+receiver static msg:arg.      "static dispatch"
+receiver inline msg:arg.      "inlining"
+#+END_SRC
+Conceptually *all* sends are HOM-mediated, with =sync= as default.
+Compiler support means HOMs can go both more dynamic *and* more static
+than plain messaging — contrast the Cocoa
+=performSelectorInBackground:withArgument:= and BeOS BMessage
+contortions (BPC Listings 24–25) which abandon the messaging syntax
+entirely.
+
+*** Dataflow constraints
+
+=|== (permanent assignment) = =:== that keeps holding. Built entirely
+from the existing pieces — LoggingStore decorates any store, sends update
+refs to a stream, the constraint listens and recomputes; "no additional
+metaobject protocol." The 2024 formulation of the logging store is a
+two-liner via property paths (BPC Listing 39):
+#+BEGIN_SRC smalltalk
+scheme Log {
+    var stream.
+    /*:uri { put { source at:uri put:value. stream << `uri. } }
+}
+#+END_SRC
+Scaling ladder, same one-line constraint at every rung:
+#+BEGIN_SRC smalltalk
+f |= c * 9/5 + 32.                    "variables (BPC Listing 40)"
+target |= source.                     "two directories (Listing 41)"
+targetScheme |= sourceScheme.         "local dir → remote dir over SSH/SFTP
+                                       (Listing 42, via #SSHConnection store)"
+#+END_SRC
+
+*** The polymorphic connection designator =→= (BPC §3)
+
+Terminology is deliberate: a *designator*, not an operator — it does not
+command a one-time imperative hookup; it *is* the connection for the
+connection's lifetime (a breakpoint on it fires whenever communication
+crosses it). The full architecture model behind it (BPC Fig. 2):
+
+#+BEGIN_EXAMPLE
+ Component A ─ Port A.1 ─ Role 1 ─[ Connector ]─ Role 2 ─ Port B.1 ─ Component B
+#+END_EXAMPLE
+
+A fully qualified connection names all seven elements; almost always you
+write only the two components. Matching algorithm: find each component's
+default port → ask the ports for the default connector → match ports to
+the connector's LHS/RHS roles → send =connect=. Ports can be named via
+the =port:= scheme:
+#+BEGIN_SRC smalltalk
+celsiusField → port:model/setCelsius: .
+#+END_SRC
+Every message an object responds to is a port by default. The metaobject
+protocol defines component/port/connector interfaces; conforming objects
+participate in matching — the exact pattern of the Storage protocol,
+lifted to connection itself.
+
+*** Support features: classes, components, complex object literals
+
+#+BEGIN_SRC smalltalk
+class Task {
+    var id.
+    var <bool> done.
+    var title.
+}
+-description {"Task {this:title} done: {this:done}"}
+
+#Task{ id:0, title: 'Submit paper', done: false }
+[ #Task{ id:0, title: 'Submit paper', done: false },
+  #Task{ id:1, title: 'Write code',  done: true  } ].
+#+END_SRC
+
+Complex object literals attack "accidentally algorithmic" code: program
+text describes classes, but systems are connected *instances*, and
+constructing instances procedurally reopens Black's meta-description gap.
+JSON-shaped literals (=#{...}= dicts, =[...]= arrays, optional class name
+after =#=) close it.
+
+** The MVC / UI thread — the 2024 resolution of the 2020 problem
+
+The callback ladder, one rung at a time (BPC Listings 14–20):
+#+BEGIN_SRC smalltalk
+"procedural: connection invisible inside a callback"
+text setCallback: { :text | stdout println:text. }.
+
+"architectural: the connection is the code"
+text → stdout.
+text → upout.                       "upout := upcase → stdout — named processing"
+text → ref:file:/tmp/hello.txt.     "UI → file"
+text → { stdout println:$0. }.      "closure-as-filter when inline code is wanted"
+#+END_SRC
+The callback version invites computing inside glue (uppercasing in the
+view layer) — the everyday mechanism by which MVC separation dies in
+industry. Full MVC: widgets hold a *polymorphic reference* to their model
+value and adopt =ModelDidChange=; model stores are overlaid with Log;
+observers pull. The complete 7GUIs Counter (BPC Listing 43):
+#+BEGIN_SRC smalltalk
+init:model:count := 1.
+button := #Button{ title: 'count' }.
+button → { model:count := model:count + 1. }.
+#Grid{ rows: [ [ #Label{ ref: ref:model:count }, button ] ] }.
+#+END_SRC
+
+** Web applications, end to end
+
+#+BEGIN_SRC smalltalk
+"Hello World (BPC Listing 44)"
+#HTTPServer{ port: 8081 } → #MPWDictStore{ hello: 'World' }.
+
+"Any store serves the same way:"
+#HTTPServer{ port: 8081 } → scheme:env.
+
+"The Todo store as a JSON web API (Listing 45)"
+toJSON := #JSONConverter{ up: true, converterClass: class:Task }.
+#HTTPServer{ port: 8081 } → toJSON → scheme:todo.
+
+"The same store persisted to disk instead (Listing 31)"
+fromJSON := #JSONConverter{ up: false, converterClass: class:Task }.
+todo := #Todo{ tasks: (tasks dictionaryByKey:'id'.) }.
+todo → fromJSON → ref:file:/tmp/tasks/ asScheme.
+
+"An S3 scheme in three lines (Listing 30)"
+scheme:s3 := ref:http://localhost:9000/ asScheme.
+scheme:s3 source setHeaders: #{ user:'minioadmin', password:'minioadmin' }.
+text → ref:s3:bucket1/message.txt.
+#+END_SRC
+
+Verified over curl (BPC Listing 46): GET =/tasks=, GET =/task/0=,
+=PUT /complete/0=, GET =/tasks= shows done flipped. The stated principle:
+keep the model free of outside-world references; make adapters
+transparent and functionality-free — hexagonal architecture, packaging-
+mismatch avoidance, and naked objects, rediscovered as one pattern.
+
+** Evaluation and the two big surprises
+
+1. /Connectors are few./ The expectation was first-class connector
+   definition syntax à la Shaw; Objective-S has it and it goes unused.
+   Connector *types* number in the single digits; connectors are far
+   fewer than components; but they are used constantly — so the winning
+   design is optimized surface syntax per *type* + metaobject-level
+   polymorphism per variant, not user-defined connector zoos. Few
+   compatible reference interfaces are also exactly what makes glueless
+   composition and =→= possible.
+2. /Slow language, fast systems./ A tree-walking interpreter serving
+   ~89 000 r/s on the tasks backend vs Sinatra's ~1 800 r/s (BPC Fig. 7,
+   M1 MacBook), because the language connects fast C/Objective-C
+   components "and then gets out of the way," while conventional
+   frameworks burn cycles metaprogramming REST into procedures. The
+   objective.st site survives Hacker-News-front-page loads on a free-tier
+   ARM instance (~1 800 r/s capacity). Corollary honestly stated: with
+   more Objective-S in the hot path, throughput falls (fully-interpreted
+   hello-server ≈60 K r/s); a young native ARM64 compiler (no LLVM, no
+   optimizations, from Wirth's compiler book) already gains 2.6×
+   (BPC Fig. 8, Listing 48):
+   #+BEGIN_SRC smalltalk
+   scheme HelloServer {
+       /hi/:name { get { 'hello: ',name. } }
+       -main:args { self waitOnPort: 8081 intValue. }
+   }
+   #+END_SRC
+
+** Related work, 2024 framing
+
+- /Previous own work/: PIs, SCs, PWS, HOM are inputs; the novelty here is
+  the coherent MOP organized along software-architectural lines, plus
+  =→=. The storage-combinator+stream constraints were declared remote
+  "future work" in Constraints as Polymorphic Connectors (2016) — and
+  "worked out very naturally."
+- /ADLs (ACME, Rapide, UniCon)/: separate representations, verbose (the
+  ACME encoding of =ls | wc= is a 14-line System block — BPC Listing 50),
+  no implementation help, unused in industry. Objective-S makes the
+  architecture *be* the implementation.
+- /ArchJava/: the direct predecessor by intent; failed because connectors
+  were bolted onto full Java — more cumbersome than the built-ins they
+  competed with. Objective-S generalizes instead of extends (the same
+  verb Gentle Tyranny applied to call/return).
+- /CLOS/AMOP/: the governing inspiration — a metaobject protocol
+  describes a *region* of language-design space; Objective-S enlarges the
+  region across architectural styles while keeping a navigable
+  conceptual model (software architecture itself).
+- /CLIC/: component language symbiotic with Smalltalk — but still
+  separate, no MOP integration, call/return only.
+- /DSLs/: costly, overlapping, rudimentary; the diagnosis is inverted —
+  general-purpose languages "are not general enough." Nile/Gezira was
+  absorbed as adapted filters rather than reimplemented.
+- /Plan 9/: OS-mediated storage unification → serialisation + POSIX
+  overhead = packaging mismatch; Objective-S keeps object identity
+  in-process and can *export* any scheme as a filesystem (FUSE/WebDAV)
+  when files are wanted.
+
+* Part 5 — The consolidated model, and every conflict resolved
+
+** One diagram for the whole corpus
+
+#+BEGIN_EXAMPLE
+                 ARCHITECTURE-ORIENTED PROGRAMMING (2024)
+                 metaobject protocol of polymorphic connectors
+                 one designator:  A → B
+   ┌──────────────┬──────────────┬──────────────┬─────────────────┐
+   │ procedure    │ data access  │   stream     │     event       │
+   │ call (HOM)   │ (PI + SC)    │   (PWS)      │  (protocols)    │
+   │  2005/2024   │  2013/2019   │   2019       │     2024        │
+   └──────────────┴──────┬───────┴──────┬───────┴─────────────────┘
+                         │              │
+                 naming/distributor     └── dataflow constraints (2016/2020/2024)
+                 (schemes, 2013)            = LoggingStore + stream + recompute
+#+END_EXAMPLE
+
+Reading: the 2013 and 2019 papers each built one column to production
+quality; the 2020 paper diagnosed why one column can never be enough; the
+2024 paper built the roof.
+
+** The stable core (identical in every paper that states it)
+
+- The Storage protocol: =at:= / =at:put:= / =at:merge:= / =deleteAt:=
+  ↔ GET / PUT / PATCH / DELETE. Four verbs, never five. POST appears
+  only in 2024 *property paths* (verb set get/put/post/delete at the
+  path-definition level), never in the Storage protocol itself.
+- The Streaming protocol: =writeObject:= — one message.
+- Store = implements Storage; combinator = implements *and consumes*
+  Storage; stores may compute rather than store.
+- Diagrams ↔ code 1:1, generatable from the live object graph.
+
+** Conflict register (most recent paper wins)
+
+| # | Topic | Older statement | 2024-normative resolution |
+|---+-------+-----------------+---------------------------|
+| 1 | Language name | Objective-Smalltalk (2013, 2020) | Objective-S |
+| 2 | Store definition style | Implement 4 methods of Storage protocol (2019 class listings) | Declarative =scheme= components with property paths + verb bodies; the 2019 style remains the semantic model underneath |
+| 3 | Logging store | Class with 3 overridden write methods (SC Fig. 19) | Wildcard property path =/*:uri { put { ... } }= (BPC Listing 39); same semantics: pass through, emit ref to stream, writes only |
+| 4 | Constraints | ==|== bidirectional presented as peer of =|== (2020) | Only =|== demonstrated; multi-way, glitch-free graphs, solvers explicitly future work |
+| 5 | Status of storage combinators | The composition mechanism (2019) | One connector type (data access) among ~8; §7.2 of SC already warned against ontologizing it |
+| 6 | POST | Absent from Storage protocol (2019) | Present only as a property-path verb for actions (=/complete/:id post=), still not a Storage-protocol message |
+| 7 | Connector definition syntax | Implied goal: first-class user-defined connectors (Shaw program) | Exists, unused; type-level syntax + MOP polymorphism is the working design |
+| 8 | Composition syntax | Array convenience + arrow (2019) | Arrow (=→=) generalized into the polymorphic connection designator with port/role matching; array form not re-presented |
+| 9 | Scheme handler role | "Scheme-handlers manage a store" (2013 — handler ≈ store) | Schemes are late-bound *names* for stores; any store can be bound/rebound; =asScheme= converts refs to stores; handler = binding/factory role |
+
+Items 4, 5, 6, and 9 are load-bearing for RESTLY rulings already on the
+books (glitch-freedom REJECTED; combinator-as-one-connector-type framing;
+POSTABLE as a separate protocol; schemes as factories).
+
+** Terms that changed meaning quietly (círculos watch-list)
+
+- /filter/ — 2019: implementor of =-write:= fed by a LoggingStore.
+  2024: any Streaming-protocol component, defined with =filter name |{}=.
+  The 2019 sense is a special case of the 2024 sense.
+- /reference/ vs /identifier/ — identifier is the URI text; reference is
+  the store-created LUP object; 2024 uses "URI and Polymorphic Identifier
+  interchangeably" but never conflates identifier with reference.
+- /source/ — always defined from the GET perspective (SC footnote 5);
+  in CachingStore diagrams the labels =source= and =cache= are port
+  names, which is why the 2024 port/role model subsumes them cleanly.
+- /combinator/ — functional-programming sense (Store(s) → Store, closed
+  under composition), not lens sense; SC's related work draws the lens
+  boundary explicitly (per-function vs entire identifier set).
+
+* Part 6 — What this obligates RESTLY to do
+
+Each anchor is stated as: what the papers establish → what the thesis
+must therefore preserve, answer, or qualify. TODO keywords are in your
+scheme.
+
+** SETTLED anchors (paper-backed, already ruled in RESTLY)
+
+- *The typing charter.* SC §9 declares typing open and names the
+  identifier branch; RESTLY takes the store branch (=[K, V]= generics),
+  with =restly_schemes= at =[STRING, STRING]= recovering Weiher's
+  monomorphic universal composability. Both branches are legitimate
+  children of the same sentence; the thesis should cite the sentence and
+  name both branches.
+- *HASH_TABLE as the uniform interface.* SC Table 2 puts the Smalltalk
+  dictionary column beside HTTP; the Wunderlist story is literally
+  "dictionaries lifted to stores." RESTLY's item/force/remove(+merge)
+  vocabulary conformance is the Eiffel image of Weiher's own analogy.
+- *PATCH as merge, cache-merge decomposition.* CachingStore's
+  =at:merge:= is load-from-authoritative-source → merge-in-cache →
+  put-to-source. The RESTLY PATCH-as-composition (load → merge → force)
+  ruling and the cache-merge overclaim correction both trace to SC
+  Fig. 18 verbatim.
+- *Stores are not streams.* Weiher keeps Storage and Streaming as
+  disjoint protocols connecting only at LoggingStore; the async writer
+  uses queues as transport between store stages. RESTLY's
+  STREAMING_CELL/SCOOP-queue ruling mirrors the corpus exactly.
+- *Schemes as factories.* 2013 §3.3 + 2024 =asScheme=: schemes are
+  rebindable names, references are store-created. =restly_schemes= as
+  factory-only is the faithful reading.
+- *Flat/compositional hierarchy.* SC's BBC experience endorses
+  hierarchical *organization* (mounted subtrees via SwitchingStore) while
+  the access protocol stays four flat verbs over deep keys — combinators
+  compose over the root and see every access. The RESTLY flat-directory-
+  keys ruling is the typed restatement; a nested-only key design would
+  bypass combinators below level one and forfeit SC's central mechanism.
+
+** CONFIRM anchors (paper-backed equivalences to finalize)
+
+- =RESTLY_DIRECTORY= ↔ DiskStore; =RESTLY_HTTP_CLIENT= ↔ rawhttp
+  (outbound half only — confirmed by SC Figs. 28–29 where rawhttp is a
+  leaf under client caches).
+- =backed_by= ↔ setSource / arrow-nesting: SC's
+  =A -> B -> C= is exactly =a.backed_by(b.backed_by(c))=. The array
+  convenience syntax (SC Fig. 23) is a possible Eiffel creation-
+  convention analogue worth one paragraph.
+- SchemeHTTPServer ↔ the required *separate inbound server adapter*;
+  BPC Listing 44's =#HTTPServer{...} → store= confirms server and client
+  are distinct components on opposite ends of the arrow, matching the
+  Fielding client/server separation already ruled.
+
+** GAP anchors (paper-flagged, RESTLY inventory items)
+
+- *DictStore.* Weiher's most-used store: the default cache backing (SC
+  Fig. 26 "configures itself with a DictStore"), the mount table inside
+  SwitchingStore, and the entire test strategy (SC Fig. 33 — production
+  parts, smaller configuration, no mocks). Until RESTLY has it, the
+  no-mock testing argument — one of the strongest experience results in
+  SC §5.2 — is unavailable to the thesis.
+- *PassThrough.* Trivial to write, but it is the base class of half the
+  catalog (Logging, Caching) and the identity of the combinator algebra;
+  its absence leaves the catalog without its unit element.
+- *RESTLY_RELATIVE.* RelativeStore is 4 lines in SC Fig. 15 and load-
+  bearing in every composition shown (=home:=, temp-dir caches, rfc:).
+- *Switching/mount.* Required to reproduce the BBC and Wunderlist
+  architectures; also the natural home of the by-type routing RESTLY
+  will need for TodoBackend.
+
+** OPEN anchors (the corpus sharpens but does not settle)
+
+- *AOP as outer frame vs future-work chapter.* The corpus itself gives
+  both precedents: SC §7.2 refuses the ontology and defers to "many
+  kinds of glue"; BPC then builds the frame. If the thesis claims the
+  typed-core/uniform-stratum split generalizes across BPC Table 1's
+  connector taxonomy, the frame is BPC and the thesis inherits its
+  scope; if the claim stays data-access-only, SC's own restraint is the
+  citable justification for deferring the rest. Either way the decision
+  now has paper-anchored language on both sides.
+- *Arbitrator row.* BPC pointedly leaves arbitrators (locks,
+  transactions) unclaimed — the only Table 1 row with no Objective-S
+  story. A SCOOP-regions claim would be *new* territory, not a
+  reconstruction; that raises both the value and the burden of proof.
+  Note the PATCH-atomicity question lives in this row too: SC's
+  CachingStore merge is a read-modify-write with no atomicity claim
+  anywhere in the corpus — Weiher never promises it, so RESTLY should
+  not inherit an obligation Weiher never took on, but must say so.
+- *405 and the verb-subset problem.* Weiher's property paths expose only
+  the verbs mentioned — unmatched verb/path pairs simply don't exist, and
+  the papers never state what an unsupported verb answers. The corpus is
+  silent exactly where Eiffel precondition-weakening bites; the thesis's
+  qualified claim (400/404/422 clean, 405 runtime) fills a genuine gap
+  rather than contradicting a source.
+- *Enumeration.* =file:.= listings and reference child-listing (PI §3.2)
+  are runtime discovery through and through; a typed =RESTLY_LISTABLE
+  [K]= is a static commitment the corpus never makes. Jurisdictional
+  conflict (Eiffel static vs HTTP runtime discovery) stands, now with
+  the precise cites for the runtime side.
+
+** Overclaim register cross-check (nothing in the corpus rescues these)
+
+- /TodoBackend "all tests pass"/: Weiher's To-Do artifacts are the
+  Objective-S store + curl transcript (BPC Listings 3, 45–46) — a
+  demonstration, not a compliance suite. No cover from the corpus;
+  qualification stands.
+- /Glitch-freedom under SCOOP/: BPC explicitly defers update-graph
+  constraints. REJECTED ruling confirmed.
+- /Reliability & productivity numbers/: 50×, 10×, ÷4, 49M r/s are
+  Weiher's *observational correlations* ("correlates with", "cannot be
+  attributed solely") — quote them with his hedges attached or a
+  reviewer will attach them for you.
+
+** One-paragraph reminder of what you're building
+
+RESTLY is the typed answer to SC §9: keep Weiher's four-verb store
+algebra, its combinator catalog, and its composition discipline, but move
+the types onto the store interface as =[K, V]= generic parameters so that
+Eiffel's contracts can state — and AutoTest can check — what Weiher could
+only assert observationally: that a composition is connected correctly.
+Fielding rules on what survives the translation (client/server split,
+cache-as-connector, uniform interface); Eiffel rules on what is true
+(DbC as HTTP status semantics, with the 405 qualification); Weiher rules
+on what gets built — and Part 3 above is the inventory of what he built.
+
+* Figure and listing index (paper → this document)
+
+| Paper | Reproduced here | Omitted (and why) |
+|-------+-----------------+-------------------|
+| PI '13 | Listings 1, 5–7 (abridged), 13, 14, 16–19; Fig. 1; Table 3 | Listings 8–12 (ValueAccessor/Resourcer scaffolding — superseded by refs); Figs. 2–3 (screenshots) |
+| SC '19 | Figs. 1–35, 37 essentially complete (code + redrawn diagrams); Tables 1–2 | Fig. 36 (screenshot), Fig. 38 (bar chart — numbers given inline) |
+| GT '20 | Figs. 3–16, 19–23 (code); Tables 1 | Figs. 17–18 (duplicate SC Figs. 30–31 — noted) |
+| BPC '24 | Listings 1–48 coverage in text; Tables 1–2; Figs. 1–2 redrawn | Figs. 3–6, 9 (screenshots); Figs. 7–8 (bar charts — numbers inline); Listing 50 described |
+
+* Coda — The Tao of AOP (twelve points)
+
+A memorization aid, not a substitute for the parts above. Each point is a
+compression of an argument made at length in the corpus; the parenthetical
+tells you where to go when the compression stops being enough.
+
+1. *The architecture is the connectors, not the boxes.* Components
+   compute and store; connectors /are/ the system. A program whose glue
+   is invisible is a program whose architecture is invisible.
+   (BPC §1, Fig. 1)
+
+2. *Separate the name from the operation.* =setName:= fuses location and
+   verb; =PUT name= does not. Only when they are separate can an
+   intermediary stand between them. Everything else in the corpus
+   follows from this cut. (PI §2.4; SC Table 1)
+
+3. *Few verbs, many names.* Four operations over an open-ended
+   identifier space beats infinite operations over closed interfaces.
+   Syntactic compatibility by default is what makes composition cheap
+   enough to actually happen. (SC §1 — Unix filters and the WWW)
+
+4. *Symmetry is the whole mechanism.* A combinator provides the same
+   interface it consumes. Interface-in equals interface-out, therefore
+   closed under composition, therefore =A → B → C= is always legal.
+   (SC Figs. 9–10)
+
+5. *A store need not store.* It may compute, translate, route, or
+   refuse — as long as it answers the four verbs. Behavior hides behind
+   state-shaped interfaces just as well as state hides behind
+   behavior-shaped ones. This is OO inverted. (SC §3, §7.1)
+
+6. *The program text should be the connection, not set it up.* A binding
+   established as a side effect has no line for the debugger to point
+   at. Dijkstra's argument against goto, applied to glue: shorten the
+   gap between static text and dynamic process. (GT §5.4; BPC §3 —
+   designator, not operator)
+
+7. *Computers are filing systems.* Storage and communication replaced
+   computation as the dominant workload; a language whose only
+   abstraction is "compute and terminate" mismatches most programs
+   before the first line is written. (GT §1, §7 — Feynman, Steele,
+   Black)
+
+8. *The tyranny is gentle because the simulation is almost good enough.*
+   Call/return can imitate any style — streams, events, constraints —
+   closely enough that objecting feels like splitting hairs. The
+   differences are not small, just subtle. Distrust "almost."
+   (GT §9.1 — Java Streams)
+
+9. *Generalize, don't extend and don't replace.* Call/return survives as
+   the special case, like Newton inside Einstein. ArchJava extended and
+   lost; the ADLs replaced and were ignored. (GT §4; BPC §8.2, §8.4)
+
+10. *Connector types are few; use each constantly.* Single digits of
+    types in the wild — so give each type one optimized syntax and push
+    variant polymorphism down into the metaobject protocol. First-class
+    connector definition syntax exists in Objective-S and goes unused.
+    (BPC §7.1)
+
+11. *Scale down, don't distribute.* Fielding's generic-interface
+    argument contains nothing that requires a network. Move REST
+    in-process and the partial-failure modes vanish while three orders
+    of magnitude of throughput appear. (SC §1, §6.1–6.2)
+
+12. *Test with smaller configurations, not mocks.* The production
+    parts, arranged more simply, are the test double. Composition that
+    cannot be reconfigured for testing was never really composition.
+    (SC §5.2, Fig. 33)
+
+* Coda II — The Tao, operationalized (agent directives)
+
+The twelve points of the first coda, restated as concrete engineering
+directives with code, followed by the classification procedure and worked
+examples. Eiffel snippets are RESTLY-flavored; Objective-S snippets quote
+the corpus.
+
+** =<|= vs =→= — Eiffel is left-handed
+
+Weiher's =→= reads *source-to-client* (left-to-right toward the front):
+#+BEGIN_SRC smalltalk
+ref:file:{env:HOME} -> scheme:file -> SchemeHTTPServer port:8080.
+#+END_SRC
+
+RESTLY's =<|= reads *client-to-source* (left-to-right toward the back):
+#+BEGIN_SRC eiffel
+routes ["/todos"] := (create {GATEWAY}) <| todos_table
+#+END_SRC
+
+This is not a cosmetic flip — it aligns the composition direction with
+Eiffel's evaluation direction:
+1. Eiffel is left-handed: the target of an expression is the leftmost
+   entity; =a <| b= means "a, backed by b" — the subject acts.
+2. The reader meets the HTTP boundary first: gateway (what the client
+   talks to) is leftmost; the backing store is rightmost — same order
+   as a request traveling inward.
+3. Left-associative chains type-check naturally: =(g <| c) <| t= — each
+   =<|= returns =like Current=, so the chain builds from the front,
+   which is the typed entry point.
+4. Route assignment reads as a sentence:
+   =routes ["/articles"] := gate <| store= — "the articles route IS
+   a gateway backed by a store."
+
+Both directions are valid; =<|= is the Eiffel-native reading because
+Eiffel's dot notation, assignment, and aliasing all put the actor on
+the left.
+
+** The twelve directives
+
+*** 1. Draw the arrows before writing the boxes
+The composition is the first artifact you write, and it survives as the
+top of the program:
+#+BEGIN_SRC smalltalk
+"Weiher (SC Fig. 25): source-to-client, one expression"
+ref:file:{env:HOME} -> scheme:file -> SchemeHTTPServer port:8080.
+#+END_SRC
+#+BEGIN_SRC eiffel
+-- RESTLY (realworld_execution.e): client-to-source, same principle
+articles := gate <| articles_table           -- the architecture
+guarded := auth <| articles                  -- auth by composition
+
+    -- the route table IS the architecture diagram
+Current ["/articles"] [method_get] := agent articles.items       -- public
+Current ["/articles"] [method_post] := agent guarded.extend      -- guarded
+Current ["/articles/{slug}"] [method_get] := agent articles.item
+Current ["/articles/{slug}"] [method_put] := agent guarded.merge
+Current ["/articles/{slug}"] [method_delete] := agent guarded.remove
+#+END_SRC
+#+BEGIN_SRC java
+// not: architecture reconstructed by simulating constructors in your head
+this.dao = new Dao(new ConnectionPool(config));
+this.cache = CacheManager.getInstance();  // wired... where? to what?
+#+END_SRC
+
+*** 2. Pass the location as a parameter; put the verb in the interface
+#+BEGIN_SRC eiffel
+-- RESTLY (restly_protocol.e): location is the argument, verb is the feature
+store.item (key)              -- GET: one verb, any location
+store [key]                   -- same thing via alias "[]" — dictionary syntax
+store.force (value, key)      -- PUT: location still a parameter
+store.remove (key)            -- DELETE
+#+END_SRC
+#+BEGIN_SRC java
+person.setName(v); person.setAge(a);   // not: one LUP minted per location —
+                                       // nothing generic can ever interpose
+#+END_SRC
+
+*** 3. Implement the four verbs and stop
+#+BEGIN_SRC eiffel
+-- not: capability as interface growth
+save_with_retry (key: K; v: V; attempts: INTEGER)
+-- do: capability as a new component in the chain
+client_stack := retry.backed_by (http_client)   -- interface unchanged
+#+END_SRC
+
+*** 4. When a store needs new behavior, wrap it, don't edit it
+#+BEGIN_SRC smalltalk
+"do: SC Fig. 19 — logging without touching the logged"
+scheme:p := LoggingStore store.
+scheme:p setSource: DictStore store.
+#+END_SRC
+#+BEGIN_SRC java
+// not: threading the concern through the class
+void put(K k, V v) { log.info("put " + k); validate(v);
+                     cache.put(k,v); db.put(k,v); }
+#+END_SRC
+
+*** 5. Let some "stores" compute
+#+BEGIN_SRC smalltalk
+"Weiher (GT Fig. 19): a 'table schema' resource computed on GET"
+/schema/:table {
+    |= { resultSet := self dictionariesForQuery:
+             "PRAGMA table_info({table})". ... }
+}
+#+END_SRC
+#+BEGIN_SRC eiffel
+-- RESTLY (article_store.e): slug minted from the title on POST —
+-- the "store" computes its own keys, not just storing them.
+fresh_key (a_v: JSON_OBJECT): STRING
+    do
+        Result := slugify (title_of (a_v))
+        from until not has_key (Result) loop
+            Result := Result + "-" + (table.count + 1).out
+        end
+    end
+#+END_SRC
+Not =SchemaInspectorServiceImpl.describeTable(...)= — a bespoke
+procedural API for what is, to its clients, just a readable resource.
+
+*** 6. Make the connection a line of code you can point at
+#+BEGIN_SRC smalltalk
+text → stdout.                                 "do: this line IS the binding"
+text setCallback: { :t | stdout println:t. }.  "not: binding as setup side effect"
+#+END_SRC
+#+BEGIN_SRC eiffel
+-- RESTLY (realworld_execution.e): the <| expression IS the connection
+articles := gate <| articles_table
+-- A breakpoint on make_with_back fires at composition time.
+-- A breakpoint on articles.items fires on every GET /articles.
+-- Both are source-level, debugger-visible, named.
+#+END_SRC
+A breakpoint on the first fires on every communication. The second gives
+the debugger nothing.
+RESTLY adds auto-generated GraphViz diagrams: every combinator redefines
+=graph_dot_lines=; executions call =print_pipeline_graph= at startup —
+the 1:1 diagram correspondence Weiher advocates, recovered from the live
+object graph.
+
+*** 7. Model ongoing relationships as constraints, not method bodies
+#+BEGIN_SRC smalltalk
+ivar:f |= (9.0/5.0) * ivar:c + 32.     "do: the relationship, stated once"
+#+END_SRC
+
+#+BEGIN_SRC smalltalk
+- c:newValue {                          "not: the relationship smeared into"
+    ivar:c := newValue.                 "every setter that might disturb it"
+    ivar:ui/fahrenheitTextField/intValue := self f. }
+#+END_SRC
+
+*** 8. Name your filters; ban anonymous glue
+#+BEGIN_SRC smalltalk
+filter upcase |{ ^object uppercaseString. }    "do: named, reusable, testable"
+text → upcase → stdout.
+#+END_SRC
+#+BEGIN_SRC java
+list.stream().map(s -> s.toUpperCase())...     // not: logic trapped in a
+                                               // lambda, invisible to diagrams
+#+END_SRC
+
+*** 9. When tempted to simulate a style with calls, add the connector
+#+BEGIN_SRC eiffel
+source_dir |= mirror_dir     -- do: one constraint, works local or over SFTP
+#+END_SRC
+Not the watcher-thread + callback + debounce + retry apparatus that
+simulates the same constraint in four hundred lines of call/return.
+
+*** 10. Prefer deep keys through a flat interface over deep object graphs
+#+BEGIN_SRC eiffel
+store.item ("sports/cricket/results")   -- every root combinator sees this
+#+END_SRC
+#+BEGIN_SRC java
+root.getSports().getCricket().getResults()  // not: hop 2 onward bypasses
+                                            // every cache/logger/guard
+#+END_SRC
+
+*** 11. Keep the model world-ignorant; make adapters dumb
+#+BEGIN_SRC smalltalk
+"Weiher (BPC Listing 45): transport and format are edges"
+#HTTPServer{ port: 8081 } → toJSON → scheme:todo.
+#+END_SRC
+#+BEGIN_SRC eiffel
+-- RESTLY: TODO_ROW knows nothing about HTTP.
+-- Its to_json is an Eiffel conversion clause, not an annotation.
+-- The adapter chain is explicit and each stage is dumb:
+--   GATEWAY (HTTP boundary) <| TODO_CODEC (wire <-> typed) <| store
+-- The codec's four conversion points are one-liners:
+representation (a_value: TODO_ROW): JSON_OBJECT
+    do Result := a_value end                    -- implicit convert fires
+storage_value (a_value: JSON_OBJECT): TODO_ROW
+    do Result := a_value end                    -- implicit convert fires
+-- Wire-schema names (envelope, url) declared by the codec via
+-- RESTLY_WIRE_SCHEMA mixin, adopted by the gateway at composition —
+-- the domain object never mints its own url.
+#+END_SRC
+Not =@Entity @JsonSerialize @Path("/tasks") class Task= — three outside
+worlds annotated into the domain class.
+
+*** 12. Test by shrinking the composition, not by faking it
+#+BEGIN_SRC eiffel
+-- Weiher's principle (SC Fig. 33):
+production := core.backed_by (cache.backed_by (json.backed_by (disk)))
+test       := core.backed_by (dict_store)   -- same parts, fewer
+
+-- RESTLY: all unit tests use RESOURCE_HASH_TABLE [K, V] — a real
+-- in-memory dict-backed store. No mocks, no test doubles.
+-- RESTLY_NULL [K, V] (unwired-state singleton) demonstrates
+-- "shrinking to nothing": all keys absent, used as the default
+-- back before <| wiring.
+-- The testing guide: "No mocking. All tests use real objects."
+#+END_SRC
+Not =MockTaskRepository implements TaskRepository= — test-only code
+duplicating the interface and falsifying exactly what's under test.
+
+** The decision procedure
+
+Three questions classify any proposed component:
+
+| Q1: answers the four verbs to clients? | Q2: calls the four verbs on a source? | Verdict                                  |
+|----------------------------------------+---------------------------------------+------------------------------------------|
+| yes                                    | yes                                   | *combinator*                             |
+| yes                                    | no                                    | *leaf store*                             |
+| no                                     | writes flow one-way into it           | *filter* (Streaming)                     |
+| no                                     | no                                    | plain component — keep it out of the chain |
+
+Refinement for combinators: does it map the /ref/, the /data/, the
+/routing/, or the /policy/? That picks the superclass
+(Relative / Serialiser / Switching / guard-shaped PassThrough).
+
+** Worked example — "How should AUTH be implemented?"
+
+Wrong framing: "the AUTH component" is three components wearing one name.
+Decompose by the procedure.
+
+*a) The gatekeeper* — answers verbs, forwards verbs → *combinator*,
+guard-shaped PassThrough:
+#+BEGIN_SRC eiffel
+class RESTLY_GUARD [K, V]
+inherit RESTLY_PASSTHROUGH [K, V]
+feature
+    item (key: K): V
+        require authorized: policy.allows (current_principal, key, Read)
+        do Result := source.item (key) end
+    force (key: K; v: V)
+        require authorized: policy.allows (current_principal, key, Write)
+        do source.force (key, v) end
+end
+#+END_SRC
+This is where DbC-encodes-HTTP earns its keep: 401/403 as precondition
+violations. Corpus warrant: SC Fig. 34 places "authentication frameworks"
+/mid-chain/ in the To-Do hierarchy — auth is an intermediary, not a
+base-class feature and not a parameter threaded through every call.
+
+*b) The credential injector* — decorates outbound requests near the HTTP
+leaf → *mapping combinator* (maps data-to-store, identity elsewhere).
+Corpus warrant: BPC Listing 30, =scheme:s3 source setHeaders: #{...}= —
+credentials attached at the rawhttp leaf, invisible above it.
+
+*c) Credential storage* — answers verbs, has no source → *leaf store*.
+Corpus warrant: Wunderlist (SC Fig. 32), the keychain leaf, with a
+SwitchingStore routing sensitive object types to it. Secrets are just
+resources with a different backing store.
+
+So: =guard.backed_by (app_stack)= inbound;
+=retry.backed_by (header_injector.backed_by (http_client))= outbound;
+=switcher → keychain= for the secrets. Three verdicts, no =AuthService=.
+
+** Worked example — "How does DirectoryStore return subdirectories and files?"
+
+Corpus answer: listing is a GET on the container's ref. =file:.= returns
+the directory listing in the st shell (BPC Listing 29), and references
+can enumerate their child references (PI §3.2) — that is what makes the
+generic miller-column browser and HTTP export work at all.
+
+The typed answer exposes why this cannot live in the core protocol: for
+=RESTLY_DIRECTORY [K, V]=, =item("src/main.e")= returns a V, but
+=item("src/")= returns /a collection of keys/ — a different type through
+the same verb. Weiher's dynamically-typed store doesn't notice; a typed
+one must. Hence:
+#+BEGIN_SRC eiffel
+class RESTLY_DIRECTORY [K, V]
+inherit
+    RESTLY_PROTOCOL [K, V]   -- item/force/remove on file keys
+    RESTLY_LISTABLE [K]      -- children (prefix: K): LIST [K] — keys, not values
+#+END_SRC
+Listing returns *keys* (child refs), never values — clients GET each
+child through the same uniform interface, so intermediaries see every
+subsequent access (directive 10). Returning materialized values from a
+listing would be the bulk-bypass anti-pattern. The NSBrowser lesson
+(SC Figs. 35–37) applies verbatim: per-child access over a
+whole-directory reader is quadratic — fixed by inserting the stock
+cache, not by widening the interface.
+
+Note the derivation: =RESTLY_LISTABLE [K]= being value-type-agnostic is
+not a design taste — listing is the one operation whose result type is
+K-shaped in a V-typed store.
+
+** Three more, compressed
+
+- /Serializer — store or filter?/ Both exist in the corpus, and the
+  procedure disambiguates: bidirectional at a chain seam (must answer
+  GET with deserialized objects) → mapping store; one-directional in a
+  pipeline → filter. BPC's JSONConverter is the store built /on top of/
+  the converter streams — layering, not contradiction.
+- /Validation?/ Guard combinator in front of the source; 422 = contract
+  violation on =force=. Never inside the leaf — the leaf must stay
+  substitutable with the unvalidated test dict.
+- /Change notification / UI refresh?/ Never inside any store.
+  LoggingStore overlay + filter (SC Figs. 19–21): refs out, no data,
+  observers pull. Putting =notify_observers= in a store body is
+  directive 4 violated.
+
+** RESTLY scorecard against the twelve directives
+
+| # | Directive                    | Status          | RESTLY realization                                     |
+|---+------------------------------+-----------------+--------------------------------------------------------|
+| 1 | Draw the arrows first        | ✓ Followed      | =realworld_execution.e= route table as architecture    |
+| 2 | Location as param, verb in   | ✓ Followed      | =item alias "[]"= gives dictionary syntax              |
+| 3 | Four verbs and stop          | ✓ Followed      | Capability mixins (LISTABLE, POSTABLE…); 405 at compile time |
+| 4 | Wrap, don't edit             | ✓ Followed      | =CACHE [K, V]= is Weiher's CachingStore               |
+| 5 | Let stores compute           | ✓ Followed      | =article_store.e= slug minting from title              |
+| 6 | Connection = a line of code  | ✓ Followed      | =<|= expression + GraphViz auto-generation             |
+| 7 | Constraints                  | ✗ Deviated      | Different connector type per BPC Table 1; non-goal v1  |
+| 8 | Named filters, no anon glue  | ✓ (spirit)      | No filters yet, but no anonymous glue either            |
+| 9 | Add the connector            | ✓ (partial)     | Storage connector only; streams/events deferred         |
+|10 | Deep keys, flat interface    | ✓ (typed)       | Typed keys vs string paths; SwitchingStore a GAP anchor |
+|11 | World-ignorant model         | ✗ Overclaimed   | =TODO_ROW= has =convert make_from_json/to_json=: domain IS the serializer |
+|12 | Test by shrinking            | ✓ Followed      | =RESOURCE_HASH_TABLE=; no mocks; testing guide codifies |
+
+8 of 12 followed, 1 deliberate deviation (constraints = different
+connector type), 2 partial (no filters yet, no hierarchical keys yet),
+1 overclaimed (directive 11 — convert clauses are annotations in
+disguise).
+
+Additionally, four constructs use =<|= syntax without full combinator
+semantics (see the honesty ledger in =restly_ewf_design_document.org=):
+=JWT_AUTH= is a boundary guard not a storage combinator; =GATEWAY= is an
+adapter (interface-in ≠ interface-out); envelopes are configuration knobs
+not composable stages; =make_from_json= / =to_json= put the serializer
+inside the domain object.
+Each has the /shape/ of composition without its /substance/ (symmetric
+interface, independent testability, substitutability).

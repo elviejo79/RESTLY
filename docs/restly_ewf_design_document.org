@@ -731,6 +731,45 @@ Re-entry criteria, both required:
 2. Value-level mismatches follow ELKS =MISMATCH_CORRECTOR= semantics: a present-but-mistyped representation field /raises/ (→ 500) unless a declared correction handles it; a declared correction is the only silent path; an /absent/ field defaults, because REST partial bodies are legitimate — the same shape as the old preconditions =has_key (f) implies well_typed (f)=.
    =check_schema= already gives these semantics at the class-shape level; the value level must match.
 
+*** Honesty ledger: what is NOT composable (2026-07-23)
+
+Four constructs use =<|= syntax or claim Weiher alignment but fail the symmetry test (SC Figs. 9–10: a combinator provides the same interface it consumes).
+
+*1. JWT_AUTH is a boundary guard, not a combinator.*
+It composes via =<|= with exactly one thing: a =GATEWAY=.
+It cannot sit between a codec and a store — it speaks =CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE]= on both sides, never the storage protocol.
+In Weiher's world (SC Fig. 34), authentication frameworks sit mid-chain in the store hierarchy; RESTLY's ruling deliberately moved auth to the boundary.
+The =<|= syntax is cosmetic here — it reads like composition but it is really "set my back field."
+It is a guard, not a storage combinator.
+
+*2. GATEWAY is an adapter, not a combinator.*
+It consumes =RESTLY_PROTOCOL [STRING, JSON_OBJECT]= on its back but provides =CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE]= on its front.
+Interface-in ≠ interface-out.
+You cannot stack two gateways, put a cache in front of one (in the =RESTLY_PROTOCOL= sense), or put one behind a codec.
+It is Weiher's =SchemeHTTPServer= — which Weiher also never claims is a combinator; it is a bridge component at the edge of the store world.
+The =<|= operator obscures this: =gate <| store= looks like two peers, but they speak different protocols.
+
+*3. Envelopes are configuration, not composition.*
+Envelope wrapping is baked into =GATEWAY= as conditional logic (=if attached collection_envelope=, =if attached element_envelope=) inside =items=, =element_representation=, and =parse_body=.
+In Weiher's world, wrapping would be a =MappingStore= — a separate composable stage that maps data going up.
+RESTLY cannot test envelope wrapping independently of the HTTP machinery, reuse it in a non-HTTP context, stack two different envelope strategies, or compose it with caching (a cache in front of the gateway caches unwrapped; one behind it never sees the wrapper).
+The wire-schema adoption via =make_with_back= is elegant plumbing, but the /application/ of that schema is hardcoded.
+It is configuration, not composition.
+
+*4. =make_from_json= / =to_json= make the domain object its own serializer.*
+=TODO_ROW= has =convert make_from_json ({JSON_OBJECT}), to_json: {JSON_OBJECT}=.
+The domain object has a compile-time dependency on =JSON_OBJECT=.
+It knows its wire field names (="title"=, ="completed"=, ="order"=), it knows =completed= is a JSON boolean that maps to an integer.
+This is =@JsonSerialize= wearing Eiffel's convert-clause clothing — the coupling is identical.
+=TODO_CODEC='s conversion points just delegate to the domain's own conversion:
+=representation (a_value: TODO_ROW): JSON_OBJECT do Result := a_value end= — the codec is a pass-through over conversion logic that lives in the domain.
+The world-ignorance of directive 11 is an illusion: the domain /is/ the serializer.
+Want to change the wire format? Edit =TODO_ROW=, not the codec.
+Want to test =TODO_ROW= without the JSON library? You cannot.
+
+*What these four share:* each has the shape of composition (=<|= syntax, mixin inheritance, declarative wiring) without its substance (symmetric interface, independent testability, substitutability).
+Naming the gap is the first step; fixing it is future work, and fixing it wrong (premature abstraction for one user each) was exactly the mistake the reflective-converter withdrawal corrected.
+
 *** Verb → required conformance (doubles as the 405 spec)
 
 | Route kind (feature)  | Verb       | requires                                 |
