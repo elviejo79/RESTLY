@@ -6,9 +6,24 @@ class
 
 inherit
 	CONVERTER [STRING,JSON_OBJECT,INTEGER, TODO_ROW]
+		redefine
+			default_create
+		end
+
+	RESTLY_WIRE_SCHEMA
+		redefine
+			default_create
+		end
 
 create
 	default_create
+
+feature {NONE} -- Initialization
+
+	default_create
+		do
+			url_field := "url"
+		end
 
 feature -- Conversion points
 

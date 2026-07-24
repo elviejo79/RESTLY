@@ -108,8 +108,6 @@ feature -- Conversion
 		do
 			create Result.make
 			Result.put (create {JSON_NUMBER}.make_integer (id), "id")
-			-- host/port must match {TODOBACKEND_SERVER}
-			Result.put (create {JSON_STRING}.make_from_string ("http://localhost:8080/todos/" + id.out), "url")
 			Result.put (create {JSON_STRING}.make_from_string (title), "title")
 			Result.put (create {JSON_BOOLEAN}.make (completed = 1), "completed")
 			Result.put (create {JSON_NUMBER}.make_integer (order_value), "order")
