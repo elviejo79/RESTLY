@@ -79,6 +79,22 @@ feature -- Status report
 				and then not l_tok.has_error
 		end
 
+	subject_of (req: WSF_REQUEST): detachable STRING
+			-- The `sub` claim from the bearer token in `req`, if valid.
+		do
+			if
+				attached req.http_authorization as l_auth and then
+				l_auth.starts_with (bearer_prefix) and then
+				attached (create {JWT_LOADER}).token (
+					l_auth.substring (bearer_prefix.count + 1, l_auth.count),
+					algorithm, secret, Void) as l_tok and then
+				not l_tok.has_error and then
+				attached l_tok.claimset.subjet as l_sub
+			then
+				Result := l_sub.to_string_8
+			end
+		end
+
 feature -- REST verbs
 
 	item alias "[]" (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE

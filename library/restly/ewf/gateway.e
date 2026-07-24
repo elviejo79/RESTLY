@@ -20,9 +20,9 @@ inherit
 			-- Re-effects default_create/copy/out/is_equal, which
 			-- CALL_RETURN_PROTOCOL undefines for its own joins.
 
-	RESTLY_WIRE_SCHEMA
-			-- The four wire-schema knobs; adopted from `back` at
-			-- composition for any name not set explicitly here.
+	RESTLY_JSON_BODY
+			-- Body parsing, envelope wrapping, and the four wire-schema
+			-- knobs; adopted from `back` at composition.
 
 	RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
 		redefine
@@ -173,26 +173,6 @@ feature -- REST verbs
 		end
 
 feature {NONE} -- Helpers
-
-	parse_body (req: WSF_REQUEST): JSON_OBJECT
-			-- Parse JSON from request body, unwrapping `element_envelope` if set.
-		local
-			l_input: STRING
-			l_parser: JSON_PARSER
-		do
-			create l_input.make_empty
-			req.read_input_data_into (l_input)
-			create l_parser.make_with_string (l_input)
-			l_parser.parse_content
-			if l_parser.is_valid and then attached l_parser.parsed_json_object as l_obj then
-				Result := l_obj
-			else
-				create Result.make_with_capacity (0)
-			end
-			if attached element_envelope as l_name and then attached {JSON_OBJECT} Result [l_name] as l_inner then
-				Result := l_inner
-			end
-		end
 
 	represented (a_json: JSON_OBJECT; req: WSF_REQUEST; a_key: STRING): JSON_OBJECT
 			-- `a_json` plus the address-derived fields (`key_field`,

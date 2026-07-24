@@ -157,6 +157,13 @@ feature -- Factory: Client errors (4xx)
 			instance_free: class
 		end
 
+	unprocessable_entity: WSF_JSON_RESPONSE
+		do
+			create Result.make_with_status ({HTTP_STATUS_CODE}.unprocessable_entity)
+		ensure
+			instance_free: class
+		end
+
 feature -- Factory: Success responses (2xx)
 
 	ok: WSF_JSON_RESPONSE
