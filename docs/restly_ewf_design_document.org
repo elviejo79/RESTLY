@@ -173,10 +173,22 @@ more combinator.
    semantics gives safe retries and a path to concurrency.
    The HTTP POST handler mints its own request_id when the client
    sends none (todobackend sends none).
-6. *PATCH* (revised by decision 16, round 3): =RESTLY_PATCHABLE=
-   (mixin) adds =merge (a_patch: V; a_k: K)= — the patch is a
-   PARTIAL VALUE of the representation type. v1 merges JSON-on-JSON
-   at the pipeline front (RFC 7386: absent field = unchanged).
+6. *PATCH* (revised by decision 16, round 3; signature change
+   2026-07-23): =RESTLY_PATCHABLE= (mixin) adds
+   =merge (a_patch: JSON_OBJECT; a_k: K)= — the patch is a
+   =JSON_OBJECT= because a partial update is by definition
+   incomplete: a typed =V= cannot represent "only these fields
+   changed."  =JSON_OBJECT='s named properties are the natural
+   partial-data container (presence = intent to change, absence =
+   leave alone; RFC 7386 semantics).
+   The default implementation is effective (not deferred): read the
+   current =V= via =item=, convert to =JSON_OBJECT= via the convert
+   clause (=to_json=), merge patch fields, convert back
+   (=make_from_json=), =put=.  Descendants may override for
+   optimized merge (e.g. SQL =UPDATE SET= on individual columns).
+   =CONVERTER= inherits the default without overriding — =item= and
+   =put= route through the converter's own type-translation, so the
+   merge runs in the correct (representation) type space.
    The original TUPLE/=copy_from_tuple= domain-level design is kept
    available via =RESTLY_MERGEABLE= but unused in v1.
 7. *Collections*: =RESTLY_TRAVERSABLE= — iteration + =wipe_out=,
@@ -772,14 +784,21 @@ Naming the gap is the first step; fixing it wrong (premature abstraction for one
 
 *Resolution strategy, in priority order:*
 
-1. /Convert clauses (=make_from_json= / =to_json=) — fix now./
-   The only item that contradicts a directive we claimed to follow (directive 11: world-ignorant model).
-   Move the JSON mapping from =TODO_ROW= into =TODO_CODEC=: the codec's =representation= and =storage_value= do the field-by-field work themselves instead of delegating to the domain's convert clause.
-   =TODO_ROW= loses =make_from_json=, =to_json=, and the =convert= clause entirely — becomes a plain data holder with attributes and setters, zero JSON dependency.
-   Cost: the codec gets longer (two ~10-line features instead of two one-liners).
-   Gain: directive 11 is genuinely satisfied; =TODO_ROW= is testable without the JSON library.
-   This is exactly what the reflective converter was trying to automate — the manual version is tedious but honest, and correct for one typed resource.
-   Apply to all three todobackend examples and to =ARTICLE_STORE= (which already speaks =[STRING, JSON_OBJECT]= and has no domain class, so it is already clean).
+1. /Convert clauses (=make_from_json= / =to_json=) — keep: load-bearing for =merge=./
+   The =RESTLY_PATCHABLE= default implementation relies on the
+   convert clause: =item(k)= returns a =V= that converts to
+   =JSON_OBJECT= via =to_json=; after merging, the patched
+   =JSON_OBJECT= converts back to =V= via =make_from_json=.
+   Removing the convert clauses would force either (a) the codec to
+   reimplement field-by-field merge (duplicating =RESTLY_PATCHABLE='s
+   logic per domain type) or (b) a reflection mechanism that the
+   reflective-converter withdrawal already rejected.
+   The convert clauses ARE the serialization strategy — naming them
+   honestly in the ledger is better than pretending they are not
+   there, and extracting them would create more coupling than it
+   removes.
+   Directive 11 is overclaimed for typed stores: the domain object
+   knows its wire field names.  The honesty is in saying so.
 2. /Envelopes — record the extraction trigger, do not extract yet./
    The composable fix: a =RESTLY_ENVELOPE_MAPPER= combinator sitting between gateway and back, providing =[STRING, JSON_OBJECT]= on both sides, wrapping/unwrapping by name.
    Extract it when a second envelope strategy appears (HAL, JSON:API, or a non-HTTP consumer) — then the combinator has two users and the extraction pays for itself.
@@ -819,20 +838,19 @@ restbucks and the old handler) — NOT a config value.
 | =order=     | number    | =INTEGER=   | optional in POSTs                   |
 | =url=       | string    | (none)      | added by the web layer (decision 9) |
 
-PATCH is a JSON-on-JSON merge at the pipeline front (decision 16);
+PATCH uses =RESTLY_PATCHABLE.merge (JSON_OBJECT, K)= — the default
+implementation reads the current item, merges in JSON space
+(RFC 7386), and puts back (decision 6, revised 2026-07-23).
 =TODO_ITEM= does NOT implement =copy_from_tuple= in v1.
-(If a domain-level merge is ever wanted, =copy_from_tuple= would
-accept =TUPLE [title: detachable STRING; completed: detachable
-BOOLEAN_REF; order: detachable INTEGER_REF]= — absent field =
-=Void= = unchanged.)
 
 ** Request flows
 
 - =POST /todos= → handler mints request_id → =extend_new (item,
   request_id)= → =extend_requests [request_id]= → 201 + =Location= +
   =url= field.
-- =PATCH /todos/42= → =front.merge (patch_json, "42")= (JSON-on-JSON,
-  RFC 7386: absent field = unchanged) → 200 + full item.
+- =PATCH /todos/42= → gateway delegates to =back.merge (patch_json, "42")=
+  → =RESTLY_PATCHABLE= default: read via =item=, JSON merge (RFC 7386:
+  absent field = unchanged), =put= back → 200 + full item.
 - =GET /todos/42= → key conversion ("42" → 42) → =item (42)= →
   200 + full item (unknown id → 404 via contract tag).
 - =GET /todos= → collection iteration (cursor exposes key + item;
