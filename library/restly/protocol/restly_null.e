@@ -18,6 +18,9 @@ inherit
 	RESTLY_POSTABLE [K, V]
 
 	RESTLY_PATCHABLE [K, V]
+		redefine
+			merge
+		end
 
 	RESTLY_SEARCHABLE [ANY, K, V]
 
@@ -104,7 +107,7 @@ feature {NONE} -- Key minting
 
 feature -- Update
 
-	merge (a_patch: V; a_k: K)
+	merge (a_patch: JSON_OBJECT; a_k: K)
 			-- <Precursor>
 		do
 			check this_should_never_be_called: False end

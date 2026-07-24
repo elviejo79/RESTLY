@@ -12,6 +12,8 @@ class
 inherit
 	RESTLY_LISTABLE [K, V]
 
+	RESTLY_PATCHABLE [K, V]
+
 	ANY
 
 create

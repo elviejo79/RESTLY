@@ -151,24 +151,17 @@ feature -- REST verbs
 
 	merge (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- PATCH /resource/{id}
-			-- Read-modify-write in wire format: partiality is representable
-			-- in JSON but not in a rigid R, so the merge happens here.
-			-- `require else`: effecting of {CALL_RETURN_PROTOCOL}.merge;
-			-- or-composes with the parent's has_key (req), which delegates
-			-- to the same condition, so strictness is preserved.
+			-- Delegates to the back's RESTLY_PATCHABLE.merge, which
+			-- does the read-modify-write in JSON space.
 		require else
 			error_404: back.has_key (element_key (req))
 		local
 			l_key: STRING
-			l_json, l_patch: JSON_OBJECT
 		do
 			l_key := element_key (req)
-			l_json := back [l_key]
-			l_patch := parse_body (req)
-			across l_patch.current_keys as k loop
-				l_json.replace (l_patch [k], k)
+			if attached {RESTLY_PATCHABLE [STRING, JSON_OBJECT]} back as l_back then
+				l_back.merge (parse_body (req), l_key)
 			end
-			back.put (l_json, l_key)
 			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (element_representation (req, l_key))
 		end
 
