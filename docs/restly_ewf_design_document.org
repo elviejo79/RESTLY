@@ -685,7 +685,7 @@ Extract it only when a second front-end format appears (a CLI or test adapter sp
 
 The question: should there be an AUTH combinator in the typed core (=RESTLY_COMPOSABLE [K, V]=), guarding verbs per user?
 
-Ruling: *no principal in the typed protocol; authentication lives at the call/return boundary*.
+Ruling: *no principal[fn:principal] in the typed protocol; authentication lives at the call/return boundary*.
 
 1. /Weiher has no AUTH combinator, and the absence is structural./
    His generic catalog (Figure 13) is PassThrough, Mapping, Switching, Logging, Caching, Sequential.
@@ -768,7 +768,29 @@ Want to change the wire format? Edit =TODO_ROW=, not the codec.
 Want to test =TODO_ROW= without the JSON library? You cannot.
 
 *What these four share:* each has the shape of composition (=<|= syntax, mixin inheritance, declarative wiring) without its substance (symmetric interface, independent testability, substitutability).
-Naming the gap is the first step; fixing it is future work, and fixing it wrong (premature abstraction for one user each) was exactly the mistake the reflective-converter withdrawal corrected.
+Naming the gap is the first step; fixing it wrong (premature abstraction for one user each) was exactly the mistake the reflective-converter withdrawal corrected.
+
+*Resolution strategy, in priority order:*
+
+1. /Convert clauses (=make_from_json= / =to_json=) — fix now./
+   The only item that contradicts a directive we claimed to follow (directive 11: world-ignorant model).
+   Move the JSON mapping from =TODO_ROW= into =TODO_CODEC=: the codec's =representation= and =storage_value= do the field-by-field work themselves instead of delegating to the domain's convert clause.
+   =TODO_ROW= loses =make_from_json=, =to_json=, and the =convert= clause entirely — becomes a plain data holder with attributes and setters, zero JSON dependency.
+   Cost: the codec gets longer (two ~10-line features instead of two one-liners).
+   Gain: directive 11 is genuinely satisfied; =TODO_ROW= is testable without the JSON library.
+   This is exactly what the reflective converter was trying to automate — the manual version is tedious but honest, and correct for one typed resource.
+   Apply to all three todobackend examples and to =ARTICLE_STORE= (which already speaks =[STRING, JSON_OBJECT]= and has no domain class, so it is already clean).
+2. /Envelopes — record the extraction trigger, do not extract yet./
+   The composable fix: a =RESTLY_ENVELOPE_MAPPER= combinator sitting between gateway and back, providing =[STRING, JSON_OBJECT]= on both sides, wrapping/unwrapping by name.
+   Extract it when a second envelope strategy appears (HAL, JSON:API, or a non-HTTP consumer) — then the combinator has two users and the extraction pays for itself.
+   Until then, the gateway's inline wrapping is the lazier and correct choice for one strategy in one place.
+3. /GATEWAY — correctly an adapter; nothing to fix./
+   Weiher's =SchemeHTTPServer= is also not a combinator; it is a bridge at the edge of the store world.
+   =<|= is overloaded across two protocol families for ergonomic wiring, not because the composition is symmetric.
+   The thesis should name GATEWAY as an /adaptor/ (BPC Table 1, adaptor connector type), not a storage combinator.
+4. /JWT_AUTH — correctly a boundary guard; nothing to fix./
+   Auth at the boundary is a deliberate ruling backed by Weiher (the typed storage protocol has no principal parameter) and Fielding (trust boundaries at the connector).
+   Making it a storage combinator would mean threading a principal through =RESTLY_PROTOCOL [K, V]= — contradicting the auth ruling above.
 
 *** Verb → required conformance (doubles as the 405 spec)
 
@@ -1216,3 +1238,9 @@ Collected here so nobody scope-creeps:
 - Generic parameter naming (decision 15): =K= key, =V= value in
   position-agnostic classes, =R=/=S= only where conversion relates
   Representation and Store; =F=/=B= banned as type parameters.
+
+* Footnotes
+
+[fn:principal] Security term for the authenticated identity — the "who" in "who is making this request."
+Standard vocabulary in JAAS, Kerberos, and HTTP authentication specs.
+Weiher's corpus never uses the word because his stores have no auth story; the term enters RESTLY via Fielding's trust-boundary argument.
