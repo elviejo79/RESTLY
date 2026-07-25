@@ -25,17 +25,23 @@ feature -- Constants
 	secret: STRING = "realworld-secret"
 			-- HS256 signing secret (dev only).
 
+	jwt_codec: JWT_CODEC
+		once ("PROCESS")
+			create Result.make (secret, "realworld-issuer", "realworld-audience")
+		end
+
 feature {NONE} -- Router
 
 	setup_router
 		local
 			gate: GATEWAY
-			auth, guarded: JWT_AUTH
+			auth: AUTH_BOUNDARY
+			guarded: AUTH_BOUNDARY
 			articles: GATEWAY
 			uh: USER_HANDLER
 		do
 				-- Auth guard (shared)
-			create auth.make (secret)
+			create auth.make (jwt_codec)
 			auth.bearer_prefix := "Token "
 
 				-- Article pipelines

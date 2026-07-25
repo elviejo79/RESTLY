@@ -765,3 +765,47 @@ verb set; a capability is its query set./
   =RESTLY_CONSTANTS=-inherits-=PROTOCOL= idea shows how cheap Eiffel
   makes the wrong move; the addendum's "a capability is its query set"
   is the same information with no inheritance at all.
+
+* Correction (2026-07-25) — Taxonomitis: seven wrapper classes deleted
+
+** The ruling
+
+Six stub classes and one speculative combinator are deleted.
+The =stubs/= directory no longer exists.
+
+Deleted outright (unused):
+- =SCOPE= — never referenced; =JWT_CAPABILITY= uses =ARRAYED_SET [STRING_32]= directly.
+- =CLOCK= / =TEST_CLOCK= — nobody calls them; time is already threaded as =DATE_TIME= parameters (ground rule 3 enforces this).
+
+Inlined into their one caller (single-field wrappers):
+- =VERIFICATION_KEY= → =JWT_CODEC.secret: STRING_8=.
+- =RAW_CREDENTIAL= → =READABLE_STRING_8= in =PRINCIPAL_CODEC= and =JWT_CODEC= signatures; empty string = absent credential; Eiffel's void-safety gives =is_present= for free via =attached=.
+- =PRINCIPAL= → =STRING=. =STRING= is already =HASHABLE= and already compares by value with =~=.
+
+Deferred (premature memoization):
+- =SESSION_SWITCH= — not wired into any route; build when a profiler complains.
+
+** Why
+
+Each deleted class wrapped one =STRING= field and added zero behavior.
+A class whose only job is to rename a type is taxonomitis — it costs a file, a creation procedure, and a mental slot in every reader's head, and buys nothing that Eiffel's own type system doesn't already provide.
+=SESSION_SWITCH= is the YAGNI case: cache optimization before measurement.
+
+** Amendments, section by section
+
+- /Idea 1, Technical/ :: =PRINCIPAL_CODEC.authenticated= and =.mint= now take =a_token: READABLE_STRING_8= instead of =RAW_CREDENTIAL=.
+- /Idea 5/ :: =SESSION_SWITCH= exists only as a design sketch (the prose and pseudocode remain); no implementation until profiling justifies it. =PRINCIPAL= references in the pseudocode are illustrative, not normative — =CAPABILITY.subject= is now =STRING=.
+- /Ground rule 8/ :: still "use =~= everywhere" — =STRING= already satisfies this by default; the =PRINCIPAL.is_equal= test is deleted (testing stdlib).
+- /M0/ :: stubs list shrinks to nothing. The =stubs/= directory is gone. =JWT_CODEC.make= takes three strings: =make (a_secret, an_issuer, an_audience: READABLE_STRING_8)=.
+- /M1/ :: =CAPABILITY.subject= returns =STRING= (was =PRINCIPAL=). =TEST_CAPABILITY.make= takes =a_subject: READABLE_STRING_GENERAL=.
+- /M3/ :: =JWT_CODEC= accepts bare =READABLE_STRING_8= tokens. =JWT_CAPABILITY.make= takes =a_subject: READABLE_STRING_GENERAL= (was =PRINCIPAL=). Behavioral table row 1 (absent credential) uses empty string =""=; the =raw= test helper is deleted.
+- /M3, row 9/ :: =TEST_CLOCK= theater removed; the test proves the same property (=is_valid= never checks expiry) without a clock object, since nothing in the codec or view reads a clock.
+- /M4/ :: deferred. =SESSION_SWITCH= code and tests deleted; milestone reopens when measured.
+- /Class summary/ :: eight classes remain: =CAPABILITY=, =AUTH_VIEW=, =LISTABLE_AUTH_VIEW=, =AUTH_FILTER_CURSOR=, =PRINCIPAL_CODEC=, =JWT_CODEC=, =JWT_CAPABILITY=, =AUTH_BOUNDARY=.
+- /Definition of done/ :: M0–M3 + M1b acceptance criteria pass (20/20 green). M4 is deferred, not failed.
+
+** Test delta
+
+24 tests → 20 tests.
+- −3: =SESSION_SWITCH_TEST_SET= deleted with the class.
+- −1: =test_principal_equality_is_by_name= deleted (testing =STRING.is_equal= is testing stdlib).

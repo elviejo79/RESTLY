@@ -17,9 +17,9 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_subject: PRINCIPAL; a_scopes: LIST [READABLE_STRING_32])
+	make (a_subject: READABLE_STRING_GENERAL; a_scopes: LIST [READABLE_STRING_32])
 		do
-			subject := a_subject
+			subject := a_subject.to_string_8
 			create scopes.make (a_scopes.count)
 			scopes.compare_objects
 			from
@@ -34,12 +34,12 @@ feature {NONE} -- Initialization
 
 feature -- Access
 
-	subject: PRINCIPAL
+	subject: STRING
 
 	is_valid: BOOLEAN
 			-- Structurally sound: a named subject.
 		do
-			Result := not subject.name.is_empty
+			Result := not subject.is_empty
 		end
 
 feature -- Queries (the protocol's verbs, collapsed)

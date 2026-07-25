@@ -20,16 +20,16 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_key: VERIFICATION_KEY; an_issuer, an_audience: READABLE_STRING_8)
+	make (a_secret, an_issuer, an_audience: READABLE_STRING_8)
 		do
-			key := a_key
+			secret := a_secret.to_string_8
 			issuer := an_issuer.to_string_8
 			audience := an_audience.to_string_8
 		end
 
 feature -- Access
 
-	key: VERIFICATION_KEY
+	secret: STRING_8
 
 	issuer: STRING_8
 
@@ -37,34 +37,29 @@ feature -- Access
 
 feature -- Status report
 
-	authenticated (a_raw: RAW_CREDENTIAL; a_time: DATE_TIME): BOOLEAN
+	authenticated (a_token: READABLE_STRING_8; a_time: DATE_TIME): BOOLEAN
 			-- <Precursor>
 		do
-			Result := a_raw.is_present
-				and then attached verified_token (a_raw, a_time) as t
+			Result := not a_token.is_empty
+				and then attached verified_token (a_token, a_time) as t
 				and then attached t.claimset.subjet
 		end
 
-feature -- Access
-
-	mint (a_raw: RAW_CREDENTIAL; a_time: DATE_TIME): JWT_CAPABILITY
+	mint (a_token: READABLE_STRING_8; a_time: DATE_TIME): JWT_CAPABILITY
 			-- <Precursor>
-		local
-			l_subject: PRINCIPAL
 		do
 			check
 				established:
-					attached verified_token (a_raw, a_time) as t
+					attached verified_token (a_token, a_time) as t
 					and then attached t.claimset.subjet as s
 			then
-				create l_subject.make (s)
-				create Result.make (l_subject, scopes_of (t))
+				create Result.make (s, scopes_of (t))
 			end
 		end
 
 feature {NONE} -- Implementation
 
-	verified_token (a_raw: RAW_CREDENTIAL; a_time: DATE_TIME): detachable JWT
+	verified_token (a_token: READABLE_STRING_8; a_time: DATE_TIME): detachable JWT
 			-- Signature-verified, claim-validated token, if any.
 		local
 			l_loader: JWT_LOADER
@@ -76,7 +71,7 @@ feature {NONE} -- Implementation
 			l_ctx.set_issuer (issuer)
 			l_ctx.set_audience (audience)
 			if
-				attached l_loader.token (a_raw.text, l_loader.algorithms.hs256.name, key.secret, l_ctx) as t
+				attached l_loader.token (a_token.to_string_8, l_loader.algorithms.hs256.name, secret, l_ctx) as t
 				and then not t.has_error
 			then
 				Result := t

@@ -25,11 +25,8 @@ feature {NONE} -- Fixtures
 
 	alice_capability: TEST_CAPABILITY
 			-- Permits only alice's rows.
-		local
-			l_alice: PRINCIPAL
 		do
-			create l_alice.make ("alice")
-			create Result.make (l_alice)
+			create Result.make ("alice")
 			Result.permit ("alice/1")
 			Result.permit ("alice/2")
 		end

@@ -35,19 +35,18 @@ create
 
 feature {NONE} -- Initialization
 
-    make (a_subject: PRINCIPAL; a_role: STRING)
+    make (a_subject: READABLE_STRING_GENERAL; a_role: STRING)
         do
-            subject := a_subject
+            subject := a_subject.to_string_8
             role := a_role
         end
 
 feature -- Access
-
-    subject: PRINCIPAL
+    subject: STRING
 
     is_valid: BOOLEAN
         do
-            Result := not subject.name.is_empty
+            Result := not subject.is_empty
         end
 
 feature -- Queries
@@ -57,7 +56,7 @@ feature -- Queries
             -- Example: only keys that start with their own name.
         do
             if attached {READABLE_STRING_GENERAL} a_key as k then
-                Result := k.starts_with (subject.name)
+                Result := k.starts_with (subject)
             end
         end
 
@@ -105,7 +104,7 @@ do
     l_store.extend ("bob private note", "bob/1")
 
     -- Alice's capability: sees alice/* keys, editor role.
-    create l_cap.make (create {PRINCIPAL}.make ("alice"), "editor")
+    create l_cap.make ("alice", "editor")
 
     -- Alice's view of the store.
     create l_view.make (l_cap, l_store)
@@ -161,25 +160,22 @@ end
 #+begin_src eiffel
 local
     l_codec: JWT_CODEC
-    l_raw: RAW_CREDENTIAL
+    l_token: STRING_8
     l_time: DATE_TIME
     l_view: AUTH_VIEW [STRING, STRING]
 do
     -- Build the codec once at startup.
-    create l_codec.make (
-        create {VERIFICATION_KEY}.make ("my-hs256-secret"),
-        "my-issuer",
-        "my-audience")
+    create l_codec.make ("my-hs256-secret", "my-issuer", "my-audience")
 
     -- Per request: extract the Authorization header.
-    create l_raw.make (request.authorization_header)
+    l_token := request.authorization_header
 
     -- Snapshot time at request entry (ground rule 3).
     create l_time.make_now_utc
 
     -- Authenticate: present + well-formed + signature + exp/nbf/iss/aud.
-    if l_codec.authenticated (l_raw, l_time) then
-        create l_view.make (l_codec.mint (l_raw, l_time), my_store)
+    if l_codec.authenticated (l_token, l_time) then
+        create l_view.make (l_codec.mint (l_token, l_time), my_store)
         -- l_view sees only what the token's scopes permit.
     else
         -- 401 Unauthorized.
@@ -188,33 +184,11 @@ end
 #+end_src
 
 JWT scope values map to capability queries:
-| Scope     | Grants                  |
-|-----------+-------------------------|
-| =read=    | =readable=              |
-| =write=   | =readable= + =writable= + =creatable= |
-| =delete=  | =removable=             |
-
-** 5. Session memoization
-
-=SESSION_SWITCH= remembers each principal's view so the codec runs
-once per session, not once per request:
-
-#+begin_src eiffel
-local
-    l_switch: SESSION_SWITCH [STRING, STRING]
-do
-    create l_switch.make (my_store)
-
-    -- First call for alice: builds and caches the view.
-    l_switch.view (alice_capability)
-
-    -- Second call for same principal: returns the cached view.
-    l_switch.view (alice_capability)  -- same object
-
-    -- Revoke: alice's view is discarded, next call rebuilds.
-    l_switch.evict (create {PRINCIPAL}.make ("alice"))
-end
-#+end_src
+| Scope    | Grants                                |
+|----------+---------------------------------------|
+| =read=   | =readable=                            |
+| =write=  | =readable= + =writable= + =creatable= |
+| =delete= | =removable=                           |
 
 * The gateway pattern for writes
 
@@ -250,13 +224,11 @@ fires =error_404_not_found= if called anyway.
 | =CAPABILITY=           | Deferred: subject + four permission queries            |
 | =AUTH_VIEW=            | Store wrapper: forbidden keys look absent              |
 | =LISTABLE_AUTH_VIEW=   | Adds filtered cursor and scoped =wipe_out=             |
-| =PRINCIPAL_CODEC=      | Deferred: raw credential to capability at a given time |
+| =AUTH_FILTER_CURSOR=   | Forward-only cursor skipping forbidden keys            |
+| =PRINCIPAL_CODEC=      | Deferred: bearer token to capability at a given time   |
 | =JWT_CODEC=            | HS256 bearer token authentication                      |
 | =JWT_CAPABILITY=       | Capability derived from JWT =scope= claim              |
-| =SESSION_SWITCH=       | Memoizes principal to view; =evict= revokes            |
-| =PRINCIPAL=            | Named identity, compared by name                       |
-| =RAW_CREDENTIAL=       | The Authorization header, untrusted                    |
-| =VERIFICATION_KEY=     | HS256 shared secret wrapper                            |
+| =AUTH_BOUNDARY=        | EWF composable stage: 401 guard for HTTP routes        |
 
 * ECF targets
 

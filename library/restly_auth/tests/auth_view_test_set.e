@@ -1,12 +1,11 @@
 note
 	description: "[
-		M1 acceptance (design doc): principal equality first (ground
-		rule 8), visibility is authorization, and denial as the
-		inherited 404 precondition firing on the view's shrunken
-		has_key — proven by assertion tags and by unchanged backing
-		state, not by counting calls.
+		M1 acceptance (design doc): visibility is authorization, and
+		denial as the inherited 404 precondition firing on the view's
+		shrunken has_key — proven by assertion tags and by unchanged
+		backing state, not by counting calls.
 	]"
-	testing: "covers/{AUTH_VIEW}, covers/{PRINCIPAL}"
+	testing: "covers/{AUTH_VIEW}"
 
 class
 	AUTH_VIEW_TEST_SET
@@ -15,11 +14,6 @@ inherit
 	EQA_TEST_SET
 
 feature {NONE} -- Fixtures
-
-	alice: PRINCIPAL
-		do
-			create Result.make ("alice")
-		end
 
 	backing: RESOURCE_HASH_TABLE [STRING, STRING]
 			-- One row for alice, one for bob.
@@ -32,22 +26,8 @@ feature {NONE} -- Fixtures
 	alice_capability: TEST_CAPABILITY
 			-- Permits only alice's row.
 		do
-			create Result.make (alice)
+			create Result.make ("alice")
 			Result.permit ("alice/1")
-		end
-
-feature -- Tests: ground rule 8 first
-
-	test_principal_equality_is_by_name
-		local
-			p, q, r: PRINCIPAL
-		do
-			create p.make ("alice")
-			create q.make ("alice")
-			create r.make ("bob")
-			assert ("same_name_equal", p ~ q)
-			assert ("same_name_same_hash", p.hash_code = q.hash_code)
-			assert ("different_name_not_equal", not (p ~ r))
 		end
 
 feature -- Tests: visibility is authorization

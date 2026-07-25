@@ -17,9 +17,9 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_subject: PRINCIPAL)
+	make (a_subject: READABLE_STRING_GENERAL)
 		do
-			subject := a_subject
+			subject := a_subject.to_string_8
 			create permitted_keys.make (4)
 			permitted_keys.compare_objects
 			is_valid := True
@@ -27,7 +27,7 @@ feature {NONE} -- Initialization
 
 feature -- Access
 
-	subject: PRINCIPAL
+	subject: STRING
 
 	is_valid: BOOLEAN
 

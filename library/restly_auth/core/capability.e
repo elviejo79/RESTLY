@@ -19,7 +19,7 @@ deferred class
 
 feature -- Access
 
-	subject: PRINCIPAL
+	subject: STRING
 			-- Whom this capability speaks for.
 		deferred
 		end

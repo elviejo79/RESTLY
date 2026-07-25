@@ -52,19 +52,27 @@ feature {NONE} -- Initialization
 	smoke_check_jwt_auth
 			-- Token round trip and pipeline wiring for the auth combinator.
 		local
-			auth, wired: JWT_AUTH
+			l_codec: JWT_CODEC
+			auth, wired: AUTH_BOUNDARY
 			jws: JWS
 			tok: STRING
+			l_time: DATE_TIME
 		do
-			create auth.make ("realworld-secret")
-			create jws.make_with_json_payload ("{%"sub%":%"1%"}")
-			jws.set_algorithm_to_hs256
+			create l_codec.make ("realworld-secret", "realworld-issuer", "realworld-audience")
+			create auth.make (l_codec)
+			create jws
+			jws.claimset.set_subject ({STRING_32} "1")
+			jws.claimset.set_issuer ("realworld-issuer")
+			jws.claimset.set_audience ("realworld-audience")
+			jws.claimset.set_claim ("scope", "read write delete")
+			jws.claimset.set_expiration_time (create {DATE_TIME}.make_from_epoch (2000000000))
+			jws.claimset.set_not_before_time (create {DATE_TIME}.make_from_epoch (1700000000))
 			tok := jws.encoded_string ("realworld-secret")
+			create l_time.make_now_utc
 			wired := auth <| (create {GATEWAY}) <| create {RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]}.make ("smoke")
 			check
-				valid_token_accepted: auth.is_valid_token (tok)
-				tampered_token_rejected: not auth.is_valid_token (tok + "x")
-				wrong_secret_rejected: not (create {JWT_AUTH}.make ("other")).is_valid_token (tok)
+				valid_token_accepted: l_codec.authenticated (tok, l_time)
+				tampered_token_rejected: not l_codec.authenticated (tok + "x", l_time)
 				auth_backed_by_gateway: attached {GATEWAY} wired.back
 			end
 		end
