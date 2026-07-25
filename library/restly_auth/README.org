@@ -1,0 +1,277 @@
+#+TITLE: RESTLY_AUTH — Authorization as a Store Combinator
+#+AUTHOR: RESTLY
+
+* What it does
+
+=RESTLY_AUTH= wraps any =RESTLY_PROTOCOL= store so that each user sees
+only the resources their capability permits. Forbidden keys look
+absent — the caller gets the protocol's own 404, not an auth-specific
+error. There is no authorization check scattered across your handlers;
+you hand the user a view and every verb inherits the restriction.
+
+* Core idea in one paragraph
+
+A =CAPABILITY= declares what a principal may read, write, remove, or
+create. An =AUTH_VIEW= takes a capability and a backing store, then
+shrinks =has_key= so that invisible keys cease to exist. Every
+inherited precondition (=item=, =put=, =remove=) binds dynamically to
+the shrunken =has_key= — denial is free, no new code required.
+
+* Quick start
+
+** 1. Define what each user can do
+
+Inherit =CAPABILITY= and implement the four queries:
+
+#+begin_src eiffel
+class
+    MY_CAPABILITY
+
+inherit
+    CAPABILITY
+
+create
+    make
+
+feature {NONE} -- Initialization
+
+    make (a_subject: PRINCIPAL; a_role: STRING)
+        do
+            subject := a_subject
+            role := a_role
+        end
+
+feature -- Access
+
+    subject: PRINCIPAL
+
+    is_valid: BOOLEAN
+        do
+            Result := not subject.name.is_empty
+        end
+
+feature -- Queries
+
+    readable (a_key: HASHABLE): BOOLEAN
+            -- Can this principal see the resource at `a_key`?
+            -- Example: only keys that start with their own name.
+        do
+            if attached {READABLE_STRING_GENERAL} a_key as k then
+                Result := k.starts_with (subject.name)
+            end
+        end
+
+    writable (a_key: HASHABLE): BOOLEAN
+        do
+            Result := readable (a_key) and role ~ "editor"
+        end
+
+    removable (a_key: HASHABLE): BOOLEAN
+        do
+            Result := readable (a_key) and role ~ "editor"
+        end
+
+    creatable: BOOLEAN
+        do
+            Result := role ~ "editor"
+        end
+
+feature {NONE} -- Implementation
+
+    role: STRING
+
+end
+#+end_src
+
+The four queries map onto the protocol's verbs:
+- =readable= gates =item=, =has_key=, cursor iteration.
+- =writable= gates =put=, =force=, =extend=.
+- =removable= gates =remove=, =wipe_out=.
+- =creatable= gates =extend_new= (key does not exist yet).
+
+Ground rule: =writable (k)= must imply =readable (k)=.
+
+** 2. Wrap a store in an AUTH_VIEW
+
+#+begin_src eiffel
+local
+    l_store: RESOURCE_HASH_TABLE [STRING, STRING]
+    l_cap: MY_CAPABILITY
+    l_view: AUTH_VIEW [STRING, STRING]
+do
+    -- The real store, shared by all users.
+    create l_store.make ("articles")
+    l_store.extend ("alice first post", "alice/1")
+    l_store.extend ("bob private note", "bob/1")
+
+    -- Alice's capability: sees alice/* keys, editor role.
+    create l_cap.make (create {PRINCIPAL}.make ("alice"), "editor")
+
+    -- Alice's view of the store.
+    create l_view.make (l_cap, l_store)
+
+    -- Alice sees her key.
+    l_view.has_key ("alice/1")   -- True
+    l_view ["alice/1"]           -- "alice first post"
+
+    -- Bob's key is invisible — not forbidden, absent.
+    l_view.has_key ("bob/1")     -- False
+    -- l_view ["bob/1"]          -- would fire error_404_not_found
+
+    -- Write pre-check: the gateway pattern.
+    if l_view.writable ("alice/1") then
+        l_view.put ("alice edited post", "alice/1")
+    end
+end
+#+end_src
+
+** 3. Listing (filtered cursor)
+
+Use =LISTABLE_AUTH_VIEW= when the backing store is =RESTLY_LISTABLE=:
+
+#+begin_src eiffel
+local
+    l_store: RESOURCE_HASH_TABLE [STRING, STRING]
+    l_view: LISTABLE_AUTH_VIEW [STRING, STRING]
+    l_cursor: TABLE_ITERATION_CURSOR [STRING, STRING]
+do
+    create l_store.make ("articles")
+    l_store.extend ("alice post", "alice/1")
+    l_store.extend ("bob post", "bob/1")
+
+    create l_view.make (alice_capability, l_store)
+
+    -- Cursor yields only alice's keys.
+    from l_cursor := l_view.new_cursor until l_cursor.after loop
+        -- "alice/1" appears; "bob/1" never does.
+        l_cursor.forth
+    end
+
+    -- wipe_out empties alice's world; bob's row survives.
+    l_view.wipe_out
+    l_store.has_key ("bob/1")  -- True, untouched.
+end
+#+end_src
+
+** 4. JWT authentication (token to capability in one call)
+
+=JWT_CODEC= authenticates HS256 bearer tokens and mints a
+=JWT_CAPABILITY= whose permissions come from the =scope= claim:
+
+#+begin_src eiffel
+local
+    l_codec: JWT_CODEC
+    l_raw: RAW_CREDENTIAL
+    l_time: DATE_TIME
+    l_view: AUTH_VIEW [STRING, STRING]
+do
+    -- Build the codec once at startup.
+    create l_codec.make (
+        create {VERIFICATION_KEY}.make ("my-hs256-secret"),
+        "my-issuer",
+        "my-audience")
+
+    -- Per request: extract the Authorization header.
+    create l_raw.make (request.authorization_header)
+
+    -- Snapshot time at request entry (ground rule 3).
+    create l_time.make_now_utc
+
+    -- Authenticate: present + well-formed + signature + exp/nbf/iss/aud.
+    if l_codec.authenticated (l_raw, l_time) then
+        create l_view.make (l_codec.mint (l_raw, l_time), my_store)
+        -- l_view sees only what the token's scopes permit.
+    else
+        -- 401 Unauthorized.
+    end
+end
+#+end_src
+
+JWT scope values map to capability queries:
+| Scope     | Grants                  |
+|-----------+-------------------------|
+| =read=    | =readable=              |
+| =write=   | =readable= + =writable= + =creatable= |
+| =delete=  | =removable=             |
+
+** 5. Session memoization
+
+=SESSION_SWITCH= remembers each principal's view so the codec runs
+once per session, not once per request:
+
+#+begin_src eiffel
+local
+    l_switch: SESSION_SWITCH [STRING, STRING]
+do
+    create l_switch.make (my_store)
+
+    -- First call for alice: builds and caches the view.
+    l_switch.view (alice_capability)
+
+    -- Second call for same principal: returns the cached view.
+    l_switch.view (alice_capability)  -- same object
+
+    -- Revoke: alice's view is discarded, next call rebuilds.
+    l_switch.evict (create {PRINCIPAL}.make ("alice"))
+end
+#+end_src
+
+* The gateway pattern for writes
+
+The write verbs (=put=, =remove=, =extend=) guarantee success by
+inherited contract — they cannot return "denied." The caller pre-checks
+permission before calling:
+
+#+begin_src eiffel
+-- PUT handler:
+if l_view.writable (key) then
+    l_view.put (value, key)
+    -- respond 200
+else
+    -- respond 403
+end
+
+-- DELETE handler:
+if l_view.removable (key) then
+    l_view.remove (key)
+    -- respond 200
+else
+    -- respond 403
+end
+#+end_src
+
+Read denial needs no gateway — =has_key= returns =False=, and =item=
+fires =error_404_not_found= if called anyway.
+
+* Class summary
+
+| Class                  | Role                                                  |
+|------------------------+-------------------------------------------------------|
+| =CAPABILITY=           | Deferred: subject + four permission queries            |
+| =AUTH_VIEW=            | Store wrapper: forbidden keys look absent              |
+| =LISTABLE_AUTH_VIEW=   | Adds filtered cursor and scoped =wipe_out=             |
+| =PRINCIPAL_CODEC=      | Deferred: raw credential to capability at a given time |
+| =JWT_CODEC=            | HS256 bearer token authentication                      |
+| =JWT_CAPABILITY=       | Capability derived from JWT =scope= claim              |
+| =SESSION_SWITCH=       | Memoizes principal to view; =evict= revokes            |
+| =PRINCIPAL=            | Named identity, compared by name                       |
+| =RAW_CREDENTIAL=       | The Authorization header, untrusted                    |
+| =VERIFICATION_KEY=     | HS256 shared secret wrapper                            |
+
+* ECF targets
+
+Add to your project:
+
+#+begin_src xml
+<target name="my_app" extends="restly_auth">
+    <!-- your clusters -->
+    <option>
+        <assertions precondition="true" postcondition="true"
+                    check="true" invariant="true"
+                    loop="true" supplier_precondition="true"/>
+    </option>
+</target>
+#+end_src
+
+The =<assertions>= block is mandatory — =extends= does not inherit it.
+Without it, authorization contracts are silently off.

@@ -697,3 +697,71 @@ verb set; a capability is its query set./
 - /M3/ :: =JWT_CAPABILITY= maps the =scope= claim onto the four
   queries (write scope covering read by construction, per ground
   rule 9).
+
+* Friction log — RESTLY_AUTH v2 (M0–M4)
+
+** What was free
+
+- *Denial for free (the design's central bet — it paid).* =AUTH_VIEW=
+  never wrote a single denial precondition. Shrinking =has_key= to
+  =back.has_key (k) and capability.readable (k)= made the inherited
+  =error_404_not_found: has_key (k)= on =item= / =put= / =remove=
+  bind dynamically to the shrunken query. The tag tests prove it: an
+  unauthorized =item= fires /the protocol's own/ 404 tag, not an
+  auth-specific one. Forbidden ≡ absent fell out of dynamic binding.
+- *The addendum's four queries.* Replacing =permits (k, op)= with
+  =readable= / =writable= / =removable= / =creatable= deleted
+  =OPERATION=, its statics, and all dispatch. Every call site got
+  shorter; JWT scope mapping became four one-liners.
+- *SESSION_SWITCH.* ~30 lines, compiled and passed first try.
+  =HASH_TABLE= + =compare_objects= + =PRINCIPAL.is_equal=-by-name did
+  all the work; =bound_to_caller= and =gone= transcribed verbatim
+  with nothing to adapt.
+- *The distribution JWT library (revised M2).* =JWT_LOADER.token= with
+  a =JWT_CONTEXT= carrying the snapshot time validated
+  sig+exp+nbf+iss+aud in one call — =authenticated= collapsed to
+  three conjuncts. RFC 7515 A.1 vector verified untouched.
+
+** What resisted
+
+- *ECF =extends= does not inherit =<option><assertions/>=* — the
+  prime friction. Assertions were silently OFF in the extended
+  targets; both tag-violation tests "failed" with
+  =DEVELOPER_EXCEPTION= because preconditions never fired at all.
+  Ground rule 6 ("assertion monitoring always on") is not one
+  setting — it must be re-declared per target. A design that stakes
+  denial on live contracts is one ECF omission away from an auth
+  bypass that all /behavioral/ tests still pass. The two tag tests
+  are therefore load-bearing, not decorative.
+- *Capturing the assertion tag.* Three layers deep: unwrap
+  =ROUTINE_FAILURE= via =.original=, cast to
+  ={PRECONDITION_VIOLATION}=, and read =.description= (=.tag= is the
+  generic "Precondition violated."; =.message= is obsolete). Plus the
+  rescue/retry pattern needs a retry guard or a failing assert inside
+  the retried branch loops forever.
+- *Test discovery.* =all_classes= root kills the EQA evaluator; the
+  working pattern (=<root class="ANY" feature="default_create"/>=)
+  came from ISE's own =net_test=. New test classes need a /clean/
+  compile to be discovered — incremental reports 0 tests.
+- *One typing seam.* The addendum types the queries =k: K= but
+  =CAPABILITY= is non-generic (cost #4 still open) — transcribed as
+  =a_key: HASHABLE=, argued and accepted. Also =split= on
+  =READABLE_STRING_32= yields =LIST [READABLE_STRING_32]=, not
+  =STRING_32= (VJAR).
+
+** Where the design surprised
+
+- *Row 9 was unfalsifiable by accident.* With =is_valid=
+  structural-only and the snapshot threaded explicitly, there is /no
+  code path/ by which the mid-request wall clock can influence
+  anything — the test advances =TEST_CLOCK= and nothing can even
+  observe it. The test exists purely as a tripwire against a future
+  "improvement."
+- *wipe_out's postcondition is a theorem about the capability.* A
+  readable-but-not-removable key makes =empty: new_cursor.after=
+  unsatisfiable — the contract itself forces the gateway's per-key
+  removability pre-check. The addendum caught this before I did.
+- *Facility-inheritance temptation.* The rejected
+  =RESTLY_CONSTANTS=-inherits-=PROTOCOL= idea shows how cheap Eiffel
+  makes the wrong move; the addendum's "a capability is its query set"
+  is the same information with no inheritance at all.

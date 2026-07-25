@@ -40,4 +40,27 @@
 		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
 		<cluster name="test" location=".\testing\" recursive="true"/>
 	</target>
+	<target name="restly_auth" extends="restly">
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<capability>
+			<concurrency support="thread"/>
+			<void_safety support="all" use="all"/>
+		</capability>
+		<library name="time" location="$ISE_LIBRARY\library\time\time.ecf"/>
+		<cluster name="restly_auth" location=".\restly_auth\" recursive="true">
+			<file_rule>
+				<exclude>/tests$</exclude>
+			</file_rule>
+		</cluster>
+	</target>
+	<target name="restly_auth_tests" extends="restly_auth">
+		<root class="ANY" feature="default_create"/>
+		<option warning="warning">
+			<assertions precondition="true" postcondition="true" check="true" invariant="true" loop="true" supplier_precondition="true"/>
+		</option>
+		<library name="testing" location="$ISE_LIBRARY\library\testing\testing.ecf"/>
+		<cluster name="restly_auth_test" location=".\restly_auth\tests\" recursive="true"/>
+	</target>
 </system>
