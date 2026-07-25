@@ -78,12 +78,8 @@ feature -- REST verbs
 
 	extend (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- POST /resource — create a new item.
-			-- Post/Redirect/Get: the command answers only the location
-			-- of the fresh element; the representation is the client's
-			-- follow-up GET (see restly_ewf_design_document.org, PRG
-			-- ruling experiment 2026-07-23).
 		local
-			l_json: JSON_OBJECT
+			l_json, response_json: JSON_OBJECT
 			l_request_id: STRING
 		do
 			if attached {RESTLY_POSTABLE [STRING, JSON_OBJECT]} back as l_back then
@@ -91,7 +87,9 @@ feature -- REST verbs
 				l_request_id := l_json.out
 				l_back.extend_new (l_json, l_request_id)
 				check attached l_back.extend_requests [l_request_id] as l_new_key then
-					Result := {WSF_JSON_RESPONSE}.see_other
+					response_json := back [l_new_key]
+					Result := {WSF_JSON_RESPONSE}.created
+						.with_json_object (response_json)
 						.with_location (element_url (req, l_new_key))
 				end
 			else
@@ -151,9 +149,9 @@ feature -- REST verbs
 
 	merge (req: WSF_REQUEST): WSF_JSON_RESPONSE
 			-- PATCH /resource/{id}
-			-- Delegates to the back's RESTLY_PATCHABLE.merge, which
-			-- does the read-modify-write in JSON space.
-		require else
+			-- Read-modify-write in wire format: partiality is representable
+			-- in JSON but not in a rigid R, so the merge happens here.
+		require
 			error_404: back.has_key (element_key (req))
 		local
 			l_key: STRING

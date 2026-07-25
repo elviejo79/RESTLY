@@ -72,36 +72,7 @@ feature -- REST verbs
 		deferred
 		end
 
-feature -- REST verbs (collection)
-
-	items (req: I): O
-			-- GET on the collection: all resources.
-		deferred
-		end
-
-	wipe_out (req: I): O
-			-- DELETE on the collection: remove all resources.
-		deferred
-		end
-
-	merge (req: I): O
-			-- PATCH: partially update the resource addressed by `req`.
-		require
-			error_404_not_found: has_key (req)
-		deferred
-		end
-
-	preflight_ok (req: I): O
-			-- OPTIONS: CORS preflight response.
-		deferred
-		end
-
 feature -- Request queries
-
-	id_parameter_name: STRING
-			-- Name of the URI-template hole for element keys.
-		deferred
-		end
 
 	element_key (req: I): ANY
 			-- Key of the element addressed by `req`.
