@@ -59,7 +59,7 @@ feature {NONE} -- Initialization
 			create jws.make_with_json_payload ("{%"sub%":%"1%"}")
 			jws.set_algorithm_to_hs256
 			tok := jws.encoded_string ("realworld-secret")
-			wired := auth <| (create {GATEWAY}) <| {RESTLY_NULL [STRING, JSON_OBJECT]}.instance
+			wired := auth <| (create {GATEWAY}) <| create {RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]}.make ("smoke")
 			check
 				valid_token_accepted: auth.is_valid_token (tok)
 				tampered_token_rejected: not auth.is_valid_token (tok + "x")

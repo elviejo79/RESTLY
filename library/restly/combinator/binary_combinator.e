@@ -14,18 +14,29 @@ inherit
 
 feature -- Components
 
-	front: RESTLY_PROTOCOL [RK, RV]
-			-- Self-initialized to the null back end, like `back`.
+	detachable_front: detachable RESTLY_PROTOCOL [RK, RV]
+			-- The front stage; Void until wired, stable like `detachable_back`.
+		note
+			option: stable
 		attribute
-			Result := {RESTLY_NULL [RK, RV]}.instance
+		end
+
+	front: RESTLY_PROTOCOL [RK, RV]
+			-- The wired front; certification point mirroring `back`.
+		require
+			fronted: attached detachable_front
+		do
+			check fronted: attached detachable_front as l then
+				Result := l
+			end
 		end
 
 feature -- Creation
 
 	make (a_front: like front; a_back: like back)
 		do
-			front := a_front
-			back := a_back
+			detachable_front := a_front
+			detachable_back := a_back
 		end
 
 end
