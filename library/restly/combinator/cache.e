@@ -1,8 +1,9 @@
 note
 	description: "[
-		Cache combinator: serves reads from fast `front`, falls through
-		to the wired `back` on miss (populating the front); writes go
-		through to both. Built with the static factory:
+		Cache combinator — and-then semantics: every verb touches
+		`front` *and then* `back`. Reads hit front first, fall through
+		to back on miss and populate front; writes go through to both.
+		Built with the static factory:
 			{CACHE [K, V]}.fronted_by (a_front) <| a_back
 		A bare `fronted_by` without `<|` trips `wired` on the first verb.
 	]"

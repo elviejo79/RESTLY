@@ -1,13 +1,13 @@
 note
 	description: "[
-		Or-else combinator: every verb tries `front` first; if the key
-		is not present there, falls through to `back`.
-		Reads search both (front or else back). Writes land in
-		whichever store owns the key. Extends go to front (preferred).
+		Fallback combinator — or-else semantics: every verb tries
+		`front` first; if the key is not present there, falls through
+		to `back`. Exactly one store handles each call, never both.
+		Extends go to front (preferred store).
 	]"
 
 class
-	FRONT_OR_ELSE [K -> HASHABLE, V -> ANY]
+	FALLBACK [K -> HASHABLE, V -> ANY]
 
 inherit
 	RESTLY_BINARY_COMBINATOR [K, V]
