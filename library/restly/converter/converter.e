@@ -32,7 +32,7 @@ inherit
 			graph_dot_lines
 		end
       
-   RESTLY_COMPOSABLE[SK,SV]
+   RESTLY_UNARY_COMBINATOR[SK,SV]
    
 	ANY
 			-- Re-effects default_create/copy/out/is_equal,

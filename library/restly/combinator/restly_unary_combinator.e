@@ -10,7 +10,7 @@ note
 	]"
 
 deferred class
-	RESTLY_COMPOSABLE [SK -> HASHABLE, SV]
+	RESTLY_UNARY_COMBINATOR [SK -> HASHABLE, SV]
 
 feature -- Components
 
@@ -51,7 +51,7 @@ feature -- Composition
 			-- must not share.
 		do
 			Result := twin
-			if attached {RESTLY_COMPOSABLE [HASHABLE, ANY]} detachable_back as l_chain then
+			if attached {RESTLY_UNARY_COMBINATOR [HASHABLE, ANY]} detachable_back as l_chain then
 				check chain_speaks_my_types: attached {RESTLY_PROTOCOL [SK, SV]} (l_chain <| a_back) as l_new then
 					Result.make_with_back (l_new)
 				end

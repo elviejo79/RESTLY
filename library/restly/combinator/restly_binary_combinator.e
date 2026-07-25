@@ -10,7 +10,7 @@ deferred class
 	RESTLY_BINARY_COMBINATOR [K -> HASHABLE, V -> ANY]
 
 inherit
-	RESTLY_COMPOSABLE [HASHABLE, ANY]
+	RESTLY_UNARY_COMBINATOR [HASHABLE, ANY]
 
 feature -- Components
 

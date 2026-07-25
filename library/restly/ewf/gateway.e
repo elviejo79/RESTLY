@@ -24,7 +24,7 @@ inherit
 			-- Body parsing, envelope wrapping, and the four wire-schema
 			-- knobs; adopted from `back` at composition.
 
-	RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
+	RESTLY_UNARY_COMBINATOR [STRING, JSON_OBJECT]
 		redefine
 			make_with_back
 		end
