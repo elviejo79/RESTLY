@@ -1,60 +1,46 @@
 note
-	description: "Cache combinator: serves reads from fast `front`, falls through to `back` on miss; writes go through to both."
+	description: "[
+		Cache combinator: serves reads from fast `front`, falls through
+		to the wired `back` on miss (populating the front); writes go
+		through to both. Built with the static factory:
+			{CACHE [K, V]}.fronted_by (a_front) <| a_back
+		A bare `fronted_by` without `<|` trips `wired` on the first verb.
+	]"
 	author: "agarciafdz@gmail.com"
 
 class
-	CACHE [K -> ANY, V -> ANY]
+	CACHE [K -> HASHABLE, V -> ANY]
 
 inherit
-	COMBINATOR [K, V]
+	RESTLY_BINARY_COMBINATOR [K, V]
+
+	RESTLY_PROTOCOL [K, V]
 		redefine
 			graph_dot_lines
 		end
 
+	ANY
+			-- Re-effects default_create/copy/out/is_equal, which
+			-- RESTLY_PROTOCOL undefines for its own joins.
+
 create
-	make,
-	make_with_back
-
-feature -- ANY
-
-	is_equal (other: like Current): BOOLEAN
-		do
-			Result := front ~ other.front and then back ~ other.back
-		end
-
-	copy (other: like Current)
-		do
-			front := other.front
-			back := other.back
-		end
-
-	out: STRING
-		do
-			create Result.make_from_string (generating_type.name)
-		end
-
-	default_create
-		do
-		end
+	make
 
 feature -- Factory
 
-	new_with_parts (a_front: RESTLY_PROTOCOL [K, V]; a_back: detachable RESTLY_PROTOCOL [ANY, ANY]): CACHE [K, V]
-			-- <Precursor>
+	fronted_by (a_front: RESTLY_PROTOCOL [K, V]): CACHE [K, V]
+			-- Fresh cache fronted by `a_front`; back unwired until `<|`.
 		do
-			if attached a_back as b then
-				create Result.make_with_back (a_front, b)
-			else
-				create Result.make (a_front)
-			end
+			create Result.make (a_front)
+		ensure
+			instance_free: class
 		end
 
 feature -- REST verbs
 
 	has_key (k: K): BOOLEAN
 		do
-			Result := front.has_key (k) or else
-				(attached back as b and then b.has_key (k))
+			Result := front.has_key (k) or else back.has_key (k)
 		end
 
 	item alias "[]" (k: K): V assign force
@@ -62,8 +48,7 @@ feature -- REST verbs
 			if front.has_key (k) then
 				Result := front.item (k)
 			else
-				-- cache miss: key is in back (guaranteed by precondition has_key)
-				check attached back as b and then attached {V} b.item (k) as v then
+				check back_speaks_front_value_type: attached {V} back.item (k) as v then
 					Result := v
 					front.force (v, k)
 				end
@@ -73,22 +58,14 @@ feature -- REST verbs
 	extend (v: V; k: K)
 		do
 			front.extend (v, k)
-			if attached back as b then
-				b.extend (v, k)
-			end
+			back.extend (v, k)
 		end
 
 	put (v: V; k: K)
+			-- `force` on each part: the key may live in only one of them.
 		do
-			if front.has_key (k) then
-				front.put (v, k)
-			else
-				-- key is in back but not yet cached; populate front on write
-				front.force (v, k)
-			end
-			if attached back as b then
-				b.put (v, k)
-			end
+			front.force (v, k)
+			back.force (v, k)
 		end
 
 	remove (k: K)
@@ -96,8 +73,8 @@ feature -- REST verbs
 			if front.has_key (k) then
 				front.remove (k)
 			end
-			if attached back as b and then b.has_key (k) then
-				b.remove (k)
+			if back.has_key (k) then
+				back.remove (k)
 			end
 		end
 
@@ -105,7 +82,7 @@ feature -- Output
 
 	graph_dot_lines: STRING
 			-- <Precursor>
-			-- Edges to `front` and (when attached) `back`.
+			-- Edges to `front` and the wired `back`.
 		do
 			create Result.make_from_string (graph_node_id)
 			Result.append (" [label=%"")
@@ -113,10 +90,8 @@ feature -- Output
 			Result.append ("%"];%N")
 			Result.append (front.graph_dot_lines)
 			Result.append (graph_node_id + " -> " + front.graph_node_id + " [label=%"front%"];%N")
-			if attached back as b then
-				Result.append (b.graph_dot_lines)
-				Result.append (graph_node_id + " -> " + b.graph_node_id + " [label=%"back%"];%N")
-			end
+			Result.append (back.graph_dot_lines)
+			Result.append (graph_node_id + " -> " + back.graph_node_id + " [label=%"back%"];%N")
 		end
 
-end -- class
+end

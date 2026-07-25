@@ -33,6 +33,7 @@ feature {NONE} -- Initialization
 				fresh_user_without_bio: user.bio = Void
 			end
 			smoke_check_jwt_auth
+			smoke_check_cache
 			io.put_string ("RealWorld domain objects OK%N")
 			print_dev_token
 			create server.make
@@ -65,6 +66,28 @@ feature {NONE} -- Initialization
 				tampered_token_rejected: not auth.is_valid_token (tok + "x")
 				wrong_secret_rejected: not (create {JWT_AUTH}.make ("other")).is_valid_token (tok)
 				auth_backed_by_gateway: attached {GATEWAY} wired.back
+			end
+		end
+
+	smoke_check_cache
+			-- Static factory + `<|` wiring; write-through, hit path,
+			-- and read-through miss path.
+		local
+			cache: CACHE [STRING, JSON_OBJECT]
+			slow: RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]
+			written, behind: JSON_OBJECT
+		do
+			create slow.make ("slow")
+			cache := {CACHE [STRING, JSON_OBJECT]}.fronted_by (
+				create {RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]}.make ("fast")) <| slow
+			create written.make
+			cache.extend (written, "a")
+			create behind.make
+			slow.extend (behind, "b")
+			check
+				write_readable: cache.has_key ("a") and then cache.item ("a") = written
+				miss_falls_through: cache.has_key ("b") and then cache.item ("b") = behind
+				miss_populated_front: cache.front.has_key ("b")
 			end
 		end
 

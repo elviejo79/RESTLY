@@ -1262,3 +1262,8 @@ Collected here so nobody scope-creeps:
 [fn:principal] Security term for the authenticated identity — the "who" in "who is making this request."
 Standard vocabulary in JAAS, Kerberos, and HTTP authentication specs.
 Weiher's corpus never uses the word because his stores have no auth story; the term enters RESTLY via Fielding's trust-boundary argument.
+
+[fn:wired] Architecture term for a stage that has been composed into a pipeline with =<|=, so its =detachable_back= now points at the next stage.
+Mechanically it coincides with the Eiffel terms: wired exactly when =detachable_back= has been /assigned/ an /attached/ value — but those name the language mechanism, while wired names the domain reason.
+The precondition tag =wired:= follows the same principle as =error_404:=: assertion labels state why the clause must hold, since the clause text (=attached detachable_back=) already states the mechanism.
+"Bound" was rejected because it collides with dynamic binding.
