@@ -1,0 +1,123 @@
+#+TITLE: What =note option: stable= actually does
+#+DATE: 2026-07-24
+
+* Context
+
+While removing =RESTLY_NULL= and =CALL_RETURN_NULL= (the null-object
+back ends of the composable mixins), =back= became a *stable
+detachable attribute* (=detachable_back=) plus a certified query that
+keeps the name =back=:
+
+#+begin_src eiffel
+detachable_back: detachable RESTLY_PROTOCOL [SK, SV]
+		-- The stage behind this one; Void until wired with `<|'.
+	note
+		option: stable
+	attribute
+	end
+
+back: RESTLY_PROTOCOL [SK, SV]
+		-- The wired back; the single certification point.
+	require
+		wired: attached detachable_back
+	do
+		check wired: attached detachable_back as l then
+			Result := l
+		end
+	end
+#+end_src
+
+The open question: is the =check= inside the query redundant?  The
+hypothesized semantics was "stable = void until assigned; any use
+before assignment throws" — which would make the compiler (or
+runtime) enforce attachment automatically and the query unnecessary.
+
+A spike settled it.
+
+* The experiment
+
+A minimal void-safe project (=/tmp/stable_spike=, EiffelStudio 25.12,
+same ecf option style as RealWorldApp) with two attributes:
+
+#+begin_src eiffel
+stable_s: detachable STRING
+	note
+		option: stable
+	attribute
+	end
+
+plain_s: detachable STRING
+#+end_src
+
+Five test features, compiled one configuration at a time:
+
+| Test | Body                                                        | Result               |
+|------+-------------------------------------------------------------+----------------------|
+| A    | =Result := stable_s.count= — direct use, no evidence        | *VUTA(2)* error      |
+| B    | =if stable_s /= Void then Result := stable_s.count end=     | *compiles*           |
+| C    | same if-test on the *ordinary* attribute =plain_s=          | *VUTA(2)* error      |
+| D    | =require attached stable_s= as only evidence, direct use    | *VUTA(2)* error      |
+| E    | =stable_s := Void=                                          | *VBAR(2)* error      |
+
+- VUTA(2): "target of the Object_call might be void."
+- VBAR(2): "source of assignment to stable target might be void."
+
+* Conclusions
+
+** Stable means exactly two things, both compile-time
+
+1. *Monotonicity* (test E): a stable attribute can never be assigned
+   Void or a detachable source.  Its lifetime is Void → attached,
+   once, and never back.  Void exists only as the initial,
+   pre-wiring state.
+
+2. *Durable evidence* (tests B vs C): because of that monotonicity, a
+   plain void test (=if x /= Void then=) certifies the attribute for
+   the rest of the scope, with no =as l= alias.  An ordinary
+   detachable attribute cannot use void tests at all (C fails): any
+   feature call between test and use could re-void it, so the
+   compiler only accepts an object test with a fresh local.
+   Stability removes that hazard, so the cheap test becomes legal.
+
+** What stable does NOT mean
+
+- It does *not* allow direct use (test A).  Stability says "never
+  goes back to Void", not "is already attached".  At the start of
+  any feature body the attribute may still be in its initial Void
+  state — that is precisely the bare =create {GATEWAY}= moment
+  before =<|= wiring.
+
+- There is *no runtime check and no exception*.  Eiffel void safety
+  is a static proof, not a dynamic guard: the program that could
+  void-call does not compile.  Nothing is ever "thrown on use before
+  assignment"; the compiler refuses any use it cannot prove attached.
+
+- A *precondition is not accepted as evidence* (test D).  The
+  eiffel.org CAP document suggests contract clauses certify stable
+  attributes; this compiler refuses =require attached stable_s=
+  followed by direct body use.  Preconditions on attributes are
+  contract (blame assignment), not certification.
+
+** Consequence for the =back= query design
+
+The =check attached detachable_back as l then= inside the =back=
+query is not belt-and-braces — it is the *minimum evidence the
+compiler accepts*, written once so the ~40 delegation sites
+(=back.item=, =back.has_key=, ... in JWT_AUTH, GATEWAY, CONVERTER,
+USER_HANDLER) need none.  The =wired= precondition stays for honest
+blame: an unwired stage fails loud with a =wired= violation at the
+seam, instead of RESTLY_NULL's silent emptiness.
+
+Test B does permit an alias-free body:
+
+#+begin_src eiffel
+if detachable_back /= Void then
+	Result := detachable_back
+else
+	check wired: False then end
+end
+#+end_src
+
+but the else-branch still needs =check False= to satisfy Result
+attachment, so the =check ... as l then= form remains the shortest.
+Kept as shipped.
