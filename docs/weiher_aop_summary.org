@@ -1837,16 +1837,6 @@ Refinement for combinators: does it map the /ref/, the /data/, the
 
 ** Worked example — "How should AUTH be implemented?"
 
-*Superseded (part a only) by =Design_RESTLY_AUTH_V2.org=.* The inbound
-gatekeeper is /not/ a guard-shaped PassThrough with =authorized=
-preconditions: those =require= clauses would strengthen inherited
-preconditions (illegal in Eiffel), and 403-shaped denial leaks
-existence. It is a codec at the boundary (401) plus an =AUTH_VIEW=
-whose shrunken =has_key= makes the inherited =error_404_not_found=
-clause deny (404). Parts (b) credential injector and (c) credential
-storage stand unchanged. The original text is kept below for the
-corpus-warrant citations.
-
 Wrong framing: "the AUTH component" is three components wearing one name.
 Decompose by the procedure.
 
@@ -1952,9 +1942,7 @@ disguise).
 
 Additionally, four constructs use =<|= syntax without full combinator
 semantics (see the honesty ledger in =restly_ewf_design_document.org=):
-=JWT_AUTH= is a boundary guard not a storage combinator (resolution
-designed in =Design_RESTLY_AUTH_V2.org=: codec at the boundary +
-=AUTH_VIEW= combinator); =GATEWAY= is an
+=JWT_AUTH= is a boundary guard not a storage combinator; =GATEWAY= is an
 adapter (interface-in ≠ interface-out); envelopes are configuration knobs
 not composable stages; =make_from_json= / =to_json= put the serializer
 inside the domain object.
