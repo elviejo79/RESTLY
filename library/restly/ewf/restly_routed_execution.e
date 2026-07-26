@@ -13,6 +13,10 @@ inherit
 
 	WSF_ROUTED_URI_TEMPLATE_HELPER
 
+	RESTLY_CONTRACT_TO_HTTP
+			-- CORS headers for the command-verb path; the query-verb
+			-- path gets them from EWF_CONTRACT_GUARD.
+
 feature -- Routing
 
 	routes: RESTLY_ROUTES
@@ -25,6 +29,13 @@ feature -- Routing
 			-- Route `a_methods' requests on `a_resource_path' to `an_action'.
 		do
 			map_uri_template_response (a_resource_path, create {EWF_CONTRACT_GUARD}.make (an_action), a_methods)
+		end
+
+	map_command_verb (a_methods: WSF_REQUEST_METHODS; a_resource_path: RESTLY_URI_PATH; an_action: PROCEDURE [WSF_JSON_RESPONSE, WSF_REQUEST])
+			-- Route `a_methods' requests on `a_resource_path' to `an_action',
+			-- creating the response message the command mutates.
+		do
+			map_uri_template_agent (a_resource_path, agent execute_command (an_action, ?, ?), a_methods)
 		end
 
 feature -- Fine-grained routing
@@ -44,6 +55,17 @@ feature -- Fine-grained routing
 		end
 
 feature {NONE} -- Implementation
+
+	execute_command (an_action: PROCEDURE [WSF_JSON_RESPONSE, WSF_REQUEST]; req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Create the response message, run `an_action` on it, send it.
+		local
+			l_json: WSF_JSON_RESPONSE
+		do
+			create l_json.make
+			an_action (l_json, req)
+			add_cors_headers (l_json)
+			res.send (l_json)
+		end
 
 	path_table: V_HASH_TABLE [STRING, RESTLY_PATH]
 			-- Fine-grained route rows by URI template.

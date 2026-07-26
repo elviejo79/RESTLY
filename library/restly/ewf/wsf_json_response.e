@@ -106,6 +106,12 @@ feature -- Element change
 			set_body (default_json_for_status)
 		end
 
+	set_ok
+			-- Set status to 200 OK, keeping the current body.
+		do
+			set_status_code ({HTTP_STATUS_CODE}.ok)
+		end
+
 feature -- Factory: Client errors (4xx)
 
 	not_found: WSF_JSON_RESPONSE

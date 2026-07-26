@@ -1,0 +1,41 @@
+#+TITLE: Plan: RESTLY_UNSAFE_PROTOCOL and the RESTLY-shaped EWF gateway
+#+DATE: 2026-07-26
+
+* Motivation
+
+GATEWAY changes all the semantics to a CALL_RETURN architecture that RESTLY is trying to eschew.
+RESTLY_EWF_HANDLER intends to be a more RESTLY gateway than the current one: REST verbs expressed as the Eiffel container protocol, delegating to a composable =back= stage.
+The blocker: fronting =RESTLY_PROTOCOL [WSF_REQUEST, WSF_JSON_RESPONSE]= drags in table postconditions (=item (k) ~ v= after =force=) that are meaningless for an HTTP adapter.
+
+* Ruling
+
+The weak class must be the ancestor.
+In Eiffel a descendant can never remove an inherited postcondition, so this is the only workable direction.
+
+** RESTLY_UNSAFE_PROTOCOL
+
+Current =RESTLY_PROTOCOL= with every =ensure= block deleted.
+Preconditions stay intact.
+"Unsafe" means: no guarantees about what happened, but still honest about what is askable.
+The preconditions (=error_404_not_found: has_key (k)=, =error_409_conflict: not has_key (k)=) are exactly the HTTP error semantics, and =has_key (req)= is computable by delegating to =back=.
+
+** RESTLY_PROTOCOL
+
+Inherits from =RESTLY_UNSAFE_PROTOCOL=.
+Redeclares =extend= / =force= / =put= / =remove= with =ensure then= carrying the current =error_500_*= clauses verbatim.
+Terminology note: it is =ensure then= (strengthens postconditions); =ensure else= does not exist, and =require else= is the precondition-weakening form.
+
+** WSF_JSON_RESPONSE gains set_ok
+
+Nearly free: =WSF_PAGE_RESPONSE= already has =set_status_code=, so =set_ok= is one line, =set_status_code ({HTTP_STATUS_CODE}.ok)=, plus whatever default body mirrors =make_with_status= / =ok=.
+It is a mutator on a class with a deliberately fluent instance-free API, so name it as a command and keep it dumb.
+
+* Division of labor
+
+Contracts are owner-only: the owner writes and approves the =ensure then= clauses and any precondition changes.
+Claude does the mechanical split plus fixes =RESTLY_EWF_HANDLER=:
+- real =RESTLY_COMPOSABLE [STRING, JSON_OBJECT]= instead of the nonexistent =RESTLY_UNARY_COMBINATOR=
+- key extraction via =path_parameter= instead of =ITERABLE.last=
+- =parse_body= for the JSON body
+- fix the =ond= / =check ... do= typos
+Then clean compile.
