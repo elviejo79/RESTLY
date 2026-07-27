@@ -1,6 +1,6 @@
 note
 	description: "[
-		Mixin: partial update of an existing entry.
+		Partial update of an existing entry.
 		The patch is a JSON_OBJECT because a partial update is by
 		definition incomplete — a typed V cannot represent "only
 		these fields changed." JSON_OBJECT's named properties are
@@ -10,14 +10,15 @@ note
 		the convert clause (to_json), merge patch fields, convert
 		back (make_from_json), put. Descendants may override for
 		optimized merge (e.g. SQL UPDATE SET on individual columns).
-		Inherit alongside RESTLY_PROTOCOL [K, V].
+		Not a mixin anymore: RESTLY_PROTOCOL inherits this, so every
+		store speaks merge.
 	]"
 
 deferred class
-	RESTLY_PATCHABLE [K -> HASHABLE, V]
+	RESTLY_PATCHABLE [K, V]
 
 inherit
-	RESTLY_PROTOCOL [K, V]
+	RESTLY_UNSAFE_PROTOCOL [K, V]
 
 feature -- Update
 

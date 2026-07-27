@@ -27,11 +27,6 @@ inherit
 			extend_new
 		end
 
-	RESTLY_PATCHABLE [RK, RV]
-		redefine
-			graph_dot_lines
-		end
-      
    RESTLY_COMPOSABLE[SK,SV]
    
 	ANY

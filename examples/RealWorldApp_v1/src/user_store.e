@@ -22,8 +22,6 @@ inherit
 			extend_new
 		end
 
-	RESTLY_PATCHABLE [STRING, JSON_OBJECT]
-
 	RESTLY_WIRE_SCHEMA
 
 create

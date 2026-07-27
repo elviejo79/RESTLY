@@ -137,9 +137,7 @@ feature -- Queries
 				attached auth.subject_of (req) as l_email and then
 				back.has_key (l_email)
 			then
-				if attached {RESTLY_PATCHABLE [STRING, JSON_OBJECT]} back as l_store then
-					l_store.merge (parse_body (req), l_email)
-				end
+				back.merge (parse_body (req), l_email)
 				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (
 					wrapped (back [l_email]))
 			else

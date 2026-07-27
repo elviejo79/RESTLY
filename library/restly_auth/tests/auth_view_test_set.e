@@ -105,8 +105,8 @@ feature -- Tests: denial is the inherited precondition
 		do
 			if l_failed then
 				if attached l_tag as t then
-					assert ("fired_has_key_got_" + t.out,
-						t.same_string_general ("has_key"))
+					assert ("fired_error_404_not_found_got_" + t.out,
+						t.same_string_general ("error_404_not_found"))
 				else
 					assert ("no_precondition_violation_captured", False)
 				end

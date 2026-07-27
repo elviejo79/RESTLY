@@ -14,7 +14,7 @@ deferred class
 	RESTLY_PROTOCOL [K, V]
 
 inherit
-	RESTLY_UNSAFE_PROTOCOL [K, V]
+	RESTLY_PATCHABLE [K, V]
 		redefine
 			force
 		end
