@@ -20,8 +20,11 @@ feature {NONE} -- Router
 	setup_router
 		local
 			l_handler: RESTLY_EWF_HANDLER
+			l_codec: TODO_CODEC
 		do
-			l_handler := (create {RESTLY_EWF_HANDLER}) <| (create {TODO_CODEC}) <| todos_table
+			create l_codec
+			l_codec.base_url := "http://localhost:8080/todos/"
+			l_handler := (create {RESTLY_EWF_HANDLER}) <| l_codec <| todos_table
 			Current ["/todos/{id}"] [method_get] := agent l_handler.item
 			Current ["/todos/{id}"] [method_put] := agent l_handler.put
 			Current ["/todos/{id}"] [method_delete] := agent l_handler.remove
