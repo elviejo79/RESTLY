@@ -106,12 +106,6 @@ feature -- Element change
 			set_body (default_json_for_status)
 		end
 
-	set_ok
-			-- Set status to 200 OK, keeping the current body.
-		do
-			set_status_code ({HTTP_STATUS_CODE}.ok)
-		end
-
 feature -- Factory: Client errors (4xx)
 
 	not_found: WSF_JSON_RESPONSE
@@ -271,6 +265,11 @@ feature {WSF_RESPONSE} -- Output
 				res.put_header_lines (h)
 				res.put_string (b)
 			else
+				if not h.has_content_length then
+						-- Delimit the bodyless response, or the client
+						-- waits for bytes that never come.
+					h.put_content_length (0)
+				end
 				res.put_header_lines (h)
 			end
 		end

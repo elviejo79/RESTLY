@@ -95,7 +95,42 @@ feature -- REST verbs
 		do
 			if not l_rescued then
 				back.extend (parse_body (req), element_key (req))
-				res.set_ok
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
+			end
+				-- on the retry path res was already set by handle_rescue_for_command
+		rescue
+			l_rescued := True
+			handle_rescue_for_command (res)
+			retry
+		end
+
+	extend_new (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+			-- POST /resource: create an element with a server-minted key.
+			-- Post/Redirect/Get: answers 303 with the fresh element's
+			-- Location; the representation is the client's follow-up
+			-- GET (PRG ruling, restly_ewf_design_document.org).
+			-- A back that is not RESTLY_POSTABLE answers 405: the verb
+			-- set of the pipeline is a conformance test.
+			-- Self-guarding: on contract violation `res` becomes the
+			-- mapped error response.
+		local
+			l_rescued: BOOLEAN
+			l_json: JSON_OBJECT
+			l_request_id: STRING
+		do
+			if not l_rescued then
+				if attached {RESTLY_POSTABLE [STRING, JSON_OBJECT]} back as l_back then
+					l_json := parse_body (req)
+					l_request_id := l_json.out
+					l_back.extend_new (l_json, l_request_id)
+					check request_recorded: attached l_back.extend_requests [l_request_id] as l_new_key then
+						res.set_status_code ({HTTP_STATUS_CODE}.see_other)
+						res.header.put_location (element_url (req, l_new_key))
+					end
+				else
+					res.set_status_code ({HTTP_STATUS_CODE}.method_not_allowed)
+					res.set_default_json_body
+				end
 			end
 				-- on the retry path res was already set by handle_rescue_for_command
 		rescue
@@ -113,7 +148,7 @@ feature -- REST verbs
 		do
 			if not l_rescued then
 				back.put (parse_body (req), element_key (req))
-				res.set_ok
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
 			end
 				-- on the retry path res was already set by handle_rescue_for_command
 		rescue
@@ -131,7 +166,7 @@ feature -- REST verbs
 		do
 			if not l_rescued then
 				remove_element (req)
-				res.set_ok
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
 			end
 				-- on the retry path res was already set by handle_rescue_for_command
 		rescue
@@ -158,6 +193,20 @@ feature -- Request queries
 			-- Extract element keys from URI-template hole `a_name`.
 		do
 			id_parameter_name := a_name
+		end
+
+	element_url (req: WSF_REQUEST; a_key: READABLE_STRING_8): STRING
+			-- Absolute URL of element `a_key' under the requested collection.
+			-- Element-addressed requests carry the key as the last URI
+			-- segment; strip it, or the key would be appended twice.
+		local
+			l_uri: STRING
+		do
+			l_uri := req.request_uri.to_string_8
+			if attached req.path_parameter (id_parameter_name) then
+				l_uri.keep_head (l_uri.last_index_of ('/', l_uri.count) - 1)
+			end
+			Result := req.absolute_script_url (l_uri + "/" + a_key)
 		end
 
 	element_key (req: WSF_REQUEST): STRING
