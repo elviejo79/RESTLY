@@ -4,8 +4,9 @@ note
 		assertion violations (error_NNN_* tags) into JSON responses
 		with the right status, plus the CORS/connection headers every
 		RESTLY response carries.
-		Shared by EWF_CONTRACT_GUARD (call/return path) and
-		RESTLY_EWF_HANDLER (container-protocol path).
+		Inherited by every self-guarding adapter at the wire
+		boundary (RESTLY_EWF_HANDLER is the reference) and by
+		RESTLY_ROUTED_EXECUTION for the CORS headers.
 	]"
 
 deferred class

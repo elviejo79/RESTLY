@@ -14,21 +14,16 @@ inherit
 	WSF_ROUTED_URI_TEMPLATE_HELPER
 
 	RESTLY_CONTRACT_TO_HTTP
-			-- CORS headers for the command-verb path; the query-verb
-			-- path gets them from EWF_CONTRACT_GUARD.
+			-- CORS headers for both verb paths. Guarding is not this
+			-- class's responsibility: wired adapters are self-guarding
+			-- (see RESTLY_EWF_HANDLER).
 
 feature -- Routing
-
-	routes: RESTLY_ROUTES
-			-- Route table of this execution.
-		attribute
-			create Result.make (Current)
-		end
 
 	map_verb (a_methods: WSF_REQUEST_METHODS; a_resource_path: RESTLY_URI_PATH; an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE])
 			-- Route `a_methods' requests on `a_resource_path' to `an_action'.
 		do
-			map_uri_template_response (a_resource_path, create {EWF_CONTRACT_GUARD}.make (an_action), a_methods)
+			map_uri_template_agent (a_resource_path, agent execute_query (an_action, ?, ?), a_methods)
 		end
 
 	map_command_verb (a_methods: WSF_REQUEST_METHODS; a_resource_path: RESTLY_URI_PATH; an_action: PROCEDURE [WSF_JSON_RESPONSE, WSF_REQUEST])
@@ -55,6 +50,16 @@ feature -- Fine-grained routing
 		end
 
 feature {NONE} -- Implementation
+
+	execute_query (an_action: FUNCTION [WSF_REQUEST, WSF_RESPONSE_MESSAGE]; req: WSF_REQUEST; res: WSF_RESPONSE)
+			-- Run `an_action`, add CORS headers, send its answer.
+		local
+			l_msg: WSF_RESPONSE_MESSAGE
+		do
+			l_msg := an_action (req)
+			add_cors_headers (l_msg)
+			res.send (l_msg)
+		end
 
 	execute_command (an_action: PROCEDURE [WSF_JSON_RESPONSE, WSF_REQUEST]; req: WSF_REQUEST; res: WSF_RESPONSE)
 			-- Create the response message, run `an_action` on it, send it.

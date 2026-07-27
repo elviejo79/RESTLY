@@ -1,0 +1,245 @@
+#+TITLE: The faucet and sink combinator
+
+* What are the symptoms?
+I have been trying to create RESTLY_EWF_HANDLER that respects several constraints:
+1. Command-Query-Separation.
+2. Weihers and RESTLYS pipe architecture.
+
+** And what have been the problems?
+there are two ways to generate a respons to an EWF request:
+
+*** WSF_RESPONSE
+It is a class that has `send(` method that actually writes the message
+
+*** WSF_RESPONSE_MESSAGE
+It is a value, that is later sent in the above `send(WSF_RESPONSE_MESSAGE)`
+
+** Correct so what is the problem?
+The problem is that in RESTLY protocol, we have queries: things that return values.
+And commands, things that don't return a value.
+but in both cases EWF must return a response to the client.s
+
+** What have you tried?
+
+*** GATEWAY
+It is class that has the same names as RESTLY_PROTOCOL but actually is CALL_RETURN_PROTOCOL
+
+So every method returns a value
+
+#+BEGIN_SRC
+  class interface
+        GATEWAY
+                -- HTTP resource handler over the wire types: translates WSF
+                -- requests into RESTLY_PROTOCOL [STRING, JSON_OBJECT] calls on
+                -- `back`. Store-agnostic: typed stores compose in through a
+                -- RESTLY_CONVERTER stage:
+                --   routes ["/todos"] := (create {GATEWAY}) <| ((create {TODO_CONVERTER}) <|
+                --
+                -- Flattened from: CALL_RETURN_PROTOCOL [WSF_REQUEST, WSF_RESPONSE_MESSAGE],
+                --                 RESTLY_JSON_BODY, RESTLY_WIRE_SCHEMA,
+                --                 RESTLY_COMPOSABLE [STRING, JSON_OBJECT], ANY
+
+  create
+        default_create
+
+  feature -- REST verbs (element)
+
+        item alias "[]" (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- GET /resource/{id}
+                require -- from CALL_RETURN_PROTOCOL
+                        error_404_not_found: has_key (req)
+                require else -- from GATEWAY
+                        error_404: back.has_key (element_key (req))
+
+        head (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- HEAD /resource/{id}
+
+        has_key (req: WSF_REQUEST): BOOLEAN
+                        -- Is the addressed element present?
+                        -- Used by contracts, not mapped to an HTTP verb itself.
+
+        force (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- PUT /resource/{id} — upsert; named `force` to match the
+                        -- rest of the protocol. Redefined: delegates the upsert to
+                        -- `back` instead of composing inherited has_key/put/extend.
+
+        put (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- PUT with exists: update the addressed element.
+
+        remove (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- DELETE /resource/{id}
+
+        merge (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- PATCH /resource/{id}: delegates to the back's
+                        -- RESTLY_PATCHABLE.merge (read-modify-write in JSON space).
+                require -- from CALL_RETURN_PROTOCOL
+                        error_404_not_found: has_key (req)
+                require else -- from GATEWAY
+                        error_404: back.has_key (element_key (req))
+
+  feature -- REST verbs (collection)
+
+        extend (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- POST /resource — create a new item.
+                        -- Post/Redirect/Get: answers only 303 + Location of the
+                        -- fresh element; the representation is the client's
+                        -- follow-up GET. 405 if `back` is not RESTLY_POSTABLE.
+
+        items (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- GET /resource — all items as a JSON array, wrapped in
+                        -- `collection_envelope` (plus a count field) if set.
+                        -- Empty array if `back` is not RESTLY_LISTABLE.
+
+        wipe_out (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- DELETE /resource — wipe all items; answers 200 + "[]".
+
+        preflight_ok (req: WSF_REQUEST): WSF_RESPONSE_MESSAGE
+                        -- OPTIONS: CORS preflight, 204. Mapped explicitly because
+                        -- {WSF_ROUTER}'s automatic reply lacks Connection: close
+                        -- (~5s keep-alive stall).
+
+
+#+END_SRC
+
+What I don't like is that
+
+**** this is again CALL/RETURN the [[file:///home/agarciafdz/Downloads/Weiher/gentle_tyranny_of_call_return.pdf][gentle tyranny]]
+
+**** I also don't like that it violates Command and Query Separation.
+`remove` is a command that in this case returns a value! WSF_JSON_RESPONSE
+And
+
+**** It is slipper slope.
+After creating CALL_RETURN_PROTOCOL I then added a CALL_RETURN_UNARY_COMBINATOR
+And so I was pretty soon creatnig a parallel hierarchy of combinators and converters.
+
+** RESTLY_EWF_HANDLER
+Then I tried a handler that I would use the RESPONSE as a sink:
+
+#+BEGIN_QUOTE
+WSF_RESPONSE is a sink, not an out-parameter. The distinguishing test is: does the caller read the argument afterwards to obtain the answer? For fill_buffer (a_buf), yes — the argument is a value container the caller inspects. For execute (req, res), no. Nobody reads res to find out what happened. It wraps the gateway's output stream; writing to it puts bytes on a socket. The framework calls you, and after you return there's nothing to collect — the effect already left the building.
+
+So CQS isn't being dodged. execute is a command, it returns nothing, its entire purpose is an observable side effect on the external world. That's a command doing exactly what commands are for. My previous answer was about routing a computed value through an argument to dress a function up as a command. Different animal.
+
+This is Beck's Collecting Parameter, or more precisely an effect handle, and it's inherited wholesale from the Servlet/WSGI/PSGI lineage — doGet(HttpServletRequest, HttpServletResponse) with the names changed. Rack and WAI took the other branch: return the response as a value. Worth knowing which tradition you're standing in, because you're about to pick one.
+#+END_QUOTE
+
+#+BEGIN_SRC Eiffel
+
+  class interface
+        RESTLY_EWF_HANDLER
+                -- Adapter that transforms EWF requests into RESTLY protocol
+                -- calls. Speaks RESTLY on both faces: WSF_REQUEST keys in
+                -- front, a composable [STRING, JSON_OBJECT] store behind.
+                -- Unlike GATEWAY it keeps the container protocol
+                -- (item/force/extend/put/remove mutating the caller's response)
+                -- instead of switching to CALL_RETURN semantics.
+                -- Unsafe front: the store's delivery postconditions are not
+                -- re-promised over the wire, but the asking preconditions
+                -- (error_404, error_409) still guard every verb via `back`.
+
+  create
+        default_create
+
+  feature -- REST verbs (queries)
+
+        item alias "[]" (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- GET /resource/{id}
+                        -- Self-guarding: contract violations raised while asking
+                        -- `back` come back as the mapped error response.
+
+        items (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- GET /resource: everything `back` enumerates, as a bare
+                        -- JSON array. Every protocol speaker is traversable now,
+                        -- so no capability downcast. Self-guarding.
+
+        preflight_ok (req: WSF_REQUEST): WSF_JSON_RESPONSE
+                        -- OPTIONS: CORS preflight, 204. Mapped explicitly because
+                        -- {WSF_ROUTER}'s automatic OPTIONS reply lacks
+                        -- "Connection: close" (~5s keep-alive stall); the CORS
+                        -- headers themselves come from the routing pipeline.
+
+        has_key (req: WSF_REQUEST): BOOLEAN
+                        -- HEAD: is the addressed element present?
+
+  feature -- REST verbs (commands: CQS shape, mutate the caller's response)
+
+        extend (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- POST: create the addressed element from the request body.
+                        -- Self-guarding.
+
+        extend_new (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- POST /resource: create an element with a server-minted key.
+                        -- Post/Redirect/Get: answers 303 with the fresh element's
+                        -- Location; the representation is the client's follow-up GET.
+                        -- A back that is not RESTLY_POSTABLE answers 405: the verb
+                        -- set of the pipeline is a conformance test. Self-guarding.
+
+        put (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- PUT: update the addressed element from the request body.
+                        -- Self-guarding.
+
+        merge (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- PATCH /resource/{id}: update the parts named in the
+                        -- request body; absent parts stay intact. Answers the
+                        -- updated element, read back after the merge. Self-guarding.
+
+        wipe_out (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- DELETE /resource: remove every element `back` holds.
+                        -- Answers the now-empty collection, as GATEWAY did.
+                        -- Self-guarding.
+
+        remove (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+                        -- DELETE /resource/{id}. Self-guarding.
+
+        remove_element (req: WSF_REQUEST)
+                        -- Remove the element addressed by `req` from `back`.
+                        -- (RESTLY_UNSAFE_PROTOCOL's `remove`, renamed.)
+
+#+END_SRC
+
+
+*** What are the problems with this approach?
+This has less problems, but still things to improve:
+
+**** The Queries: item, items, preflight_ok , etc are registered as: AGENT_HANDLER
+I.e. as a function whose return value is later sent with WSF_RESPONSE in [[../library/restly/ewf/restly_routed_execution.e]]
+It would be better if all of the methods were just commands in [WSF_REQUEST,WSF_RESPONSE] and the queries be wrapped in such a command.
+so that the registration mechanism is the same for both queries and commands.
+
+**** The fact that WSF_RESPONSE is a sink that we "inject" to the commands is un-intuitive
+Since he are sending a parameter, but this sink looks like a parameter, that we will use to calculate results.
+not as something, we will send values to.
+
+**** This patern doesn't scale.
+We have a related problem: ENVELOPE
+are things that once we ge a set of values with `` we need to package it inside a json `{list_of_items:[...]}`
+for ENVELOPE it would seem kind of weird to implement this "inject" the envelope value,
+because after that we would use the value, to `a_command(Enclosing. res.send(ENVELOPE)`
+
+I guess what makes it weird is that `RESTLY_` looks like a pipe but has both push and pull semantics.
+pull when it is a QUERY and push when it is a command.
+
+**** What would you improve on this approach.
+Hide the queries behind a command that uses WSF_RESPONSE.send and then wire the routes only for commands.
+
+** Another approach the SinkCombinator
+
+As we have discussed we have both push and pull semantics in our pipe.
+The idea of the sink combinator would be to create a pipe that is infact two
+
+for queries the combitator would look like:
+
+#+BEGIN_SRC Eiffel
+  ewf_handler.reqest_item(WSF_REQUEST)  <| backend.item(element_id) -- items is a query so it returns a value.
+#+END_SRC
+
+and for commands
+#+BEGIN_SRC Eiffel
+  ewf_handler.request_remove(WSF_REQUEST) <| backend.remove(element_id) <| ewf_handler.remove() -- the answer gets written here at the end of the sync.
+#+END_SRC
+
+So think sink combinator is a "thing" that in the case of queries sits at the front, to receive the results of the pipeline.
+and in the case of commands, sits at the begining and end of the pipeline,
+At the end to receive notify that the pipeline of commands has ended.
+And at the beginning , to start the pileni.

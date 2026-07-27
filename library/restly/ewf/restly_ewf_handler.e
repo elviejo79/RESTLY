@@ -9,6 +9,11 @@ note
 		Unsafe front: the store's delivery postconditions are not
 		re-promised over the wire, but the asking preconditions
 		(error_404, error_409) still guard every verb via `back`.
+		The wire face itself is precondition-free (require else
+		True): an HTTP client is outside the contract model, so a
+		contract error is a response to send, not caller blame --
+		and only a caller's rescue could map a precondition, which
+		would put guarding back into the routing plumbing.
 	]"
 
 class
@@ -40,6 +45,8 @@ feature -- REST verbs
 			-- GET /resource/{id}
 			-- Self-guarding: contract violations raised while asking
 			-- `back` come back as the mapped error response.
+		require else
+			error_becomes_response: True
 		do
 			if not attached Result then
 				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (back [element_key (req)])
@@ -99,6 +106,8 @@ feature -- REST verbs
 			-- POST: create the addressed element from the request body.
 			-- Self-guarding: on contract violation `res` becomes the
 			-- mapped error response.
+		require else
+			error_becomes_response: True
 		local
 			l_rescued: BOOLEAN
 		do
@@ -152,6 +161,8 @@ feature -- REST verbs
 			-- PUT: update the addressed element from the request body.
 			-- Self-guarding: on contract violation `res` becomes the
 			-- mapped error response.
+		require else
+			error_becomes_response: True
 		local
 			l_rescued: BOOLEAN
 		do
