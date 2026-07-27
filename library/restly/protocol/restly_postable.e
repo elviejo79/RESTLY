@@ -37,8 +37,9 @@ feature {NONE} -- Key minting
 
 	fresh_key (a_v: V): K
 			-- New unused key for `a_v`; the store's minting policy.
-			-- TODO(owner): contract (fresh: not has_key (Result))
 		deferred
+      ensure
+         error_500_new_key_shouldnt_exist: not has_key (Result)
 		end
 
 feature -- Access
