@@ -35,7 +35,7 @@ feature -- Routing
 
 feature -- Fine-grained routing
 
-	item alias "[]" (a_uri: READABLE_STRING_8): RESTLY_PATH
+	item alias "[]" (a_uri: READABLE_STRING_8): RESTLY_ROUTED_EXECUTION_PATH
 			-- Fine-grained route row for `a_uri`, created on first access:
 			--   Current ["/articles"] [method_post] := agent my_pipeline.extend
 			-- Memoizing query: creates the row once; the abstract state
@@ -72,7 +72,7 @@ feature {NONE} -- Implementation
 			res.send (l_json)
 		end
 
-	path_table: V_HASH_TABLE [STRING, RESTLY_PATH]
+	path_table: V_HASH_TABLE [STRING, RESTLY_ROUTED_EXECUTION_PATH]
 			-- Fine-grained route rows by URI template.
 		attribute
 			create Result.with_object_equality
