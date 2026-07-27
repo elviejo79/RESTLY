@@ -26,6 +26,11 @@
 		<library name="uri_template" location="$ISE_LIBRARY\contrib\library\text\parser\uri_template\uri_template.ecf"/>
 		<library name="jwt" location="$ISE_LIBRARY\contrib\library\web\authentication\jwt\jwt.ecf"/>
 		<library name="restly" location="..\..\library\restly.ecf"/>
+		<cluster name="restly_auth" location="..\..\library\restly_auth\" recursive="true">
+			<file_rule>
+				<exclude>/tests$</exclude>
+			</file_rule>
+		</cluster>
 		<cluster name="src" location=".\src\" recursive="true"/>
 	</target>
 </system>

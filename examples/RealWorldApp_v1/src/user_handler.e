@@ -2,7 +2,7 @@ note
 	description: "[
 		HTTP adapter for user endpoints. Composes with USER_STORE
 		via <| (backed_by), delegates JWT extraction to a shared
-		JWT_AUTH instance. Four features, one per operationId.
+		AUTH_BOUNDARY instance. Four features, one per operationId.
 		Commands (register, login) return PRG 303 (CQS-aligned).
 		Queries (current_user, update_user) return 200.
 	]"
@@ -26,14 +26,14 @@ create
 
 feature {NONE} -- Initialization
 
-	make (a_auth: JWT_AUTH)
+	make (a_auth: AUTH_BOUNDARY)
 		do
 			auth := a_auth
 		end
 
 feature -- Access
 
-	auth: JWT_AUTH
+	auth: AUTH_BOUNDARY
 
 feature -- Composition
 
