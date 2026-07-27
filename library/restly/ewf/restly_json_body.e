@@ -1,7 +1,7 @@
 note
 	description: "[
 		Mixin: JSON body parsing and envelope wrapping.
-		Shared by GATEWAY and any handler that reads/writes
+		Shared by any handler that reads/writes
 		JSON request/response bodies using RESTLY_WIRE_SCHEMA
 		envelope conventions.
 	]"

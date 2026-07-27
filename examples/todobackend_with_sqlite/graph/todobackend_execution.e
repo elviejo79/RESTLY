@@ -11,14 +11,28 @@ class
 inherit
 	RESTLY_ROUTED_EXECUTION
 
+	HTTP_REQUEST_METHODS
+		export
+			{NONE} all
+		end
+
 create
 	make
 
 feature {NONE} -- Router
 
 	setup_router
+		local
+			l_handler: RESTLY_EWF_HANDLER
 		do
-			routes ["/todos"] := (create {GATEWAY}) <| (create {TODO_CODEC}) <| todos_table
+			l_handler := (create {RESTLY_EWF_HANDLER}) <| (create {TODO_CODEC}) <| todos_table
+			Current ["/todos/{id}"] [method_get] := agent l_handler.item
+			Current ["/todos/{id}"] [method_put] := agent l_handler.put
+			Current ["/todos/{id}"] [method_delete] := agent l_handler.remove
+				-- TODO(handler): collection GET/HEAD need `items` (LISTABLE traversal + representation)
+				-- TODO(handler): collection POST needs `extend_new` (POSTABLE, PRG 303)
+				-- TODO(handler): collection DELETE needs `wipe_out` (LISTABLE)
+				-- TODO(handler): OPTIONS needs `preflight_ok`; element HEAD needs `head`; PATCH needs `merge`
 		end
 
 feature -- Access

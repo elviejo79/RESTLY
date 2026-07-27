@@ -3,8 +3,8 @@ note
 		Wire schema of one resource: envelope names and address-derived
 		fields, all Void by default (flat bodies, nothing derived).
 		Declared by the stage that knows the resource -- a codec or a
-		store -- and adopted by GATEWAY when the pipeline is composed;
-		names set explicitly on the gateway win.
+		store -- and adopted by the HTTP-boundary handler when the
+		pipeline is composed; names set explicitly on the handler win.
 	]"
 
 class

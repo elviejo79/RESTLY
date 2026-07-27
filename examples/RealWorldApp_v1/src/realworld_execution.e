@@ -34,27 +34,26 @@ feature {NONE} -- Router
 
 	setup_router
 		local
-			gate: GATEWAY
 			auth: AUTH_BOUNDARY
-			guarded: AUTH_BOUNDARY
-			articles: GATEWAY
+			ah: RESTLY_EWF_HANDLER
 			uh: USER_HANDLER
 		do
 				-- Auth guard (shared)
 			create auth.make (jwt_codec)
 			auth.bearer_prefix := "Token "
 
-				-- Article pipelines
-			create gate
-			gate.id_parameter_name := "slug"
-			articles := gate <| articles_table
-			guarded := auth <| articles
+				-- Article pipeline
+			ah := (create {RESTLY_EWF_HANDLER}) <| articles_table
+			ah.id_parameter_name := "slug"
 
-			Current ["/articles"] [method_get] := agent articles.items				-- operationId: GetArticles (public)
-			Current ["/articles"] [method_post] := agent guarded.extend				-- operationId: CreateArticle (token)
-			Current ["/articles/{slug}"] [method_get] := agent articles.item			-- operationId: GetArticle (public)
-			Current ["/articles/{slug}"] [method_put] := agent guarded.merge			-- operationId: UpdateArticle (token)
-			Current ["/articles/{slug}"] [method_delete] := agent guarded.remove		-- operationId: DeleteArticle (token)
+			Current ["/articles/{slug}"] [method_get] := agent ah.item			-- operationId: GetArticle (public)
+				-- TODO(handler): collection GET needs `items` (LISTABLE traversal + representation)
+				-- Current ["/articles"] [method_get] := agent ah.items			-- operationId: GetArticles (public)
+				-- TODO(auth): AUTH_BOUNDARY.back is CALL_RETURN_PROTOCOL; needs an auth
+				-- combinator over the container protocol. Never wire these unguarded.
+				-- Current ["/articles"] [method_post] := ...					-- operationId: CreateArticle (token)
+				-- Current ["/articles/{slug}"] [method_put] := ...				-- operationId: UpdateArticle (token)
+				-- Current ["/articles/{slug}"] [method_delete] := ...			-- operationId: DeleteArticle (token)
 
 				-- User store + handler
 			uh := (create {USER_HANDLER}.make (auth)) <| users_table

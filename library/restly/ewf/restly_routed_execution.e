@@ -2,7 +2,7 @@ note
 	description: "[
 		Reusable WSF execution for RESTLY resources.
 		Descendants implement setup_router only:
-		routes ["/todos"] := (create {MY_GATEWAY}) <| my_store
+		Current ["/todos/{id}"] [method_get] := agent my_handler.item
 	]"
 
 deferred class

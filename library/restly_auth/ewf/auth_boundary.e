@@ -2,11 +2,11 @@ note
 	description: "[
 		Authentication as a composable stage in the call/return layer:
 		each verb answers 401 Unauthorized unless the request carries
-		a valid credential, then delegates to `back` (typically a
-		GATEWAY <| store chain). Follows the Tao (directive 1): the
+		a valid credential, then delegates to `back` (a call/return
+		pipeline over a store). Follows the Tao (directive 1): the
 		route table declares which endpoints are guarded —
-			guarded := (create {AUTH_BOUNDARY}).make (codec) <| gateway <| store
-		— and swapping AUTH_BOUNDARY for a bare GATEWAY is a one-word
+			guarded := (create {AUTH_BOUNDARY}).make (codec) <| back_pipeline
+		— and swapping AUTH_BOUNDARY out of the chain is a one-word
 		change (directive 12: test by shrinking).
 
 		The clock is snapshotted once at request entry (ground rule 3)

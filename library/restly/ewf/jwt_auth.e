@@ -2,8 +2,7 @@ note
 	description: "[
 		JWT bearer-token guard over a call/return handler: each verb
 		answers 401 Unauthorized unless the request carries a valid
-		token, then delegates to `back` (typically a GATEWAY).
-		routes ["/todos"] := (create {JWT_AUTH}.make (secret)) <| (create {GATEWAY}) <| codec <| store
+		token, then delegates to `back` (a call/return pipeline).
 	]"
 
 class
