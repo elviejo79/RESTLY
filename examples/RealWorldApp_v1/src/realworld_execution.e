@@ -37,6 +37,7 @@ feature {NONE} -- Router
 			auth: AUTH_BOUNDARY
 			ah: RESTLY_EWF_HANDLER
 			uh: USER_HANDLER
+			l_user_codec: USER_CODEC
 		do
 				-- Auth guard (shared)
 			create auth.make (jwt_codec)
@@ -55,7 +56,9 @@ feature {NONE} -- Router
 				-- Current ["/articles/{slug}"] [method_delete] := ...			-- operationId: DeleteArticle (token)
 
 				-- User store + handler
-			uh := (create {USER_HANDLER}.make (auth)) <| users_table
+			create l_user_codec
+			l_user_codec.envelope := "user"
+			uh := (create {USER_HANDLER}.make (auth)) <| l_user_codec <| users_table
 
 			Current ["/users"] [method_post] := agent uh.register				-- operationId: CreateUser (public)
 			Current ["/users/login"] [method_post] := agent uh.login			-- operationId: Login (public)

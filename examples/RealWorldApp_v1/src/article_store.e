@@ -9,28 +9,11 @@ class
 
 inherit
 	RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]
-		redefine
-			make
-		end
 
 	RESTLY_POSTABLE [STRING, JSON_OBJECT]
 
-	RESTLY_WIRE_SCHEMA
-
 create
 	make
-
-feature {NONE} -- Initialization
-
-	make (a_name: STRING)
-			-- <Precursor>; declares the RealWorld wire schema:
-			-- enveloped bodies, slug echoed from the element key.
-		do
-			Precursor (a_name)
-			element_envelope := "article"
-			collection_envelope := "articles"
-			key_field := "slug"
-		end
 
 feature {NONE} -- Key minting
 

@@ -1,7 +1,8 @@
 note
 	description: "[
 		Todo store: hash table with server-minted keys (POST).
-		PATCH merging and "url" derivation happen in the gateway.
+		Serves url-less representations: no codec stage to
+		derive the "url" field.
 	]"
 
 class
@@ -10,25 +11,13 @@ class
 inherit
 	RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]
 		redefine
-			extend, make
+			extend
 		end
 
 	RESTLY_POSTABLE [STRING, JSON_OBJECT]
 
-	RESTLY_WIRE_SCHEMA
-
 create
 	make
-
-feature {NONE} -- Initialization
-
-	make (a_name: STRING)
-			-- <Precursor>; declares the wire schema: "url" is derived
-			-- by the gateway, never stored.
-		do
-			Precursor (a_name)
-			url_field := "url"
-		end
 
 feature -- REST verbs
 

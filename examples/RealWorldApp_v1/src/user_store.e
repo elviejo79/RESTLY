@@ -4,7 +4,8 @@ note
 		Registration = extend_new: mints the key from the body's
 		email field, hashes the password before storing.
 		Every read mints a fresh JWT so the token is always current.
-		Stripping password_hash is the response layer's job.
+		Stripping password_hash and envelope wrapping are
+		USER_CODEC's job.
 	]"
 
 class
@@ -13,7 +14,6 @@ class
 inherit
 	RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]
 		redefine
-			make,
 			item
 		end
 
@@ -22,19 +22,8 @@ inherit
 			extend_new
 		end
 
-	RESTLY_WIRE_SCHEMA
-
 create
 	make
-
-feature {NONE} -- Initialization
-
-	make (a_name: STRING)
-			-- <Precursor>; declares the RealWorld wire schema.
-		do
-			Precursor (a_name)
-			element_envelope := "user"
-		end
 
 feature -- Access
 

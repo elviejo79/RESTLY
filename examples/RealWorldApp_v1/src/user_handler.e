@@ -1,8 +1,10 @@
 note
 	description: "[
-		HTTP adapter for user endpoints. Composes with USER_STORE
-		via <| (backed_by), delegates JWT extraction to a shared
-		AUTH_BOUNDARY instance. Four features, one per operationId.
+		HTTP adapter for user endpoints. Composes onto
+		USER_CODEC <| USER_STORE via <| (backed_by), delegates JWT
+		extraction to a shared AUTH_BOUNDARY instance.
+		Envelope wrapping and password_hash stripping are the
+		codec's job. Four features, one per operationId.
 		Commands (register, login) return PRG 303 (CQS-aligned).
 		Queries (current_user, update_user) return 200.
 	]"
@@ -12,14 +14,8 @@ class
 
 inherit
 	RESTLY_COMPOSABLE [STRING, JSON_OBJECT]
-		redefine
-			make_with_back
-		end
 
 	RESTLY_JSON_BODY
-		redefine
-			wrapped
-		end
 
 create
 	make
@@ -34,19 +30,6 @@ feature {NONE} -- Initialization
 feature -- Access
 
 	auth: AUTH_BOUNDARY
-
-feature -- Composition
-
-	make_with_back (a_back: like back)
-			-- <Precursor>; adopt element_envelope from back.
-		do
-			Precursor (a_back)
-			if attached {RESTLY_WIRE_SCHEMA} a_back as l_schema then
-				if element_envelope = Void then
-					element_envelope := l_schema.element_envelope
-				end
-			end
-		end
 
 feature -- Commands (PRG)
 
@@ -79,6 +62,9 @@ feature -- Commands (PRG)
 			l_email, l_password: STRING
 		do
 			l_body := parse_body (req)
+			if attached {USER_CODEC} back as l_codec then
+				l_body := l_codec.storage_value (l_body)
+			end
 			if
 				attached {JSON_STRING} l_body ["email"] as l_e and then
 				attached {JSON_STRING} l_body ["password"] as l_p
@@ -86,7 +72,8 @@ feature -- Commands (PRG)
 				l_email := l_e.unescaped_string_8
 				l_password := l_p.unescaped_string_8
 				if
-					attached {USER_STORE} back as l_users and then
+					attached {USER_CODEC} back as l_codec and then
+					attached {USER_STORE} l_codec.back as l_users and then
 					l_users.authenticate (l_email, l_password)
 				then
 					Result := {WSF_JSON_RESPONSE}.see_other
@@ -110,7 +97,7 @@ feature -- Queries
 				back.has_key (l_id.value.to_string_8)
 			then
 				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (
-					wrapped (back [l_id.value.to_string_8]))
+					back [l_id.value.to_string_8])
 			else
 				Result := {WSF_JSON_RESPONSE}.not_found
 			end
@@ -124,7 +111,7 @@ feature -- Queries
 				back.has_key (l_email)
 			then
 				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (
-					wrapped (back [l_email]))
+					back [l_email])
 			else
 				Result := {WSF_JSON_RESPONSE}.unauthorized
 			end
@@ -139,22 +126,10 @@ feature -- Queries
 			then
 				back.merge (parse_body (req), l_email)
 				Result := {WSF_JSON_RESPONSE}.ok.with_json_object (
-					wrapped (back [l_email]))
+					back [l_email])
 			else
 				Result := {WSF_JSON_RESPONSE}.unauthorized
 			end
-		end
-
-feature {NONE} -- Response
-
-	wrapped (a_value: JSON_OBJECT): JSON_OBJECT
-			-- <Precursor>: strip password_hash before wrapping.
-		local
-			l_clean: JSON_OBJECT
-		do
-			l_clean := a_value.twin
-			l_clean.remove ("password_hash")
-			Result := Precursor (l_clean)
 		end
 
 end
