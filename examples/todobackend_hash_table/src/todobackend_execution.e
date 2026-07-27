@@ -27,9 +27,11 @@ feature {NONE} -- Router
 			Current ["/todos/{id}"] [method_delete] := agent l_handler.remove
 			Current ["/todos"] [method_get] := agent l_handler.items
 			Current ["/todos"] [method_post] := agent l_handler.extend_new
-				-- TODO(handler): collection HEAD needs a body-less `items`
-				-- TODO(handler): collection DELETE needs `wipe_out`
-				-- TODO(handler): OPTIONS needs `preflight_ok`; element HEAD needs `head`; PATCH needs `merge`
+			Current ["/todos"] [method_delete] := agent l_handler.wipe_out
+			Current ["/todos/{id}"] [method_patch] := agent l_handler.merge
+			Current ["/todos"] [method_options] := agent l_handler.preflight_ok
+			Current ["/todos/{id}"] [method_options] := agent l_handler.preflight_ok
+				-- TODO(handler): collection HEAD needs a body-less `items`; element HEAD needs `head`
 			print_pipeline_graph
 		end
 

@@ -80,6 +80,15 @@ feature -- REST verbs
 			retry
 		end
 
+	preflight_ok (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- OPTIONS: CORS preflight. Mapped explicitly because
+			-- {WSF_ROUTER}'s automatic OPTIONS reply lacks
+			-- "Connection: close" (~5s keep-alive stall); the CORS
+			-- headers themselves come from the routing pipeline.
+		do
+			Result := {WSF_JSON_RESPONSE}.no_content
+		end
+
 	has_key (req: WSF_REQUEST): BOOLEAN
 			-- HEAD: is the addressed element present?
 		do
@@ -149,6 +158,49 @@ feature -- REST verbs
 			if not l_rescued then
 				back.put (parse_body (req), element_key (req))
 				res.set_status_code ({HTTP_STATUS_CODE}.ok)
+			end
+				-- on the retry path res was already set by handle_rescue_for_command
+		rescue
+			l_rescued := True
+			handle_rescue_for_command (res)
+			retry
+		end
+
+	merge (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+			-- PATCH /resource/{id}: update the parts named in the
+			-- request body; absent parts stay intact. Answers the
+			-- updated element, read back after the merge.
+			-- Self-guarding: on contract violation `res` becomes the
+			-- mapped error response.
+		local
+			l_rescued: BOOLEAN
+			l_key: STRING
+		do
+			if not l_rescued then
+				l_key := element_key (req)
+				back.merge (parse_body (req), l_key)
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
+				res.set_body (back [l_key].representation)
+			end
+				-- on the retry path res was already set by handle_rescue_for_command
+		rescue
+			l_rescued := True
+			handle_rescue_for_command (res)
+			retry
+		end
+
+	wipe_out (res: WSF_JSON_RESPONSE; req: WSF_REQUEST)
+			-- DELETE /resource: remove every element `back` holds.
+			-- Answers the now-empty collection, as GATEWAY did.
+			-- Self-guarding: on contract violation `res` becomes the
+			-- mapped error response.
+		local
+			l_rescued: BOOLEAN
+		do
+			if not l_rescued then
+				back.wipe_out
+				res.set_status_code ({HTTP_STATUS_CODE}.ok)
+				res.set_body ("[]")
 			end
 				-- on the retry path res was already set by handle_rescue_for_command
 		rescue

@@ -29,15 +29,12 @@ feature {NONE} -- Router
 				-- TODO(handler): collection HEAD needs a body-less `items`
 				-- Current ["/todos"] [method_head] := agent l_handler.items
 			Current ["/todos"] [method_post] := agent l_handler.extend_new
-				-- TODO(handler): collection DELETE needs `wipe_out`
-				-- Current ["/todos"] [method_delete] := agent l_handler.wipe_out
-				-- TODO(handler): OPTIONS needs `preflight_ok`
-				-- Current ["/todos"] [method_options] := agent l_handler.preflight_ok
-				-- Current ["/todos/{id}"] [method_options] := agent l_handler.preflight_ok
+			Current ["/todos"] [method_delete] := agent l_handler.wipe_out
+			Current ["/todos/{id}"] [method_patch] := agent l_handler.merge
+			Current ["/todos"] [method_options] := agent l_handler.preflight_ok
+			Current ["/todos/{id}"] [method_options] := agent l_handler.preflight_ok
 				-- TODO(handler): element HEAD needs a routable `head` query
 				-- Current ["/todos/{id}"] [method_head] := agent l_handler.head
-				-- TODO(handler): PATCH needs `merge` (PATCHABLE)
-				-- Current ["/todos/{id}"] [method_patch] := agent l_handler.merge
 		end
 
 feature -- Access
