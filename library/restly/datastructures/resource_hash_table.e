@@ -10,7 +10,7 @@ class
 	RESOURCE_HASH_TABLE [K -> HASHABLE, V]
 
 inherit
-	RESTLY_LISTABLE [K, V]
+	RESTLY_PROTOCOL [K, V]
 
 	ANY
 

@@ -5,6 +5,9 @@ note
 		the mutating verbs promise (ensure then) that the table really
 		changed. Stores speak this; fronts that cannot promise delivery
 		stay at RESTLY_UNSAFE_PROTOCOL.
+		Every store is traversable (EiffelBase2: new_cursor lives on
+		V_CONTAINER itself, not a mixin): the container is the
+		iterable, `new_cursor` is the only traversal it hands out.
 	]"
 	author: ""
 	date: "$Date$"
@@ -17,6 +20,13 @@ inherit
 	RESTLY_PATCHABLE [K, V]
 		redefine
 			force
+		end
+
+	TABLE_ITERABLE [V, K]
+			-- `new_cursor: TABLE_ITERATION_CURSOR [V, K]` comes from
+			-- here: a forward-only stream exposing both keys and values.
+		undefine
+			is_equal, copy, out, default_create
 		end
 
 feature -- REST verbs
@@ -48,6 +58,17 @@ feature -- REST verbs
 		deferred
 		ensure then
 			error_500_didnt_actually_delete: not has_key(k)
+		end
+
+feature -- Removal
+
+	wipe_out
+			-- Remove all entries.
+			-- Lives with the mutating verbs, as in EiffelBase2's
+			-- V_TABLE — never on a read-only ancestor, never a mixin.
+		deferred
+		ensure
+			empty: new_cursor.after
 		end
 
 end

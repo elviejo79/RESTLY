@@ -25,9 +25,10 @@ feature {NONE} -- Router
 			Current ["/todos/{id}"] [method_get] := agent l_handler.item
 			Current ["/todos/{id}"] [method_put] := agent l_handler.put
 			Current ["/todos/{id}"] [method_delete] := agent l_handler.remove
-				-- TODO(handler): collection GET/HEAD need `items` (LISTABLE traversal + representation)
+			Current ["/todos"] [method_get] := agent l_handler.items
+				-- TODO(handler): collection HEAD needs a body-less `items`
 				-- TODO(handler): collection POST needs `extend_new` (POSTABLE, PRG 303)
-				-- TODO(handler): collection DELETE needs `wipe_out` (LISTABLE)
+				-- TODO(handler): collection DELETE needs `wipe_out`
 				-- TODO(handler): OPTIONS needs `preflight_ok`; element HEAD needs `head`; PATCH needs `merge`
 			print_pipeline_graph
 		end

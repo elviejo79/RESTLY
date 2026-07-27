@@ -16,11 +16,6 @@ inherit
 			graph_dot_lines
 		end
 
-	RESTLY_LISTABLE [RK, RV]
-		redefine
-			graph_dot_lines
-		end
-
 	RESTLY_POSTABLE[RK, RV]
 		redefine
 			graph_dot_lines,
@@ -100,15 +95,13 @@ feature -- Iteration
 			l_cursor: TABLE_ITERATION_CURSOR [SV, SK]
 		do
 			create l_snapshot.with_object_equality
-			if attached {RESTLY_LISTABLE [SK, SV]} back as l_list then
-				from
-					l_cursor := l_list.new_cursor
-				until
-					l_cursor.after
-				loop
-					l_snapshot.extend (representation (l_cursor.item), representation_key (l_cursor.key))
-					l_cursor.forth
-				end
+			from
+				l_cursor := back.new_cursor
+			until
+				l_cursor.after
+			loop
+				l_snapshot.extend (representation (l_cursor.item), representation_key (l_cursor.key))
+				l_cursor.forth
 			end
 			create {RESTLY_V_MAP_CURSOR [RK, RV]} Result.make (l_snapshot.new_cursor)
 		end
@@ -118,9 +111,7 @@ feature -- Removal
 	wipe_out
 			-- <Precursor>
 		do
-			if attached {RESTLY_LISTABLE [SK, SV]} back as l_list then
-				l_list.wipe_out
-			end
+			back.wipe_out
 		end
 
 feature -- Extension

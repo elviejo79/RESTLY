@@ -127,6 +127,25 @@ feature -- REST verbs
 			l_response := checked (agent proxy.delete (k, context_proxy))
 		end
 
+feature -- Iteration
+
+	new_cursor: TABLE_ITERATION_CURSOR [STRING, RESTLY_URI_PATH]
+			-- Remote enumeration needs a collection GET on the wire;
+			-- fail loud until that exists.
+		do
+			check remote_enumeration_not_wired: False then
+				Result := new_cursor
+			end
+		end
+
+	wipe_out
+			-- Remote bulk delete needs a collection DELETE on the wire;
+			-- fail loud until that exists.
+		do
+			check remote_wipe_out_not_wired: False then
+			end
+		end
+
 feature -- Navigation
 
 	subpath alias "/" (a_segment: STRING): RESTLY_HTTP_CLIENT

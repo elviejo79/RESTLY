@@ -74,6 +74,42 @@ feature -- REST verbs
 			back.remove (k)
 		end
 
+feature -- Iteration
+
+	new_cursor: TABLE_ITERATION_CURSOR [V, K]
+			-- Only the keys this capability may read.
+		do
+			create {AUTH_FILTER_CURSOR [K, V]} Result.make (back.new_cursor, capability)
+		end
+
+feature -- Removal
+
+	wipe_out
+			-- Empty this capability's world; invisible rows survive
+			-- in the back.
+		local
+			l_cursor: TABLE_ITERATION_CURSOR [V, K]
+			l_keys: ARRAYED_LIST [K]
+		do
+			create l_keys.make (8)
+			from
+				l_cursor := new_cursor
+			until
+				l_cursor.after
+			loop
+				l_keys.extend (l_cursor.key)
+				l_cursor.forth
+			end
+			from
+				l_keys.start
+			until
+				l_keys.after
+			loop
+				remove (l_keys.item)
+				l_keys.forth
+			end
+		end
+
 feature -- Status report
 
 	writable (k: K): BOOLEAN

@@ -47,8 +47,7 @@ feature {NONE} -- Router
 			ah.id_parameter_name := "slug"
 
 			Current ["/articles/{slug}"] [method_get] := agent ah.item			-- operationId: GetArticle (public)
-				-- TODO(handler): collection GET needs `items` (LISTABLE traversal + representation)
-				-- Current ["/articles"] [method_get] := agent ah.items			-- operationId: GetArticles (public)
+			Current ["/articles"] [method_get] := agent ah.items				-- operationId: GetArticles (public)
 				-- TODO(auth): AUTH_BOUNDARY.back is CALL_RETURN_PROTOCOL; needs an auth
 				-- combinator over the container protocol. Never wire these unguarded.
 				-- Current ["/articles"] [method_post] := ...					-- operationId: CreateArticle (token)

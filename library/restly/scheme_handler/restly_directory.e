@@ -156,6 +156,25 @@ feature -- Navigation
 			create Result.make_with_path (extended (a_segment))
 		end
 
+feature -- Iteration
+
+	new_cursor: TABLE_ITERATION_CURSOR [STRING, RESTLY_URI_PATH]
+			-- ponytail: fail loud; key/contents traversal via `entries`
+			-- when a scheme route needs it (eager contents read is the trap).
+		do
+			check directory_enumeration_not_wired: False then
+				Result := new_cursor
+			end
+		end
+
+	wipe_out
+			-- ponytail: fail loud; recursive delete is a decision,
+			-- not a default.
+		do
+			check directory_wipe_out_not_wired: False then
+			end
+		end
+
 feature -- Traversal
 
 	entries: ITERABLE [RESTLY_FILE_NODE]

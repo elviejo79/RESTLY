@@ -4,10 +4,10 @@ note
 		keys; alice's wipe_out empties her world and leaves bob's rows
 		in the backing table.
 	]"
-	testing: "covers/{LISTABLE_AUTH_VIEW}, covers/{AUTH_FILTER_CURSOR}"
+	testing: "covers/{AUTH_VIEW}, covers/{AUTH_FILTER_CURSOR}"
 
 class
-	LISTABLE_AUTH_VIEW_TEST_SET
+	AUTH_VIEW_TRAVERSAL_TEST_SET
 
 inherit
 	EQA_TEST_SET
@@ -35,7 +35,7 @@ feature -- Tests
 
 	test_cursor_yields_only_permitted_keys
 		local
-			l_view: LISTABLE_AUTH_VIEW [STRING, STRING]
+			l_view: AUTH_VIEW [STRING, STRING]
 			l_cursor: TABLE_ITERATION_CURSOR [STRING, STRING]
 			l_keys: ARRAYED_LIST [STRING]
 		do
@@ -59,7 +59,7 @@ feature -- Tests
 	test_wipe_out_spares_invisible_rows
 		local
 			l_back: RESOURCE_HASH_TABLE [STRING, STRING]
-			l_view: LISTABLE_AUTH_VIEW [STRING, STRING]
+			l_view: AUTH_VIEW [STRING, STRING]
 		do
 			l_back := backing
 			create l_view.make (alice_capability, l_back)

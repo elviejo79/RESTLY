@@ -78,6 +78,26 @@ feature -- REST verbs
 			end
 		end
 
+feature -- Removal
+
+	wipe_out
+			-- Empty both parts.
+		do
+			front.wipe_out
+			back.wipe_out
+		end
+
+feature -- Iteration
+
+	new_cursor: TABLE_ITERATION_CURSOR [V, K]
+			-- Traversal of `back`, the source of truth;
+			-- `front` holds only a subset.
+		do
+			check back_speaks_front_types: attached {TABLE_ITERATION_CURSOR [V, K]} back.new_cursor as c then
+				Result := c
+			end
+		end
+
 feature -- Output
 
 	graph_dot_lines: STRING

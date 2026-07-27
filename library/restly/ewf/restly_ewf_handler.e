@@ -50,6 +50,36 @@ feature -- REST verbs
 			retry
 		end
 
+	items (req: WSF_REQUEST): WSF_JSON_RESPONSE
+			-- GET /resource: everything `back` enumerates, as a bare
+			-- JSON array. Every protocol speaker is traversable now,
+			-- so no capability downcast.
+			-- Self-guarding: a back whose cursor fails loud comes back
+			-- as the mapped error response.
+			-- ponytail: raw stored values; wire-schema fields (url,
+			-- envelope, count) return when the schema grows back.
+		local
+			l_array: JSON_ARRAY
+			l_cursor: TABLE_ITERATION_CURSOR [JSON_OBJECT, STRING]
+		do
+			if not attached Result then
+				create l_array.make_empty
+				from
+					l_cursor := back.new_cursor
+				until
+					l_cursor.after
+				loop
+					l_array.extend (l_cursor.item)
+					l_cursor.forth
+				end
+				Result := {WSF_JSON_RESPONSE}.ok.with_body (l_array.representation)
+			end
+				-- on the retry path Result was already set by handle_rescue_for_queries
+		rescue
+			Result := handle_rescue_for_queries
+			retry
+		end
+
 	has_key (req: WSF_REQUEST): BOOLEAN
 			-- HEAD: is the addressed element present?
 		do
