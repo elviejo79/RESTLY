@@ -10,10 +10,8 @@ class
 inherit
 	RESOURCE_HASH_TABLE [STRING, JSON_OBJECT]
 		redefine
-			extend, make
+			extend, make, fresh_key
 		end
-
-	RESTLY_POSTABLE [STRING, JSON_OBJECT]
 
 	RESTLY_WIRE_SCHEMA
 
@@ -42,7 +40,7 @@ feature -- REST verbs
 			Precursor (v, k)
 		end
 
-feature {NONE} -- Key minting
+feature {RESTLY_PROTOCOL} -- Key minting
 
 	fresh_key (a_v: JSON_OBJECT): STRING
 			-- <Precursor>: next unused counter key; ignores `a_v`.

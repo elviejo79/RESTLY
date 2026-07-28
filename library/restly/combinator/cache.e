@@ -79,6 +79,27 @@ feature -- REST verbs
 			end
 		end
 
+feature -- Search
+
+	search (a_query: PREDICATE [V]): RESTLY_PROTOCOL [K, V]
+			-- <Precursor>: back only — it is authoritative; front
+			-- holds just the cached subset.
+		do
+			check back_speaks_front_types: attached {RESTLY_PROTOCOL [K, V]} back as l_back then
+				Result := l_back.search (a_query)
+			end
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
+
+	fresh_key (a_v: V): K
+			-- <Precursor>: the authoritative back mints.
+		do
+			check back_speaks_front_types: attached {RESTLY_PROTOCOL [K, V]} back as l_back then
+				Result := l_back.fresh_key (a_v)
+			end
+		end
+
 feature -- Output
 
 	graph_dot_lines: STRING

@@ -10,10 +10,8 @@ class
 inherit
 	RESOURCE_HASH_TABLE [INTEGER, TODO_ROW]
 		redefine
-			extend
+			extend, fresh_key
 		end
-
-	RESTLY_POSTABLE [INTEGER, TODO_ROW]
 
 create
 	make
@@ -28,7 +26,7 @@ feature -- REST verbs
 			Precursor (v, k)
 		end
 
-feature {NONE} -- Key minting
+feature {RESTLY_PROTOCOL} -- Key minting
 
 	fresh_key (a_v: TODO_ROW): INTEGER
 			-- <Precursor>: next unused counter key; ignores `a_v`.

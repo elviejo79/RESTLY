@@ -63,6 +63,23 @@ feature -- REST verbs
 			end
 		end
 
+feature -- Search
+
+	search (a_query: PREDICATE [V]): RESTLY_PROTOCOL [K, V]
+			-- <Precursor>: front only — the preferred, live store.
+			-- ponytail: union with back if fallback data must be searchable.
+		do
+			Result := front.search (a_query)
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
+
+	fresh_key (a_v: V): K
+			-- <Precursor>: front mints; extends go to front.
+		do
+			Result := front.fresh_key (a_v)
+		end
+
 feature -- Output
 
 	graph_dot_lines: STRING

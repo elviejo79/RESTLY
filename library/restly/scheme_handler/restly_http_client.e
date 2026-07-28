@@ -214,4 +214,24 @@ feature {NONE} -- Implementation
 
 	context_proxy: HTTP_CLIENT_REQUEST_CONTEXT
 
+feature -- Search
+
+	search (a_query: PREDICATE [STRING]): RESTLY_PROTOCOL [RESTLY_URI_PATH, STRING]
+			-- <Precursor>
+		do
+			check search_not_supported_here: False then
+				Result := search (a_query)
+			end
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
+
+	fresh_key (a_v: STRING): RESTLY_URI_PATH
+			-- <Precursor>
+		do
+			check minting_not_supported_here: False then
+				Result := fresh_key (a_v)
+			end
+		end
+
 end

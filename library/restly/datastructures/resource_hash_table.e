@@ -12,8 +12,6 @@ class
 inherit
 	RESTLY_LISTABLE [K, V]
 
-	RESTLY_PATCHABLE [K, V]
-
 	ANY
 
 create
@@ -63,6 +61,39 @@ feature -- REST verbs
 			-- <Precursor>
 		do
 			table.remove (k)
+		end
+
+feature -- Search
+
+	search (a_query: PREDICATE [V]): RESTLY_PROTOCOL [K, V]
+			-- <Precursor>: linear scan of the table.
+		local
+			l_matches: RESOURCE_HASH_TABLE [K, V]
+			l_cursor: TABLE_ITERATION_CURSOR [V, K]
+		do
+			create l_matches.make (name + "_search")
+			from
+				l_cursor := new_cursor
+			until
+				l_cursor.after
+			loop
+				if a_query (l_cursor.item) then
+					l_matches.extend (l_cursor.item, l_cursor.key)
+				end
+				l_cursor.forth
+			end
+			Result := l_matches
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
+
+	fresh_key (a_v: V): K
+			-- <Precursor>: a generic table cannot invent a K;
+			-- key-minting descendants (TODO_STORE, ...) redefine.
+		do
+			check minting_needs_a_concrete_key_type: False then
+				Result := fresh_key (a_v)
+			end
 		end
 
 feature -- Iteration

@@ -11,28 +11,13 @@ deferred class
 	CONVERTER [RK -> HASHABLE, RV, SK -> HASHABLE, SV]
 
 inherit
-   RESTLY_PROTOCOL[RK, RV]
-		redefine
-			graph_dot_lines
-		end
-
 	RESTLY_LISTABLE [RK, RV]
-		redefine
-			graph_dot_lines
-		end
-
-	RESTLY_POSTABLE[RK, RV]
 		redefine
 			graph_dot_lines,
 			extend_new
 		end
 
-	RESTLY_PATCHABLE [RK, RV]
-		redefine
-			graph_dot_lines
-		end
-      
-   RESTLY_UNARY_COMBINATOR[SK,SV]
+	RESTLY_UNARY_COMBINATOR [SK, SV]
    
 	ANY
 			-- Re-effects default_create/copy/out/is_equal,
@@ -137,15 +122,36 @@ feature -- Extension
 			-- in wire form (attribute cannot be redefined into a
 			-- derived query — ECMA redeclaration is one-directional).
 		do
-			check postable_back: attached {RESTLY_POSTABLE [SK, SV]} back as l_back then
-				l_back.extend_new (storage_value (a_v), a_request_id)
-				if not extend_requests.has_key (a_request_id) then
-					extend_requests.extend (representation_key (l_back.extend_requests [a_request_id]), a_request_id)
-				end
+			back.extend_new (storage_value (a_v), a_request_id)
+			if not extend_requests.has_key (a_request_id) then
+				extend_requests.extend (representation_key (back.extend_requests [a_request_id]), a_request_id)
 			end
 		end
 
-feature {NONE} -- Key minting
+feature -- Search
+
+	search (a_query: PREDICATE [RV]): RESTLY_PROTOCOL [RK, RV]
+			-- <Precursor>: filter own cursor in R-space; a predicate
+			-- over RV cannot be pushed through the conversion to `back`.
+		local
+			l_matches: RESOURCE_HASH_TABLE [RK, RV]
+			l_cursor: TABLE_ITERATION_CURSOR [RV, RK]
+		do
+			create l_matches.make ("search_results")
+			from
+				l_cursor := new_cursor
+			until
+				l_cursor.after
+			loop
+				if a_query (l_cursor.item) then
+					l_matches.extend (l_cursor.item, l_cursor.key)
+				end
+				l_cursor.forth
+			end
+			Result := l_matches
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
 
 	fresh_key (a_v: RV): RK
 			-- <Precursor>: never ours -- the store behind `back` mints.

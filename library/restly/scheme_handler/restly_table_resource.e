@@ -12,14 +12,10 @@ class
 	RESTLY_TABLE_RESOURCE [V -> RESTLY_IDENTIFIABLE [INTEGER]]
 
 inherit
-	RESTLY_POSTABLE [INTEGER, V]
+	RESTLY_LISTABLE [INTEGER, V]
 		redefine
 			extend_new
 		end
-
-	RESTLY_SEARCHABLE [PS_CRITERION, INTEGER, V]
-
-	RESTLY_LISTABLE [INTEGER, V]
 
 	RESTLY_RESOURCE
 
@@ -114,8 +110,30 @@ feature -- REST verbs
 			l_transaction.commit
 		end
 
-	search (a_query: PS_CRITERION): TABLE_ITERATION_CURSOR [V, INTEGER]
-			-- <Precursor>
+	search (a_query: PREDICATE [V]): RESTLY_PROTOCOL [INTEGER, V]
+			-- <Precursor>: criterion-less query filtered in memory.
+			-- ponytail: full-table scan; push predicates down as
+			-- PS_CRITERIONs (see `search_by_criterion`) if tables grow.
+		local
+			l_matches: RESOURCE_HASH_TABLE [INTEGER, V]
+			l_cursor: TABLE_ITERATION_CURSOR [V, INTEGER]
+		do
+			create l_matches.make (table_name + "_search")
+			from
+				l_cursor := new_cursor
+			until
+				l_cursor.after
+			loop
+				if a_query (l_cursor.item) then
+					l_matches.extend (l_cursor.item, l_cursor.key)
+				end
+				l_cursor.forth
+			end
+			Result := l_matches
+		end
+
+	search_by_criterion (a_query: PS_CRITERION): TABLE_ITERATION_CURSOR [V, INTEGER]
+			-- All rows matching `a_query`, executed by the database.
 		local
 			l_query: PS_QUERY [V]
 		do
@@ -143,7 +161,7 @@ feature -- Extension
 			end
 		end
 
-feature {NONE} -- Key minting
+feature {RESTLY_PROTOCOL} -- Key minting
 
 	fresh_key (a_v: V): INTEGER
 			-- <Precursor>: one past the highest row id.

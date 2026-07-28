@@ -82,18 +82,14 @@ feature -- REST verbs
 			l_json, response_json: JSON_OBJECT
 			l_request_id: STRING
 		do
-			if attached {RESTLY_POSTABLE [STRING, JSON_OBJECT]} back as l_back then
-				l_json := parse_body (req)
-				l_request_id := l_json.out
-				l_back.extend_new (l_json, l_request_id)
-				check attached l_back.extend_requests [l_request_id] as l_new_key then
-					response_json := back [l_new_key]
-					Result := {WSF_JSON_RESPONSE}.created
-						.with_json_object (response_json)
-						.with_location (element_url (req, l_new_key))
-				end
-			else
-				Result := {WSF_JSON_RESPONSE}.method_not_allowed
+			l_json := parse_body (req)
+			l_request_id := l_json.out
+			back.extend_new (l_json, l_request_id)
+			check attached back.extend_requests [l_request_id] as l_new_key then
+				response_json := back [l_new_key]
+				Result := {WSF_JSON_RESPONSE}.created
+					.with_json_object (response_json)
+					.with_location (element_url (req, l_new_key))
 			end
 		end
 
@@ -157,9 +153,7 @@ feature -- REST verbs
 			l_key: STRING
 		do
 			l_key := element_key (req)
-			if attached {RESTLY_PATCHABLE [STRING, JSON_OBJECT]} back as l_back then
-				l_back.merge (parse_body (req), l_key)
-			end
+			back.merge (parse_body (req), l_key)
 			Result := {WSF_JSON_RESPONSE}.ok.with_json_object (element_representation (req, l_key))
 		end
 

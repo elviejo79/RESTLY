@@ -32,6 +32,8 @@ feature -- REST verbs
 
 	extend (v: V; k: K)
 			-- POST: create new resource with key `k`; must not already exist.
+      require
+         error_409_conflict: not has_key(k)
 		deferred
 		ensure
 			error_500_didnt_actually_update: has_key(k) and then item(k) ~ v 
@@ -69,6 +71,89 @@ feature -- REST verbs
 		deferred
 		ensure
 			error_500_didnt_actually_delete: not has_key(k)
+		end
+
+feature -- Update
+
+	merge (a_patch: JSON_OBJECT; a_k: K)
+			-- PATCH: update item at `a_k` with parts named in `a_patch`;
+			-- absent parts stay intact.
+			-- The patch is a JSON_OBJECT because a partial update is by
+			-- definition incomplete — a typed V cannot represent "only
+			-- these fields changed."
+			-- Default: read current V, merge patch fields via the convert
+			-- clauses, put. Descendants may override for optimized merge
+			-- (e.g. SQL UPDATE SET on individual columns).
+		require
+			error_404_not_found: has_key (a_k)
+		local
+			l_current: JSON_OBJECT
+			l_merged: V
+		do
+			check current_converts_to_json: attached {JSON_OBJECT} item (a_k) as l_json then
+				l_current := l_json.twin
+			end
+			across a_patch.current_keys as ic loop
+				l_current.replace (a_patch [ic], ic)
+			end
+			check merged_converts_back: attached {V} l_current as l_v then
+				l_merged := l_v
+			end
+			put (l_merged, a_k)
+		ensure
+			key_still_present: has_key (a_k)
+		end
+
+feature -- Extension
+
+	extend_new (a_v: V; a_request_id: HASHABLE)
+			-- POST: create a new entry with a server-minted key.
+			-- Idempotent: a duplicate `a_request_id` with the same value is a no-op.
+			-- Default: mint via `fresh_key`, then extend; backends
+			-- where the key is born on insert (databases) redefine.
+		require
+			same_request_means_same_value: True -- TODO(owner): contract
+		local
+			l_key: K
+		do
+			if not extend_requests.has_key (a_request_id) then
+				l_key := fresh_key (a_v)
+				extend (a_v, l_key)
+				extend_requests.extend (l_key, a_request_id)
+			end
+		ensure
+			request_recorded: extend_requests.has_key (a_request_id)
+			key_present: has_key (extend_requests [a_request_id])
+			value_stored: item (extend_requests [a_request_id]) ~ a_v
+		end
+
+feature {RESTLY_PROTOCOL} -- Key minting
+
+	fresh_key (a_v: V): K
+			-- New unused key for `a_v`; the store's minting policy.
+			-- Exported to RESTLY_PROTOCOL (not {NONE}) so combinators
+			-- can delegate minting to their components.
+			-- TODO(owner): contract (fresh: not has_key (Result))
+		deferred
+		end
+
+feature -- Access
+
+	extend_requests: V_HASH_TABLE [HASHABLE, K]
+			-- Maps request_id -> generated key.
+		attribute
+			create Result.with_object_equality
+		end
+
+feature -- REST verbs (search)
+
+	search (a_query: PREDICATE [V]): RESTLY_PROTOCOL [K, V]
+			-- QUERY: all entries matching `a_query` (safe, idempotent).
+		require
+			error_400_bad_request: True
+					-- TODO(owner): contract
+					-- suggested: a_query is well-formed per the store's query language
+		deferred
 		end
 
 feature -- Output
