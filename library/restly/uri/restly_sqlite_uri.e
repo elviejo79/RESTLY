@@ -9,9 +9,9 @@ class
 	RESTLY_SQLITE_URI
 
 inherit
-	URI_TEMPLATE
-		export
-			{NONE} set_template
+	RESTLY_URI
+		redefine
+			Uri_RegEx
 		end
 
 create
@@ -21,6 +21,10 @@ create
 convert
 	make ({READABLE_STRING_8, STRING_8}),
 	template: {READABLE_STRING_8}
+
+feature -- Uri template
+
+	Uri_RegEx: STRING = "^sqlite://[^/?#]*(?:/(?:[^/?#]+/)*)?([^/?#]+)(?:\?[^#]*)?(?:#.*)?\z"
 
 feature -- Access
 
@@ -36,8 +40,5 @@ feature -- Access
 				Result.remove_tail (1)
 			end
 		end
-
-invariant
-	names_a_sqlite_database: template.starts_with ("sqlite://")
 
 end

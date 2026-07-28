@@ -9,9 +9,9 @@ class
 	RESTLY_HTTP_URI
 
 inherit
-	URI_TEMPLATE
-		export
-			{NONE} set_template
+	RESTLY_URI
+		redefine
+			Uri_RegEx
 		end
 
 create
@@ -22,7 +22,8 @@ convert
 	make ({READABLE_STRING_8, STRING_8}),
 	template: {READABLE_STRING_8}
 
-invariant
-	names_an_http_endpoint: template.starts_with ("http://") or template.starts_with ("https://")
+feature -- Uri template
+
+	Uri_RegEx: STRING = "^http[s]?://[^/?#]*(?:/(?:[^/?#]+/)*)?([^/?#]+)(?:\?[^#]*)?(?:#.*)?\z"
 
 end

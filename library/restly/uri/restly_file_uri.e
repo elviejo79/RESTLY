@@ -1,17 +1,10 @@
-note
-	description: "[
-		A URI_TEMPLATE restricted to file:/// URIs (RFC 3986),
-		so it can only address local filesystem paths.
-		Converts from strings: l_uri := "file:///home/me/dir/".
-	]"
-
 class
 	RESTLY_FILE_URI
 
 inherit
-	URI_TEMPLATE
-		export
-			{NONE} set_template
+	RESTLY_URI
+		redefine
+			Uri_RegEx
 		end
 
 create
@@ -22,7 +15,11 @@ convert
 	make ({READABLE_STRING_8, STRING_8}),
 	template: {READABLE_STRING_8}
 
-invariant
-	names_a_local_directory: template.starts_with ("file:///")
+feature -- Uri template
+
+	Uri_RegEx: STRING = "^(?:/(?:[^/]+/)*)?[^/]+\z"
+			-- Input	                           Result
+			-- my_file.txt	                     ✓ optional group absent, [^/]+ eats the lot
+			-- /a_dir/a_sub_dir/my_file.txt	   ✓ / + a_dir/a_sub_dir/ + my_file.txt
 
 end
