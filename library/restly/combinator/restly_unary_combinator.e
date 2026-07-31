@@ -12,14 +12,17 @@ note
 deferred class
 	RESTLY_UNARY_COMBINATOR [SK -> HASHABLE, SV]
 
-feature -- Components
+feature -- Internal State
 
 	detachable_back: detachable RESTLY_PROTOCOL [SK, SV]
 			-- The stage behind this one; Void until wired with `<|`.
+			-- Public: used in the exported precondition of `back` (VAPE).
 		note
 			option: stable
 		attribute
 		end
+
+feature -- Components
 
 	back: RESTLY_PROTOCOL [SK, SV]
 			-- The wired back; the single certification point.
